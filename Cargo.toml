@@ -1,0 +1,25 @@
+[workspace]
+resolver = "3"
+members = ["crates/nowcast-core"]
+# Future members (kept out of the default build until they exist):
+#   crates/nowcast-cli      — CLI runner / backtesting driver
+#   crates/nowcast-python   — PyO3 bindings (built with maturin)
+#   crates/nowcast-rainflow — v0.2 `Forcing` provider wrapping rainflow-core
+#   crates/nowcast-snowmelt — v0.2 `Forcing` provider wrapping snowmelt-core
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+authors = ["Francisco Parra-O."]
+repository = "https://github.com/franciscoparrao/nowcast"
+
+[workspace.dependencies]
+thiserror = "2"
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+csv = "1"
+
+[profile.release]
+lto = true
+codegen-units = 1

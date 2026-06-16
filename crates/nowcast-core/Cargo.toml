@@ -1,0 +1,13 @@
+[package]
+name = "nowcast-core"
+description = "Dynamic geohazard nowcasting engine: susceptibility × dynamic trigger (rainfall / snowmelt) → time-varying hazard probability."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+
+[dev-dependencies]
