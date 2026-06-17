@@ -26,6 +26,8 @@ builds and tests fully offline with no upstream Rust engines required.
 - `TriggerModel` — logistic map from I–D exceedance to a `[0, 1]` factor.
 - `Nowcast` — combines the above into per-step `HazardField`s and `Alert`s,
   using per-cell prefix sums for O(1) rolling-window accumulation.
+- `backtest` — contingency metrics (POD, FAR, CSI, frequency bias) with
+  event-centric monthly matching against a dated inventory.
 
 ### Quick start
 
@@ -33,7 +35,26 @@ builds and tests fully offline with no upstream Rust engines required.
 cargo run --example quickstart   # observed rain × susceptibility → hazard + alerts
 cargo test                       # unit + doctests
 cargo clippy -- -D warnings
+
+# Real backtest (Río Maipo, CR2MET 1979–2016 × SERNAGEOMIN inventory):
+python3 scripts/extract_maipo_cr2met.py   # regenerate derived data (numpy + netCDF4)
+cargo run --example backtest
 ```
+
+### Backtest findings (Río Maipo, v0.1)
+
+Validating the I–D trigger against 157 dated rainfall-triggered events:
+
+- The **Caine (1980) global threshold (a=14.82) never fires** on CR2MET daily
+  forcing here (POD 0) — a regional intercept is required.
+- A calibrated **regional intercept a\*≈5.5 mm/h @ D=1h** is robust and transfers
+  split-sample (calibrate odd years → validate even years, POD ≈ 0.50).
+- **FAR ≈ 0.9 is structural**: the event base rate is ~4% and a single
+  basin-centroid gauge over a Mediterranean wet-season climate makes the I–D
+  trigger over-predict — motivating susceptibility weighting, antecedent
+  moisture, and distributed forcing (v0.2).
+- Inventory month-dating noise costs ~0.3 of POD (±0→±3 month tolerance:
+  POD 0.21→0.68).
 
 ## Roadmap
 

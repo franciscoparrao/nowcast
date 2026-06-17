@@ -2,3 +2,6 @@
 **/*.rs.bk
 Cargo.lock.bak
 .DS_Store
+
+# Derived backtest data — regenerate with scripts/extract_maipo_cr2met.py
+/data/*.csv

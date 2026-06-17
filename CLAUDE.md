@@ -44,7 +44,14 @@ motores se enchufan como proveedores nativos en v0.2.
       modulación temporal del peligro (`TriggerModel` logístico).
 - [x] Salida: mapa de probabilidad de peligro por paso (`HazardField`) + alertas
       (`Alert`). Ver `examples/quickstart.rs`.
-- [ ] Backtesting contra inventario fechado (SERNAGEOMIN) — **próximo**.
+- [x] Backtesting contra inventario fechado (SERNAGEOMIN) — módulo `backtest`
+      (contingencia POD/FAR/CSI/bias, matching mensual event-céntrico con
+      tolerancia) + `examples/backtest.rs` sobre Río Maipo (CR2MET diario
+      1979-2016 × 157 eventos de lluvia). Hallazgos: Caine global a=14.82 → POD 0
+      (curva demasiado alta); intercepto regional a*≈5.5 mm/h robusto (valida
+      split-sample años pares POD 0.50); FAR ~0.9 estructural (base rate ~4% +
+      una sola estación); ruido de fecha del inventario cuesta ~0.3 de POD.
+      Datos derivados vía `scripts/extract_maipo_cr2met.py` (no versionados).
 - [ ] (v0.2) Proveedores nativos: `rainflow` + `snowmelt-rs` implementando `Forcing`.
 - [ ] (v0.2) Acople con Hydroflux y XAI (SHAP) para trazabilidad.
 

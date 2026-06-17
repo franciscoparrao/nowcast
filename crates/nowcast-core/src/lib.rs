@@ -49,6 +49,7 @@
 //! assert_eq!(alerts[0].step, 1); // alerts begin at the 40 mm/h burst
 //! ```
 
+mod backtest;
 mod error;
 mod forcing;
 mod grid;
@@ -56,6 +57,7 @@ mod nowcast;
 mod threshold;
 mod trigger;
 
+pub use backtest::{Contingency, MonthKey, monthly_contingency};
 pub use error::{Error, Result};
 pub use forcing::{Forcing, UniformRain};
 pub use grid::{GridDims, SusceptibilityMap};
