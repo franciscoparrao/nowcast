@@ -71,10 +71,23 @@ On the same warm storm, a pre-existing snowpack raises basin water input ~+46%
 (rain + melt vs rain alone), distributed down the elevation transect by the
 lapse-rate temperature field — and the peak hazard with it.
 
+## v0.2 — flood nowcasting from routed discharge (done)
+
+`nowcast-rainflow` wraps the `rainflow` GR4J/HBV engine. A flood's trigger is
+**discharge over a threshold** `Q_c` (the catchment routing already integrated
+the rainfall), not a rainfall I–D curve — so it uses `Q(t)/Q_c` exceedance while
+reusing the same `susceptibility × trigger` structure, `HazardField` and `Alert`.
+
+```bash
+cargo run -p nowcast-rainflow --example itata_flood
+```
+
+GR4J on the CAMELS-CL Itata catchment (1979–2016) → discharge → flood hazard:
+the threshold (98th-percentile discharge) flags ~1.8% of days, and the largest
+events all fall in austral winter (Jun–Aug), as expected for central-south Chile.
+
 ## Roadmap
 
-- **v0.2** — remaining native provider: `rainflow` (routed discharge → flood
-  nowcasting). Snowmelt provider is done (above).
 - Acople with Hydroflux and XAI (SHAP) for traceability.
 - CLI runner and PyO3 bindings (`nowcast-cli`, `nowcast-python`), matching the
   family's crate layout.
@@ -94,6 +107,9 @@ crates/nowcast-core/       # the engine
 crates/nowcast-snowmelt/   # v0.2 distributed rain+melt Forcing provider
   src/lib.rs               SnowmeltForcing (wraps snowmelt-core)
   examples/rain_on_snow.rs
+crates/nowcast-rainflow/   # v0.2 flood provider: discharge-exceedance trigger
+  src/lib.rs               RainflowForcing + FloodThreshold + FloodNowcast
+  examples/itata_flood.rs
 ```
 
 ## License

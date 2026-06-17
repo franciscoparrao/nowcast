@@ -1,0 +1,14 @@
+[package]
+name = "nowcast-rainflow"
+description = "v0.2 nowcast flood provider: routed catchment discharge from the rainflow engine, with a discharge-exceedance trigger."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+nowcast-core = { path = "../nowcast-core" }
+# Sibling rainfall–runoff engine (rainflow workspace).
+rainflow-core = { path = "../../../rainflow/crates/rainflow-core" }
+thiserror.workspace = true

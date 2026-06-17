@@ -28,6 +28,38 @@ pub struct HazardField {
 }
 
 impl HazardField {
+    /// Build a hazard field from a row-major probability vector.
+    ///
+    /// This is the general `susceptibility × trigger` combiner output and is
+    /// public so other hazard paths (e.g. the flood provider's discharge trigger
+    /// in `nowcast-rainflow`) can produce the same field type. Fails if the
+    /// length does not match `dims` or any value lies outside `[0, 1]`.
+    pub fn new(step: usize, dims: GridDims, probability: Vec<f64>) -> Result<Self> {
+        if probability.len() != dims.len() {
+            return Err(Error::GridSizeMismatch {
+                expected: dims.len(),
+                got: probability.len(),
+                ncols: dims.ncols,
+                nrows: dims.nrows,
+            });
+        }
+        if let Some((cell, v)) = probability
+            .iter()
+            .enumerate()
+            .find(|(_, v)| !(0.0..=1.0).contains(*v))
+        {
+            return Err(Error::InvalidParameter {
+                name: "probability",
+                reason: format!("hazard at cell {cell} is {v}, expected within [0, 1]"),
+            });
+        }
+        Ok(Self {
+            step,
+            dims,
+            probability,
+        })
+    }
+
     pub fn dims(&self) -> GridDims {
         self.dims
     }
@@ -39,6 +71,17 @@ impl HazardField {
     /// Largest hazard probability anywhere on the field at this step.
     pub fn max_probability(&self) -> f64 {
         self.probability.iter().copied().fold(0.0, f64::max)
+    }
+
+    /// An [`Alert`] for this step if any cell reaches `level`, else `None`.
+    pub fn alert(&self, level: f64) -> Option<Alert> {
+        let n_cells = self.probability.iter().filter(|&&p| p >= level).count();
+        (n_cells > 0).then(|| Alert {
+            step: self.step,
+            n_cells,
+            fraction: n_cells as f64 / self.dims.len() as f64,
+            max_probability: self.max_probability(),
+        })
     }
 }
 
@@ -168,25 +211,9 @@ impl<F: Forcing> Nowcast<F> {
     /// Run the nowcast and emit an [`Alert`] for every step whose peak hazard
     /// reaches `level` (in `[0, 1]`).
     pub fn alerts(&self, level: f64) -> Vec<Alert> {
-        let n = self.n_cells() as f64;
         self.run()
             .into_iter()
-            .filter_map(|field| {
-                let n_cells = field
-                    .probability()
-                    .iter()
-                    .filter(|&&p| p >= level)
-                    .count();
-                if n_cells == 0 {
-                    return None;
-                }
-                Some(Alert {
-                    step: field.step,
-                    n_cells,
-                    fraction: n_cells as f64 / n,
-                    max_probability: field.max_probability(),
-                })
-            })
+            .filter_map(|field| field.alert(level))
             .collect()
     }
 }

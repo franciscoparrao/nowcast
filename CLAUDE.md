@@ -58,7 +58,13 @@ motores se enchufan como proveedores nativos en v0.2.
       para el acceso aleatorio que exige el I-D. Demuestra amplificación
       rain-on-snow (+46% de agua) y distribución espacial por lapse-rate. Ver
       `examples/rain_on_snow.rs`.
-- [ ] (v0.2) Proveedor nativo **rainflow** (caudal lumped → crecidas).
+- [x] (v0.2) Proveedor nativo **rainflow** (caudal lumped → crecidas): crate
+      `nowcast-rainflow` envuelve `rainflow-core` (GR4J). `RainflowForcing`
+      implementa `Forcing` (caudal broadcast) y `FloodNowcast` usa un gatillo de
+      **exceedancia de caudal Q/Q_c** (no I-D: el ruteo ya integró la lluvia),
+      reusando `SusceptibilityMap`/`TriggerModel`/`HazardField`/`Alert`.
+      `FloodThreshold::quantile` deriva Q_c. Ver `examples/itata_flood.rs`
+      (GR4J sobre CAMELS-CL Itata 1979-2016; crecidas en invierno austral).
 - [ ] (v0.2) Acople con Hydroflux y XAI (SHAP) para trazabilidad.
 
 ## Arquitectura tentativa
