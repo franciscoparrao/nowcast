@@ -79,6 +79,16 @@ motores se enchufan como proveedores nativos en v0.2.
       reusando `SusceptibilityMap`/`TriggerModel`/`HazardField`/`Alert`.
       `FloodThreshold::quantile` deriva Q_c. Ver `examples/itata_flood.rs`
       (GR4J sobre CAMELS-CL Itata 1979-2016; crecidas en invierno austral).
+- [x] (v0.2) Forzante de **alta resolución sub-diaria** GPM IMERG: `examples/
+      atacama_subdaily.rs` + `scripts/extract_atacama_imerg.py` (GPM_3IMERGHH v07
+      semihorario, evento Atacama mar-2015). Demuestra **lead-time**: hora exacta
+      de cruce del umbral I-D (a=4.0 dispara ~8.5 h antes del onset en smoke-test)
+      vs agregación diaria que solo marca el día. Lógica verificada por smoke-test;
+      el run con datos reales requiere autorizar la app "NASA GESDISC DATA ARCHIVE"
+      en Earthdata (EulaNotAccepted hasta entonces). El único IMERG aterrizable es
+      Atacama 2015 (zona hiperárida → no es test de discriminación como Maipo, sí
+      de resolución temporal). Confirma que el trait `Forcing` hace la resolución
+      intercambiable.
 - [ ] (v0.2) Acople con Hydroflux y XAI (SHAP) para trazabilidad.
 
 ## Arquitectura tentativa

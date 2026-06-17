@@ -17,6 +17,18 @@ python3 scripts/extract_maipo_distributed.py  # distributed grid — also needs 
 | `maipo_cr2met_pr_1979_2016.csv` | daily precip (mm) 1979–2016 at the event-centroid cell (lat −33.625, lon −70.225) | **CR2MET v2.5** daily, 0.05°, CC-BY (`~/proyectos/Agentes/CR2MET_pr_v2.5_day_1960-2021_005deg/`) |
 | `maipo_events_dated.csv` | rainfall-triggered landslide events, dated `(year, month)` + location | **SERNAGEOMIN** inventory, basin 09 Río Maipo (`~/proyectos/postdoc/.../basin_inventory/09_rio_maipo.csv`) |
 
+### High-resolution sub-daily (v0.2, `examples/atacama_subdaily.rs`)
+
+| file | content | source |
+|---|---|---|
+| `atacama_imerg_hhr.csv` | half-hourly rainfall rate (basin-mean & peak, mm/hr) over the Mar 2015 Atacama event | **GPM IMERG** Final half-hourly `GPM_3IMERGHH` v07, ~0.1°, via `scripts/extract_atacama_imerg.py` (NASA GES DISC) |
+
+> **Earthdata prerequisite.** GES DISC downloads require a one-time account step:
+> log into <https://urs.earthdata.nasa.gov> → *Applications → Authorized Apps* and
+> approve **"NASA GESDISC DATA ARCHIVE"** (and accept the GPM EULA). Without it
+> `earthaccess` fails with `EulaNotAccepted`. Credentials are read from `~/.netrc`.
+> The raw HDF5 (~1 GB) lands in `data/imerg_hhr/` (git-ignored); only the CSV is kept.
+
 ### Distributed (v0.2 backtest, `examples/backtest_distributed.rs`)
 
 | file | content | source |

@@ -85,6 +85,24 @@ On the same warm storm, a pre-existing snowpack raises basin water input ~+46%
 (rain + melt vs rain alone), distributed down the elevation transect by the
 lapse-rate temperature field — and the peak hazard with it.
 
+## High-resolution sub-daily forcing (GPM IMERG)
+
+The distributed backtest found *temporal* resolution to be a limiter. The
+`atacama_subdaily` example feeds the engine **half-hourly** GPM IMERG rainfall
+for the March 2015 Atacama debris-flow disaster and shows what daily forcing
+cannot: the *time* the I–D threshold is crossed, and the resulting lead time.
+
+```bash
+python3 scripts/extract_atacama_imerg.py   # needs Earthdata creds + GESDISC app authorized
+cargo run --example atacama_subdaily
+```
+
+Same engine, two resolutions: half-hourly pins the threshold crossing to a
+timestamp (hours of lead time before the flows), while the same rain aggregated
+to daily can only flag the day — no intra-day timing. (Logic smoke-tested;
+running on real IMERG needs the one-time Earthdata GES DISC authorization noted
+in `data/README.md`.)
+
 ## v0.2 — flood nowcasting from routed discharge (done)
 
 `nowcast-rainflow` wraps the `rainflow` GR4J/HBV engine. A flood's trigger is

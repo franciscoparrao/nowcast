@@ -5,3 +5,6 @@ Cargo.lock.bak
 
 # Derived backtest data — regenerate with scripts/extract_maipo_cr2met.py
 /data/*.csv
+
+# IMERG raw HDF5 (large, downloaded) — keep derived CSV only
+/data/imerg_hhr/
