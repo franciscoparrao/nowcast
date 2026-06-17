@@ -119,3 +119,93 @@ impl Forcing for UniformRain {
         self.depths_mm[step]
     }
 }
+
+/// Spatially **distributed** rainfall: an independent depth series per cell.
+///
+/// This is the gridded counterpart of [`UniformRain`] — the v0.1 path that
+/// resolves where rain actually fell (e.g. a CR2MET precipitation grid over a
+/// basin) instead of broadcasting one gauge. Depths are stored row-major by
+/// step then cell: `depths[step * n_cells + cell]`.
+#[derive(Debug, Clone)]
+pub struct GriddedRain {
+    dims: GridDims,
+    dt_hours: f64,
+    n_steps: usize,
+    /// Row-major `n_steps * n_cells` rainfall depths (mm).
+    depths_mm: Vec<f64>,
+}
+
+impl GriddedRain {
+    /// Build from a flat `n_steps * n_cells` buffer laid out step-major
+    /// (`depths[step * n_cells + cell]`).
+    pub fn new(dims: GridDims, dt_hours: f64, depths_mm: Vec<f64>) -> Result<Self> {
+        if !dt_hours.is_finite() || dt_hours <= 0.0 {
+            return Err(Error::InvalidParameter {
+                name: "dt_hours",
+                reason: format!("must be > 0, got {dt_hours}"),
+            });
+        }
+        let n_cells = dims.len();
+        if n_cells == 0 || !depths_mm.len().is_multiple_of(n_cells) {
+            return Err(Error::GridSizeMismatch {
+                expected: n_cells,
+                got: depths_mm.len(),
+                ncols: dims.ncols,
+                nrows: dims.nrows,
+            });
+        }
+        if depths_mm.iter().any(|d| *d < 0.0 || d.is_nan()) {
+            return Err(Error::InvalidParameter {
+                name: "depths_mm",
+                reason: "rainfall depths must be finite and non-negative".to_string(),
+            });
+        }
+        Ok(Self {
+            dims,
+            dt_hours,
+            n_steps: depths_mm.len() / n_cells,
+            depths_mm,
+        })
+    }
+}
+
+impl Forcing for GriddedRain {
+    fn dims(&self) -> GridDims {
+        self.dims
+    }
+
+    fn n_steps(&self) -> usize {
+        self.n_steps
+    }
+
+    fn dt_hours(&self) -> f64 {
+        self.dt_hours
+    }
+
+    fn depth_mm(&self, cell: usize, step: usize) -> f64 {
+        self.depths_mm[step * self.dims.len() + cell]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gridded_rain_indexing() {
+        let dims = GridDims::new(2, 1); // 2 cells, 1 row
+        // step 0: [1, 2]; step 1: [3, 4]
+        let f = GriddedRain::new(dims, 24.0, vec![1.0, 2.0, 3.0, 4.0]).unwrap();
+        assert_eq!(f.n_steps(), 2);
+        assert_eq!(f.depth_mm(0, 0), 1.0);
+        assert_eq!(f.depth_mm(1, 0), 2.0);
+        assert_eq!(f.depth_mm(0, 1), 3.0);
+        assert_eq!(f.depth_mm(1, 1), 4.0);
+    }
+
+    #[test]
+    fn gridded_rain_rejects_ragged_buffer() {
+        let dims = GridDims::new(2, 1);
+        assert!(GriddedRain::new(dims, 24.0, vec![1.0, 2.0, 3.0]).is_err());
+    }
+}

@@ -57,9 +57,9 @@ mod nowcast;
 mod threshold;
 mod trigger;
 
-pub use backtest::{Contingency, MonthKey, monthly_contingency};
+pub use backtest::{Contingency, MonthKey, monthly_contingency, spatial_monthly_contingency};
 pub use error::{Error, Result};
-pub use forcing::{Forcing, UniformRain};
+pub use forcing::{Forcing, GriddedRain, UniformRain};
 pub use grid::{GridDims, SusceptibilityMap};
 pub use nowcast::{Alert, HazardField, Nowcast};
 pub use threshold::IdThreshold;

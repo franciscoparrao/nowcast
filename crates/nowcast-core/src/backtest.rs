@@ -13,6 +13,8 @@
 
 use std::collections::BTreeSet;
 
+use crate::grid::GridDims;
+
 /// A 2×2 contingency table for binary event forecasting.
 ///
 /// ```text
@@ -149,6 +151,112 @@ pub fn monthly_contingency(
     c
 }
 
+/// Chebyshev (chessboard) distance between two row-major cells on `dims`.
+fn cell_chebyshev(dims: GridDims, a: usize, b: usize) -> usize {
+    let (ra, ca) = (a / dims.ncols, a % dims.ncols);
+    let (rb, cb) = (b / dims.ncols, b % dims.ncols);
+    ra.abs_diff(rb).max(ca.abs_diff(cb))
+}
+
+/// **Spatial** event-centric contingency over a grid of per-cell monthly alerts.
+///
+/// Generalises [`monthly_contingency`] to space: an event is matched only if a
+/// nearby cell alerted, so a wet month that triggers far from the slide no
+/// longer counts as a hit — the core of attacking structural false alarms.
+///
+/// - `dims` — the grid the cells index into (row-major).
+/// - `months` — the distinct calendar months in the analysed period.
+/// - `alerted` — the `(cell, month)` pairs that raised an alert.
+/// - `events` — observed `(cell, month)` events (deduplicated internally).
+/// - `cell_radius` — neighbourhood half-width (Chebyshev) for a spatial match.
+/// - `tol_months` — month-matching half-window (inventory date slack).
+///
+/// Counting mirrors [`monthly_contingency`]: hit = event with an alert within
+/// the space–time window; miss = event without one; false_alarm = alerted
+/// `(cell, month)` outside every event's window; correct_negative = a
+/// non-alerted `(cell, month)` outside every event's window.
+pub fn spatial_monthly_contingency(
+    dims: GridDims,
+    months: &[MonthKey],
+    alerted: &BTreeSet<(usize, MonthKey)>,
+    events: &[(usize, MonthKey)],
+    cell_radius: usize,
+    tol_months: u32,
+) -> Contingency {
+    let month_set: BTreeSet<MonthKey> = months.iter().copied().collect();
+    let tol = tol_months as i32;
+    let n_cells = dims.len();
+
+    // Deduplicated events that fall inside the analysed period.
+    let observed: BTreeSet<(usize, MonthKey)> = events
+        .iter()
+        .copied()
+        .filter(|(c, m)| *c < n_cells && month_set.contains(m))
+        .collect();
+
+    // Space–time footprint of all events (cells within radius × months ±tol).
+    let mut footprint: BTreeSet<(usize, MonthKey)> = BTreeSet::new();
+    for &(ec, em) in &observed {
+        let (er, ecol) = (ec / dims.ncols, ec % dims.ncols);
+        let r = cell_radius as i64;
+        for dr in -r..=r {
+            for dc in -r..=r {
+                let (nr, nc) = (er as i64 + dr, ecol as i64 + dc);
+                if nr < 0 || nc < 0 || nr >= dims.nrows as i64 || nc >= dims.ncols as i64 {
+                    continue;
+                }
+                let cell = nr as usize * dims.ncols + nc as usize;
+                for d in -tol..=tol {
+                    footprint.insert((cell, shift_month((em.0, em.1), d)));
+                }
+            }
+        }
+    }
+
+    let alert_near_event = |ec: usize, em: MonthKey| {
+        alerted.iter().any(|&(ac, am)| {
+            cell_chebyshev(dims, ec, ac) <= cell_radius
+                && (-tol..=tol).any(|d| shift_month(em, d) == am)
+        })
+    };
+
+    let mut c = Contingency::default();
+    for &(ec, em) in &observed {
+        if alert_near_event(ec, em) {
+            c.hits += 1;
+        } else {
+            c.misses += 1;
+        }
+    }
+    for &am in &alerted_in_period(alerted, &month_set) {
+        if !footprint.contains(&am) {
+            c.false_alarms += 1;
+        }
+    }
+    // Correct negatives: every (cell, month) in the period that neither alerted
+    // nor lies in an event footprint.
+    for &m in months {
+        for cell in 0..n_cells {
+            if !alerted.contains(&(cell, m)) && !footprint.contains(&(cell, m)) {
+                c.correct_negatives += 1;
+            }
+        }
+    }
+    c
+}
+
+/// Alerted `(cell, month)` pairs whose month is inside the analysed period.
+fn alerted_in_period(
+    alerted: &BTreeSet<(usize, MonthKey)>,
+    month_set: &BTreeSet<MonthKey>,
+) -> Vec<(usize, MonthKey)> {
+    alerted
+        .iter()
+        .copied()
+        .filter(|(_, m)| month_set.contains(m))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,6 +310,29 @@ mod tests {
         );
         assert_eq!(c.pod(), Some(1.0));
         assert_eq!(c.far(), Some(0.0));
+    }
+
+    #[test]
+    fn spatial_match_needs_a_nearby_alert() {
+        // 5x5 grid. Event at center cell 12 (row 2, col 2) in month (2000,2).
+        let dims = GridDims::new(5, 5);
+        let months = vec![(2000, 1), (2000, 2), (2000, 3)];
+        let events = vec![(12usize, (2000, 2))];
+
+        // Alert in an adjacent cell 11 (row 2, col 1), same month → hit (r=1).
+        let near: BTreeSet<(usize, MonthKey)> = [(11usize, (2000, 2))].into_iter().collect();
+        let c = spatial_monthly_contingency(dims, &months, &near, &events, 1, 0);
+        assert_eq!(c.hits, 1);
+        assert_eq!(c.misses, 0);
+        assert_eq!(c.false_alarms, 0);
+
+        // Alert only in the far corner cell 0 (Chebyshev distance 2 > 1) → miss,
+        // and that alert is a false alarm (outside the event footprint).
+        let far: BTreeSet<(usize, MonthKey)> = [(0usize, (2000, 2))].into_iter().collect();
+        let c = spatial_monthly_contingency(dims, &months, &far, &events, 1, 0);
+        assert_eq!(c.hits, 0);
+        assert_eq!(c.misses, 1);
+        assert_eq!(c.false_alarms, 1);
     }
 
     #[test]

@@ -52,6 +52,20 @@ motores se enchufan como proveedores nativos en v0.2.
       split-sample años pares POD 0.50); FAR ~0.9 estructural (base rate ~4% +
       una sola estación); ruido de fecha del inventario cuesta ~0.3 de POD.
       Datos derivados vía `scripts/extract_maipo_cr2met.py` (no versionados).
+- [x] Backtest **distribuido** (v0.2): `GriddedRain` (forzante por celda) +
+      `spatial_monthly_contingency` + `examples/backtest_distributed.rs` sobre
+      subgrilla CR2MET 15×18 del Maipo con susceptibilidad **real** RandomForest
+      (reproyectada). Métricas EWS apropiadas (ROC-AUC, POD@área) porque
+      CSI/FAR son inservibles con inventario espacial disperso/incompleto.
+      **Hallazgo (negativo, honesto):** AUC≈0.48 en las tres configuraciones
+      (lumped, distribuida susc=1, distribuida×susc) — a resolución CR2MET
+      5km/diaria la lluvia grillada NO discrimina las celdas-mes de evento (su
+      lluvia media no es mayor que el promedio) y la susceptibilidad 30m
+      promediada a 5km pierde su filo. El cuello de botella es la **resolución**
+      de forzante/susceptibilidad (y el mes ruidoso del inventario), no el
+      lumping → motiva forzante de alta resolución (sub-cuenca rainflow/snowmelt,
+      QPE radar/satélite) que el trait `Forcing` hace intercambiable. Verificado
+      independientemente en Python (AUC 0.488). `scripts/extract_maipo_distributed.py`.
 - [x] (v0.2) Proveedor nativo **snowmelt**: crate `nowcast-snowmelt` envuelve
       `snowmelt-core` v0.10 e implementa `Forcing` con runoff (rain+melt) **por
       celda**. Pre-corre el modelo (stateful/secuencial) y bufferiza la forzante

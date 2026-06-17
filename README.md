@@ -56,6 +56,20 @@ Validating the I–D trigger against 157 dated rainfall-triggered events:
 - Inventory month-dating noise costs ~0.3 of POD (±0→±3 month tolerance:
   POD 0.21→0.68).
 
+### Distributed backtest (v0.2, `backtest_distributed`)
+
+Repeating the backtest with **distributed** CR2MET rainfall over a 15×18 grid,
+the **real** RandomForest susceptibility raster, and **spatial** (per-cell)
+verification — scored with ROC-AUC and POD-at-area, since CSI/FAR are meaningless
+for a spatially sparse, incomplete inventory. The result is an honest **null**:
+all configurations sit at AUC ≈ 0.48 (verified independently in Python). At
+CR2MET's 5 km / daily resolution the gridded rainfall does not discriminate the
+recorded event cell-months, and 30 m susceptibility averaged to 5 km loses its
+edge. **The bottleneck is forcing/susceptibility resolution (and month-level
+inventory dating), not the lumping** — the case for plugging higher-resolution
+forcing into the swappable `Forcing` trait (sub-basin rainflow/snowmelt, radar/
+satellite QPE).
+
 ## v0.2 — distributed snowmelt forcing (done)
 
 `nowcast-snowmelt` wraps the `snowmelt-rs` degree-day engine and implements
