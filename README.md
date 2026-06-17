@@ -56,27 +56,44 @@ Validating the I–D trigger against 157 dated rainfall-triggered events:
 - Inventory month-dating noise costs ~0.3 of POD (±0→±3 month tolerance:
   POD 0.21→0.68).
 
+## v0.2 — distributed snowmelt forcing (done)
+
+`nowcast-snowmelt` wraps the `snowmelt-rs` degree-day engine and implements
+`Forcing` with **per-cell rain + snowmelt runoff**, the rain-on-snow path the
+single gauge cannot represent. It pre-runs the (stateful) snow simulation once
+and buffers the runoff so the nowcast can random-access it for the I–D windows.
+
+```bash
+cargo run -p nowcast-snowmelt --example rain_on_snow
+```
+
+On the same warm storm, a pre-existing snowpack raises basin water input ~+46%
+(rain + melt vs rain alone), distributed down the elevation transect by the
+lapse-rate temperature field — and the peak hazard with it.
+
 ## Roadmap
 
-- **v0.2** — native `Forcing` providers wrapping the sibling engines:
-  `rainflow` (routed discharge → flood nowcasting) and `snowmelt-rs`
-  (rain + snowmelt runoff per cell → rain-on-snow landslide triggering).
-- Backtesting against dated event inventories (SERNAGEOMIN): hit rate, false
-  alarms, lead time.
+- **v0.2** — remaining native provider: `rainflow` (routed discharge → flood
+  nowcasting). Snowmelt provider is done (above).
+- Acople with Hydroflux and XAI (SHAP) for traceability.
 - CLI runner and PyO3 bindings (`nowcast-cli`, `nowcast-python`), matching the
   family's crate layout.
 
 ## Workspace layout
 
 ```
-crates/nowcast-core/   # the engine (this is what exists today)
+crates/nowcast-core/       # the engine
   src/
     forcing.rs    Forcing trait + UniformRain (observed series, CSV)
     grid.rs       GridDims + SusceptibilityMap
     threshold.rs  IdThreshold (I = a·D^-b)
     trigger.rs    TriggerModel (logistic exceedance → factor)
     nowcast.rs    Nowcast engine + HazardField + Alert
-  examples/quickstart.rs
+    backtest.rs   Contingency metrics + monthly event matching
+  examples/{quickstart,backtest}.rs
+crates/nowcast-snowmelt/   # v0.2 distributed rain+melt Forcing provider
+  src/lib.rs               SnowmeltForcing (wraps snowmelt-core)
+  examples/rain_on_snow.rs
 ```
 
 ## License

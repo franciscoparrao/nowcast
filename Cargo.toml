@@ -1,11 +1,10 @@
 [workspace]
 resolver = "3"
-members = ["crates/nowcast-core"]
+members = ["crates/nowcast-core", "crates/nowcast-snowmelt"]
 # Future members (kept out of the default build until they exist):
 #   crates/nowcast-cli      — CLI runner / backtesting driver
 #   crates/nowcast-python   — PyO3 bindings (built with maturin)
 #   crates/nowcast-rainflow — v0.2 `Forcing` provider wrapping rainflow-core
-#   crates/nowcast-snowmelt — v0.2 `Forcing` provider wrapping snowmelt-core
 
 [workspace.package]
 version = "0.1.0"

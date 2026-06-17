@@ -1,0 +1,15 @@
+[package]
+name = "nowcast-snowmelt"
+description = "v0.2 nowcast `Forcing` provider: distributed rain + snowmelt water input per cell, from the snowmelt-rs engine."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+nowcast-core = { path = "../nowcast-core" }
+# Sibling engine (snowmelt-rs workspace). ndarray must be semver-compatible with
+# snowmelt-core's so the `Array2<f64>` types unify across the crate boundary.
+snowmelt-core = { path = "../../../snowmelt-rs/crates/snowmelt-core" }
+ndarray = "0.16"

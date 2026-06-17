@@ -52,7 +52,13 @@ motores se enchufan como proveedores nativos en v0.2.
       split-sample años pares POD 0.50); FAR ~0.9 estructural (base rate ~4% +
       una sola estación); ruido de fecha del inventario cuesta ~0.3 de POD.
       Datos derivados vía `scripts/extract_maipo_cr2met.py` (no versionados).
-- [ ] (v0.2) Proveedores nativos: `rainflow` + `snowmelt-rs` implementando `Forcing`.
+- [x] (v0.2) Proveedor nativo **snowmelt**: crate `nowcast-snowmelt` envuelve
+      `snowmelt-core` v0.10 e implementa `Forcing` con runoff (rain+melt) **por
+      celda**. Pre-corre el modelo (stateful/secuencial) y bufferiza la forzante
+      para el acceso aleatorio que exige el I-D. Demuestra amplificación
+      rain-on-snow (+46% de agua) y distribución espacial por lapse-rate. Ver
+      `examples/rain_on_snow.rs`.
+- [ ] (v0.2) Proveedor nativo **rainflow** (caudal lumped → crecidas).
 - [ ] (v0.2) Acople con Hydroflux y XAI (SHAP) para trazabilidad.
 
 ## Arquitectura tentativa
