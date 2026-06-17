@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nowcast — motor de nowcasting de geohazards</title>
+<meta name="description" content="Motor Rust de nowcasting dinámico de peligros geológicos: susceptibilidad × forzante (lluvia, deshielo, caudal) → probabilidad de peligro por paso de tiempo.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,800&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:    oklch(0.975 0.011 85);
+    --paper-2:  oklch(0.951 0.015 80);
+    --paper-3:  oklch(0.928 0.018 78);
+    --ink:      oklch(0.255 0.022 60);
+    --ink-soft: oklch(0.435 0.022 62);
+    --line:     oklch(0.866 0.018 75);
+    --ochre:    oklch(0.605 0.132 56);
+    --hazard:   oklch(0.565 0.183 33);
+    --hydro:    oklch(0.520 0.090 205);
+    --ok:       oklch(0.585 0.118 150);
+    --snow:     oklch(0.560 0.075 250);
+
+    --f-display:"Fraunces", Georgia, serif;
+    --f-body:"Archivo", system-ui, sans-serif;
+    --f-mono:"IBM Plex Mono", ui-monospace, monospace;
+
+    --maxw: 1180px;
+    --gut: clamp(1.1rem, 4vw, 3.4rem);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--f-body); font-size:clamp(1rem,0.55vw + 0.9rem,1.12rem);
+    line-height:1.62; letter-spacing:-0.005em;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(oklch(0.62 0.13 56 / 0.04) 1px, transparent 1.4px);
+    background-size: 26px 26px;
+  }
+  ::selection{background:oklch(0.565 0.183 33 / 0.22)}
+  a{color:inherit}
+  h1,h2,h3{font-family:var(--f-display); font-weight:600; line-height:1.04; letter-spacing:-0.02em; margin:0}
+  .wrap{max-width:var(--maxw); margin-inline:auto; padding-inline:var(--gut)}
+
+  /* ── Masthead ─────────────────────────────────────────── */
+  .mast{border-bottom:2px solid var(--ink); padding-top:clamp(1.4rem,3vw,2.6rem)}
+  .mast-row{display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:.4rem 1.5rem}
+  .kicker{font-family:var(--f-mono); font-size:.74rem; letter-spacing:.28em; text-transform:uppercase; color:var(--ochre)}
+  .mast h1{
+    font-size:clamp(3.6rem,13vw,9.5rem); font-weight:800; letter-spacing:-0.045em;
+    margin:.1em 0 .06em; line-height:.82;
+  }
+  .mast h1 em{font-style:italic; font-weight:400; color:var(--ochre)}
+  .lede{font-family:var(--f-display); font-weight:400; font-size:clamp(1.15rem,1.4vw + 0.8rem,1.7rem);
+    max-width:34ch; color:var(--ink-soft); margin:.2rem 0 1.5rem}
+  .mast-meta{font-family:var(--f-mono); font-size:.78rem; color:var(--ink-soft); text-align:right; line-height:1.7}
+  .mast-meta b{color:var(--ink)}
+
+  .status{display:flex; flex-wrap:wrap; gap:.5rem; padding:1rem 0 1.3rem; border-top:1px solid var(--line)}
+  .chip{font-family:var(--f-mono); font-size:.76rem; letter-spacing:.02em; padding:.32em .7em;
+    border:1px solid var(--line); background:var(--paper-2); border-radius:2px; display:inline-flex; gap:.45em; align-items:center}
+  .chip b{font-weight:600}
+  .chip .dot{width:.5em; height:.5em; border-radius:50%; background:var(--ok)}
+
+  /* ── Section scaffolding ──────────────────────────────── */
+  section{padding-block:clamp(3rem,7vw,6rem)}
+  .sec-no{font-family:var(--f-mono); font-size:.76rem; letter-spacing:.22em; color:var(--ochre); text-transform:uppercase; display:block; margin-bottom:.8rem}
+  h2.title{font-size:clamp(2rem,4.5vw,3.5rem); font-weight:600; max-width:18ch; margin-bottom:.4rem}
+  .sec-intro{max-width:56ch; color:var(--ink-soft); font-size:1.05rem; margin-top:.7rem}
+  .rule{height:1px; background:var(--line); border:0; margin:0}
+
+  /* ── Equation ─────────────────────────────────────────── */
+  .equation{
+    font-family:var(--f-display); font-size:clamp(1.3rem,2.6vw,2.4rem); font-weight:500;
+    margin:2rem 0; padding:clamp(1.2rem,3vw,2.2rem); background:var(--ink); color:var(--paper);
+    border-radius:3px; line-height:1.5; letter-spacing:-0.01em;
+  }
+  .equation .v-susc{color:oklch(0.78 0.10 56)}
+  .equation .v-trig{color:oklch(0.74 0.14 40)}
+  .equation small{display:block; font-family:var(--f-mono); font-size:.72rem; letter-spacing:.04em;
+    color:oklch(0.82 0.02 80); margin-top:.9rem; line-height:1.7; font-weight:400}
+
+  /* ── Capabilities ─────────────────────────────────────── */
+  .caps{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:0; margin-top:2.5rem;
+    border-top:1px solid var(--line); border-left:1px solid var(--line)}
+  .cap{border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:clamp(1.3rem,2.5vw,2rem)}
+  .cap .tag{font-family:var(--f-mono); font-size:.72rem; letter-spacing:.04em; color:var(--ochre); font-weight:500}
+  .cap h3{font-size:1.32rem; margin:.5rem 0 .5rem}
+  .cap p{margin:0; color:var(--ink-soft); font-size:.97rem}
+  .cap code{font-family:var(--f-mono); font-size:.84em; background:var(--paper-2); padding:.1em .35em; border-radius:2px; color:var(--ink)}
+  .cap.feature{background:var(--paper-2)}
+
+  /* ── Architecture ─────────────────────────────────────── */
+  .arch{display:grid; grid-template-columns:1fr; gap:1.2rem; margin-top:2.4rem}
+  @media(min-width:880px){ .arch{grid-template-columns:0.95fr 1.05fr; gap:clamp(1.5rem,4vw,3.5rem); align-items:start} }
+  .trait-card{background:var(--ink); color:var(--paper); border-radius:3px; padding:clamp(1.3rem,3vw,2rem); align-self:start}
+  .trait-card h3{color:var(--paper); font-size:1.3rem; margin-bottom:.4rem}
+  .trait-card p{color:oklch(0.85 0.02 80); font-size:.94rem}
+  .trait-card pre{font-family:var(--f-mono); font-size:.8rem; line-height:1.65; color:oklch(0.9 0.03 85);
+    background:oklch(0.2 0.02 60); padding:1rem; border-radius:3px; overflow-x:auto; margin:1rem 0 0}
+  .trait-card pre .kw{color:oklch(0.78 0.12 40)} .trait-card pre .fn{color:oklch(0.8 0.1 200)}
+  .crates{display:flex; flex-direction:column; gap:.7rem}
+  .crate{display:grid; grid-template-columns:auto 1fr auto; gap:.4rem 1rem; align-items:baseline;
+    padding:.85rem 1.1rem; border:1px solid var(--line); border-left:4px solid var(--ochre);
+    background:var(--paper-2); border-radius:2px}
+  .crate.hydro{border-left-color:var(--hydro)} .crate.snow{border-left-color:var(--snow)}
+  .crate.plan{border-left-color:var(--line); opacity:.72}
+  .crate .name{font-family:var(--f-mono); font-weight:600; font-size:.95rem}
+  .crate .desc{color:var(--ink-soft); font-size:.9rem; grid-column:1 / -1}
+  .crate .st{font-family:var(--f-mono); font-size:.7rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ok)}
+  .crate.plan .st{color:var(--ink-soft)}
+
+  /* ── Resolution arc ───────────────────────────────────── */
+  .arc{display:grid; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:3px; overflow:hidden; margin-top:2.5rem}
+  @media(min-width:820px){ .arc{grid-template-columns:repeat(3,1fr)} }
+  .arc-step{background:var(--paper); padding:clamp(1.3rem,2.6vw,2rem)}
+  .arc-step .n{font-family:var(--f-mono); font-size:.72rem; letter-spacing:.2em; color:var(--ochre)}
+  .arc-step h3{font-size:1.3rem; margin:.5rem 0 .2rem}
+  .arc-step .res{font-family:var(--f-mono); font-size:.82rem; color:var(--ink-soft); margin-bottom:1rem}
+  .metric{font-family:var(--f-display); font-weight:600; font-size:clamp(2rem,4.5vw,3rem); line-height:1; letter-spacing:-0.03em}
+  .metric.warn{color:var(--hazard)} .metric.ok{color:var(--ok)}
+  .metric-l{font-size:.86rem; color:var(--ink-soft); margin-top:.35rem}
+  .verdict{margin-top:1rem; font-size:.92rem; padding-top:.9rem; border-top:1px solid var(--line)}
+
+  /* ── Lead-time chart ──────────────────────────────────── */
+  .chartwrap{margin-top:2.5rem; background:var(--paper-2); border:1px solid var(--line); border-radius:3px; padding:clamp(1.2rem,3vw,2rem)}
+  .chartwrap h3{font-size:1.25rem; margin-bottom:.2rem}
+  .chartwrap .cap-l{color:var(--ink-soft); font-size:.92rem; max-width:60ch; margin-bottom:1.3rem}
+  svg{display:block; width:100%; height:auto; overflow:visible}
+  .legend{display:flex; flex-wrap:wrap; gap:1.1rem; font-family:var(--f-mono); font-size:.74rem; color:var(--ink-soft); margin-top:1rem}
+  .legend i{width:1.6em; height:.5em; display:inline-block; vertical-align:middle; margin-right:.45em; border-radius:1px}
+
+  /* ── Terminal readouts ────────────────────────────────── */
+  .terms{display:grid; gap:1.3rem; margin-top:2.4rem}
+  @media(min-width:880px){ .terms{grid-template-columns:1fr 1fr} }
+  .term{background:var(--ink); border-radius:4px; overflow:hidden; display:flex; flex-direction:column}
+  .term-bar{display:flex; align-items:center; gap:.55rem; padding:.6rem .9rem; background:oklch(0.2 0.02 60); border-bottom:1px solid oklch(0.32 0.02 60)}
+  .term-bar span{width:.62rem; height:.62rem; border-radius:50%; background:oklch(0.4 0.02 60)}
+  .term-bar .cmd{font-family:var(--f-mono); font-size:.74rem; color:oklch(0.7 0.03 80); margin-left:.4rem; letter-spacing:.01em}
+  .term pre{margin:0; padding:1.05rem 1.1rem; font-family:var(--f-mono); font-size:.745rem; line-height:1.62;
+    color:oklch(0.88 0.02 85); overflow-x:auto; flex:1}
+  .term pre b{color:oklch(0.82 0.13 40); font-weight:600}
+  .term pre i{color:oklch(0.78 0.1 150); font-style:normal}
+  .term pre u{color:oklch(0.74 0.09 205); text-decoration:none}
+  .term .note{font-family:var(--f-body); font-size:.86rem; color:var(--ink-soft); padding:.2rem 0 0}
+
+  /* ── Findings ─────────────────────────────────────────── */
+  .finds{margin-top:2.4rem; display:grid; gap:0; border-top:1px solid var(--ink)}
+  .find{display:grid; grid-template-columns:auto 1fr; gap:clamp(1rem,3vw,2.6rem); padding:1.5rem 0; border-bottom:1px solid var(--line); align-items:start}
+  .find .idx{font-family:var(--f-display); font-size:2.2rem; font-weight:600; color:var(--ochre); line-height:1}
+  .find h3{font-size:1.28rem; margin-bottom:.35rem}
+  .find p{margin:0; color:var(--ink-soft); font-size:.98rem; max-width:62ch}
+  .find p b{color:var(--ink); font-weight:600}
+
+  /* ── Run / footer ─────────────────────────────────────── */
+  .run{background:var(--ink); color:var(--paper); border-radius:4px; padding:clamp(1.4rem,3.5vw,2.6rem); margin-top:2.2rem}
+  .run h3{color:var(--paper); font-size:1.35rem; margin-bottom:1rem}
+  .run pre{font-family:var(--f-mono); font-size:.82rem; line-height:1.9; color:oklch(0.88 0.02 85); margin:0; overflow-x:auto}
+  .run pre .c{color:oklch(0.62 0.04 80)}
+  .run pre .p{color:oklch(0.78 0.13 40)}
+
+  .road{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:1rem; margin-top:2.3rem}
+  .road div{padding:1.1rem 1.2rem; border:1px dashed var(--line); border-radius:3px}
+  .road .tag{font-family:var(--f-mono); font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:var(--ochre)}
+  .road h3{font-size:1.12rem; margin:.45rem 0 .3rem}
+  .road p{margin:0; color:var(--ink-soft); font-size:.9rem}
+
+  footer{border-top:2px solid var(--ink); margin-top:clamp(3rem,7vw,6rem); padding-block:2.4rem}
+  footer .wrap{display:flex; flex-wrap:wrap; justify-content:space-between; gap:1rem; align-items:baseline}
+  footer .nm{font-family:var(--f-display); font-weight:800; font-size:1.6rem; letter-spacing:-0.03em}
+  footer p{margin:0; font-family:var(--f-mono); font-size:.74rem; color:var(--ink-soft); line-height:1.8}
+
+  /* reveal — only hidden when JS opts in, so no-JS users see everything */
+  .js-reveal .reveal{opacity:0; transform:translateY(18px)}
+  .js-reveal .reveal.is-in{opacity:1; transform:none; transition:opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1)}
+  @media(prefers-reduced-motion:reduce){ .js-reveal .reveal{opacity:1; transform:none} }
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="wrap">
+    <div class="mast-row">
+      <div>
+        <span class="kicker">Boletín técnico · v0.2 · 17 jun 2026</span>
+        <h1>now<em>cast</em></h1>
+      </div>
+      <div class="mast-meta">
+        Motor Rust · familia<br><b>SurtGIS · Hydroflux · Smelt</b><br>Anvil · Cantus · Criterium
+      </div>
+    </div>
+    <p class="lede">Nowcasting dinámico de peligros geológicos: la susceptibilidad deja de ser estática y se modula en el tiempo con la forzante que la gatilla.</p>
+    <div class="status">
+      <span class="chip"><span class="dot"></span><b>4</b> crates Rust</span>
+      <span class="chip"><span class="dot"></span><b>24</b> tests + doctests</span>
+      <span class="chip"><span class="dot"></span>clippy <b>-D warnings</b> limpio</span>
+      <span class="chip"><span class="dot"></span>build <b>offline</b> (core std-only)</span>
+      <span class="chip"><span class="dot"></span><b>8</b> commits</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- QUÉ ES -->
+<section class="wrap reveal">
+  <span class="sec-no">01 — El principio</span>
+  <h2 class="title">Susceptibilidad × forzante, paso a paso</h2>
+  <p class="sec-intro">La susceptibilidad de hoy es un mapa fijo de factores. El gap del estado del arte es el <em>nowcasting</em>: combinar ese mapa con forzantes dinámicas —lluvia, deshielo, caudal— para emitir una probabilidad de peligro que cambia hora a hora, con alertas.</p>
+
+  <div class="equation">
+    peligro<span style="color:oklch(0.7 0.02 80)">(celda, t)</span> =
+    <span class="v-susc">susceptibilidad(celda)</span> ×
+    <span class="v-trig">trigger(exceedancia, t)</span>
+    <small>
+      DESLIZAMIENTOS &nbsp;→&nbsp; trigger = umbral intensidad–duración&nbsp; I = a·D⁻ᵇ &nbsp;(la lluvia se acumula en ventanas móviles)<br>
+      CRECIDAS &nbsp;→&nbsp; trigger = exceedancia de caudal&nbsp; Q / Q_c &nbsp;(el ruteo de la cuenca ya integró la lluvia)
+    </small>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- CAPACIDADES -->
+<section class="wrap reveal">
+  <span class="sec-no">02 — Qué puedes hacer hoy</span>
+  <h2 class="title">Capacidades operativas</h2>
+  <p class="sec-intro">No es una idea: el núcleo y los dos proveedores nativos corren end-to-end sobre datos reales chilenos. Todo esto funciona ahora.</p>
+
+  <div class="caps">
+    <div class="cap feature">
+      <span class="tag">deslizamientos</span>
+      <h3>Nowcast por umbral I–D</h3>
+      <p>Combina un raster de susceptibilidad con lluvia y un umbral intensidad–duración (preset Caine 1980 o regional). Devuelve un <code>HazardField</code> por paso y <code>Alert</code>s con celdas, fracción y peak.</p>
+    </div>
+    <div class="cap feature">
+      <span class="tag">crecidas</span>
+      <h3>Nowcast por caudal Q/Q_c</h3>
+      <p>Toma el hidrograma de <code>rainflow</code> (GR4J/HBV) y dispara sobre exceedancia de un umbral de caudal. <code>FloodThreshold::quantile</code> deriva Q_c de la serie.</p>
+    </div>
+    <div class="cap">
+      <span class="tag">forzante intercambiable</span>
+      <h3>El trait <code>Forcing</code></h3>
+      <p>Una sola interfaz abstrae lluvia observada (CSV), grillada (CR2MET), sub-diaria (IMERG) y nativa (rainflow / snowmelt). Cambias la resolución sin tocar el motor.</p>
+    </div>
+    <div class="cap">
+      <span class="tag">deshielo distribuido</span>
+      <h3>Rain + melt por celda</h3>
+      <p><code>nowcast-snowmelt</code> envuelve <code>snowmelt-rs</code> y entrega agua efectiva (lluvia + deshielo) celda a celda sobre un DEM — el mecanismo rain-on-snow.</p>
+    </div>
+    <div class="cap">
+      <span class="tag">validación</span>
+      <h3>Backtesting con métricas EWS</h3>
+      <p>Contingencia mensual (POD / FAR / CSI / bias), matching espacial event-céntrico, ROC-AUC y POD@área. Calibración de umbral regional y split-sample.</p>
+    </div>
+    <div class="cap">
+      <span class="tag">ingeniería</span>
+      <h3>Rust, sin deps en el núcleo</h3>
+      <p><code>nowcast-core</code> depende solo de <code>std</code> + <code>thiserror</code>: compila y testea offline. Targets PyO3 y CLI en el roadmap, espejando la familia.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ARQUITECTURA -->
+<section class="wrap reveal">
+  <span class="sec-no">03 — Arquitectura</span>
+  <h2 class="title">Una forzante, muchas fuentes</h2>
+  <p class="sec-intro">El motor no sabe de dónde viene el agua. Esa indirección —el trait <code>Forcing</code>— es lo que deja enchufar una estación, un satélite o un modelo hidrológico completo sin reescribir la lógica de peligro.</p>
+
+  <div class="arch">
+    <div class="trait-card">
+      <h3>trait <code style="color:inherit">Forcing</code></h3>
+      <p>Lámina de agua por celda y paso de tiempo. Acceso aleatorio: la lógica I–D necesita acumular ventanas móviles y el backtesting reproduce series fechadas completas.</p>
+      <pre><span class="kw">pub trait</span> Forcing {
+    <span class="kw">fn</span> <span class="fn">dims</span>(&self) -> GridDims;
+    <span class="kw">fn</span> <span class="fn">n_steps</span>(&self) -> usize;
+    <span class="kw">fn</span> <span class="fn">dt_hours</span>(&self) -> f64;
+    <span class="kw">fn</span> <span class="fn">depth_mm</span>(&self, celda, paso) -> f64;
+}</pre>
+    </div>
+    <div class="crates">
+      <div class="crate">
+        <span class="name">nowcast-core</span><span class="st">v0.1 ✓</span>
+        <span class="desc">Motor: Forcing · SusceptibilityMap · IdThreshold · TriggerModel · Nowcast · HazardField · Alert · backtest.</span>
+      </div>
+      <div class="crate snow">
+        <span class="name">nowcast-snowmelt</span><span class="st">v0.2 ✓</span>
+        <span class="desc">Proveedor distribuido: envuelve snowmelt-core, runoff rain+melt por celda.</span>
+      </div>
+      <div class="crate hydro">
+        <span class="name">nowcast-rainflow</span><span class="st">v0.2 ✓</span>
+        <span class="desc">Proveedor de crecidas: hidrograma GR4J/HBV + gatillo de exceedancia de caudal.</span>
+      </div>
+      <div class="crate plan">
+        <span class="name">nowcast-cli</span><span class="st">planificado</span>
+        <span class="desc">Runner / driver de backtesting por línea de comandos.</span>
+      </div>
+      <div class="crate plan">
+        <span class="name">nowcast-python</span><span class="st">planificado</span>
+        <span class="desc">Bindings PyO3 (maturin), espejando la familia de motores.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ARCO DE RESOLUCIÓN -->
+<section class="wrap reveal">
+  <span class="sec-no">04 — El hallazgo central</span>
+  <h2 class="title">El arco de resolución</h2>
+  <p class="sec-intro">Validamos el mismo motor con tres resoluciones de forzante sobre datos reales (SERNAGEOMIN + CR2MET + GPM IMERG). La conclusión no la esperábamos: el cuello de botella no es el modelo, es la resolución del dato.</p>
+
+  <div class="arc">
+    <div class="arc-step">
+      <span class="n">01 · LUMPED</span>
+      <h3>CR2MET centroide</h3>
+      <p class="res">diaria · 1 punto · 1979–2016</p>
+      <div class="metric ok">a* ≈ 5,5</div>
+      <div class="metric-l">intercepto I–D regional (mm/h), robusto y transferible split-sample (POD val ≈ 0,50)</div>
+      <div class="verdict">El umbral global de Caine (a=14,82) <b>nunca dispara</b> (POD 0). Hay señal temporal, pero una sola estación deja un FAR ~0,9 estructural.</div>
+    </div>
+    <div class="arc-step">
+      <span class="n">02 · DISTRIBUIDA</span>
+      <h3>CR2MET grilla 15×18</h3>
+      <p class="res">diaria · 5 km · susc. real RandomForest</p>
+      <div class="metric warn">AUC ≈ 0,48</div>
+      <div class="metric-l">las tres configuraciones (lumped, distribuida, ×susceptibilidad) cerca del azar</div>
+      <div class="verdict">A 5 km/diaria la lluvia grillada <b>no discrimina</b> las celdas-mes de evento. Distribuir no ayuda: el límite es la resolución del dato, no el lumping. Verificado en Python.</div>
+    </div>
+    <div class="arc-step">
+      <span class="n">03 · SUB-DIARIA</span>
+      <h3>GPM IMERG</h3>
+      <p class="res">semihoraria · ~10 km · Atacama 2015</p>
+      <div class="metric ok">05:00 UTC</div>
+      <div class="metric-l">hora exacta de cruce del umbral I–D, 24-mar-2015 — el dato diario solo marca "el día 24"</div>
+      <div class="verdict">La resolución <b>sub-diaria</b> fija el cruce a un timestamp y entrega lead-time horario. Es lo que convierte la lógica en un nowcast operacional.</div>
+    </div>
+  </div>
+
+  <!-- Lead-time chart -->
+  <div class="chartwrap">
+    <h3>Lead-time sub-diario — núcleo de tormenta de Atacama, marzo 2015</h3>
+    <p class="cap-l">Intensidad horaria real GPM IMERG en la celda del núcleo (lon −70,45, lat −27,15; total 108,5 mm). La forzante semihoraria fija el cruce del umbral; la misma lluvia agregada a diario (bloques de fondo) solo distingue el día.</p>
+    <svg id="lead" viewBox="0 0 760 250" role="img" aria-label="Serie de intensidad horaria IMERG con cruce de umbral y onset de aluviones"></svg>
+    <div class="legend">
+      <span><i style="background:var(--hydro)"></i>intensidad IMERG (mm/h)</span>
+      <span><i style="background:var(--ok)"></i>cruce umbral I–D</span>
+      <span><i style="background:var(--hazard)"></i>aluviones reportados</span>
+      <span><i style="background:var(--paper-3)"></i>agregado diario</span>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- READOUTS -->
+<section class="wrap reveal">
+  <span class="sec-no">05 — Salidas reales</span>
+  <h2 class="title">Lo que imprime el motor</h2>
+  <p class="sec-intro">Ejemplos ejecutables sobre datos reales. Sin maquillaje: incluye un resultado negativo honesto.</p>
+
+  <div class="terms">
+    <div class="term">
+      <div class="term-bar"><span></span><span></span><span></span><span class="cmd">cargo run --example backtest · Río Maipo</span></div>
+      <pre>Maipo I–D backtest — 13880 días, 157 eventos
+  a= 4.0 | POD 0.58  FAR 0.93  CSI 0.07
+  a= 5.0 | POD 0.53  FAR 0.92  CSI 0.07
+<b>BEST a=5.5 | POD 0.53  FAR 0.92  CSI 0.08</b>
+  → a* regional = 5.5 mm/h (vs Caine 14.82)
+
+split-sample (impares→pares):
+  val | POD 0.50  FAR 0.93
+Caine global a=14.82: <b>POD 0.00</b></pre>
+      <p class="note">Caine global nunca dispara; el intercepto regional valida fuera de muestra.</p>
+    </div>
+
+    <div class="term">
+      <div class="term-bar"><span></span><span></span><span></span><span class="cmd">cargo run -p nowcast-rainflow --example itata_flood</span></div>
+      <pre>Itata (8123001) — 13880 días, GR4J
+Q simulado: media 3.3, max 96.6 mm/día
+umbral Q_c(p=0.98) = <u>24.8 mm/día</u>
+alertas: <b>243 días (1.8%)</b>
+
+mayores eventos:
+  <u>2006-07-11</u>  96.6  Q/Q_c 3.89
+  <u>1983-06-17</u>  81.2  Q/Q_c 3.27
+  <u>1979-07-28</u>  70.7  Q/Q_c 2.85</pre>
+      <p class="note">Crecidas concentradas en invierno austral — coherente con un régimen pluvial.</p>
+    </div>
+
+    <div class="term">
+      <div class="term-bar"><span></span><span></span><span></span><span class="cmd">cargo run -p nowcast-snowmelt --example rain_on_snow</span></div>
+      <pre>Misma tormenta cálida de 50 mm:
+ elev   A lluvia   B lluvia+nieve
+ 1500     50.0        <b>86.0</b>
+ 2100     50.0        <b>70.4</b>
+ 2500     50.0        <b>60.0</b>
+media     50.0        <b>73.0  (+46%)</b>
+
+peak hazard: A 0.865 → B <b>0.900</b></pre>
+      <p class="note">El deshielo amplifica el agua y se distribuye por el lapse-rate: lo que una estación única no ve.</p>
+    </div>
+
+    <div class="term">
+      <div class="term-bar"><span></span><span></span><span></span><span class="cmd">cargo run --example atacama_subdaily · GPM IMERG</span></div>
+      <pre>Atacama 2015 — semihorario (UTC)
+total núcleo 108.5 mm; peak <b>40.0 mm/h</b>
+
+trigger I–D (a=4.0):
+ <u>half-hourly</u>: alerta <b>2015-03-24T04:30</b>
+ <u>daily</u>: alerta "2015-03-24" — <b>sin
+   timing intra-diario</b></pre>
+      <p class="note">Misma lluvia, dos resoluciones: el semihorario fija la hora; el diario no.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- HALLAZGOS -->
+<section class="wrap reveal">
+  <span class="sec-no">06 — Hallazgos honestos</span>
+  <h2 class="title">Lo que aprendimos</h2>
+
+  <div class="finds">
+    <div class="find">
+      <span class="idx">01</span>
+      <div>
+        <h3>El umbral global no sirve en Chile central</h3>
+        <p>La curva de Caine (1980) con a=14,82 <b>nunca dispara</b> sobre forzante diaria CR2MET en la precordillera del Maipo. Hay que recalibrar: el intercepto regional <b>a* ≈ 5,5 mm/h</b> es robusto y transfiere split-sample (POD validación ≈ 0,50).</p>
+      </div>
+    </div>
+    <div class="find">
+      <span class="idx">02</span>
+      <div>
+        <h3>El FAR alto es estructural, no un bug</h3>
+        <p>Con tasa base ~4% y una sola estación, el FAR ~0,9 es inevitable. Por eso el backtest espacial usa <b>ROC-AUC y POD@área</b>, no CSI/FAR: el inventario SERNAGEOMIN es disperso e incompleto y castiga métricas absolutas.</p>
+      </div>
+    </div>
+    <div class="find">
+      <span class="idx">03</span>
+      <div>
+        <h3>La resolución manda</h3>
+        <p>Distribuir la lluvia CR2MET (5 km, diaria) <b>no mejora la discriminación</b> (AUC ≈ 0,48): a esa escala el dato grillado no separa las celdas-mes de evento, y la susceptibilidad de 30 m promediada a 5 km pierde su filo. El límite es el dato, no el modelo.</p>
+      </div>
+    </div>
+    <div class="find">
+      <span class="idx">04</span>
+      <div>
+        <h3>Lo sub-diario desbloquea el lead-time</h3>
+        <p>Con GPM IMERG semihorario, el umbral I–D se cruza a las <b>05:00 UTC del 24-mar-2015</b> en el núcleo de tormenta — horas antes de los aluviones. La agregación diaria solo dice "el día 24". El trait <code>Forcing</code> hace esa resolución intercambiable.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- CÓMO CORRER + ROADMAP -->
+<section class="wrap reveal">
+  <span class="sec-no">07 — Reproducir &amp; seguir</span>
+  <h2 class="title">Corre en tu máquina</h2>
+
+  <div class="run">
+    <h3>Seis ejemplos, datos reales</h3>
+    <pre><span class="c"># núcleo: lluvia observada × susceptibilidad → alertas</span>
+cargo run <span class="p">--example</span> quickstart
+<span class="c"># backtest SERNAGEOMIN (Río Maipo, CR2MET 1979–2016)</span>
+cargo run <span class="p">--example</span> backtest
+<span class="c"># backtest distribuido, ROC-AUC / POD@área</span>
+cargo run <span class="p">--example</span> backtest_distributed
+<span class="c"># crecidas: GR4J sobre CAMELS-CL Itata</span>
+cargo run <span class="p">-p</span> nowcast-rainflow <span class="p">--example</span> itata_flood
+<span class="c"># rain-on-snow distribuido por el DEM</span>
+cargo run <span class="p">-p</span> nowcast-snowmelt <span class="p">--example</span> rain_on_snow
+<span class="c"># lead-time sub-diario con GPM IMERG (Atacama 2015)</span>
+cargo run <span class="p">--example</span> atacama_subdaily</pre>
+  </div>
+
+  <div class="road">
+    <div>
+      <span class="tag">próximo</span>
+      <h3>Forzante de alta resolución</h3>
+      <p>QPE radar / satélite o rainflow-snowmelt sub-cuenca para superar el límite de CR2MET medido aquí.</p>
+    </div>
+    <div>
+      <span class="tag">v0.2</span>
+      <h3>Acople Hydroflux + XAI</h3>
+      <p>Físico para zonas críticas y trazabilidad SHAP de cada alerta.</p>
+    </div>
+    <div>
+      <span class="tag">interfaces</span>
+      <h3>CLI &amp; PyO3</h3>
+      <p>Driver de línea de comandos y bindings Python, espejando la familia de motores.</p>
+    </div>
+    <div>
+      <span class="tag">difusión</span>
+      <h3>Paper</h3>
+      <p>El arco de resolución (lumped → distribuida → sub-diaria) como eje. Venue: NHESS · Landslides · Natural Hazards.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span class="nm">nowcast</span>
+    <p>
+      Motor de nowcasting de geohazards · Rust 2024<br>
+      4 crates · 24 tests + doctests · clippy −D warnings limpio · 8 commits<br>
+      Datos: SERNAGEOMIN · CR2MET v2.5 · CAMELS-CL · GPM IMERG v07
+    </p>
+  </div>
+</footer>
+
+<script>
+  // ── Lead-time chart: real hourly IMERG storm-core intensity (mm/h, UTC) ──
+  const series = [0,0,0.05,0.26,7.78,31.94,39.83,23.65,3.37,0,0,0,0,0,0,0.75,0,0,0,0,0,0,0,0,0,0.12,0,0,0,0.06,0,0,0,0,0.04,0.05,0.28,0.28,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+  const daily = [107.6, 0.8, 0.0]; // mm/day, 24/25/26 Mar
+  const W=760, H=250, padL=40, padR=14, padT=18, padB=34;
+  const iw = W - padL - padR, ih = H - padT - padB;
+  const n = series.length, maxR = 42;
+  const x = i => padL + (i/(n)) * iw;
+  const y = v => padT + ih - (v/maxR)*ih;
+  const crossH = 4.5;   // hour of I-D crossing (24T04:30 ≈ h4.5)
+  const onsetH = 45;    // documented onset 25T21:00 UTC ≈ h45
+  const svg = document.getElementById('lead');
+  const NS='http://www.w3.org/2000/svg';
+  const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+  // daily background blocks
+  daily.forEach((d,di)=>{
+    const bx=x(di*24), bw=x(di*24+24)-bx;
+    svg.appendChild(el('rect',{x:bx,y:padT,width:bw-1,height:ih,fill:'var(--paper-3)','fill-opacity': di===0?0.9:0.45}));
+    const lab=el('text',{x:bx+6,y:padT+ih-7,'font-family':'IBM Plex Mono','font-size':10,fill:'var(--ink-soft)'});
+    lab.textContent=(24+di)+'-mar · '+d.toFixed(0)+' mm/día'; svg.appendChild(lab);
+  });
+  // baseline
+  svg.appendChild(el('line',{x1:padL,y1:y(0),x2:W-padR,y2:y(0),stroke:'var(--ink)','stroke-width':1}));
+  // y ticks
+  [0,10,20,30,40].forEach(v=>{
+    svg.appendChild(el('line',{x1:padL-4,y1:y(v),x2:padL,y2:y(v),stroke:'var(--ink-soft)'}));
+    const t=el('text',{x:padL-7,y:y(v)+3,'text-anchor':'end','font-family':'IBM Plex Mono','font-size':9,fill:'var(--ink-soft)'});
+    t.textContent=v; svg.appendChild(t);
+  });
+  // area path
+  let d=`M ${x(0)} ${y(0)}`;
+  series.forEach((v,i)=> d+=` L ${x(i+0.5)} ${y(v)}`);
+  d+=` L ${x(n)} ${y(0)} Z`;
+  const area=el('path',{d,fill:'var(--hydro)','fill-opacity':0.18,stroke:'var(--hydro)','stroke-width':1.8,'stroke-linejoin':'round'});
+  svg.appendChild(area);
+  // crossing marker
+  svg.appendChild(el('line',{x1:x(crossH),y1:padT-2,x2:x(crossH),y2:y(0),stroke:'var(--ok)','stroke-width':2,'stroke-dasharray':'2 3'}));
+  const ct=el('text',{x:x(crossH)+5,y:padT+8,'font-family':'IBM Plex Mono','font-size':10,'font-weight':600,fill:'var(--ok)'});
+  ct.textContent='cruce I–D · 24T05:00'; svg.appendChild(ct);
+  // onset marker
+  svg.appendChild(el('line',{x1:x(onsetH),y1:padT-2,x2:x(onsetH),y2:y(0),stroke:'var(--hazard)','stroke-width':2}));
+  const ot=el('text',{x:x(onsetH)-5,y:padT+8,'text-anchor':'end','font-family':'IBM Plex Mono','font-size':10,'font-weight':600,fill:'var(--hazard)'});
+  ot.textContent='aluviones reportados'; svg.appendChild(ot);
+  // lead-time bracket
+  const by=y(0)+18;
+  svg.appendChild(el('line',{x1:x(crossH),y1:by,x2:x(onsetH),y2:by,stroke:'var(--ochre)','stroke-width':1}));
+  ['M'+x(crossH)+' '+(by-3)+'V'+(by+3),'M'+x(onsetH)+' '+(by-3)+'V'+(by+3)].forEach(p=>svg.appendChild(el('path',{d:p,stroke:'var(--ochre)'})));
+  const lt=el('text',{x:(x(crossH)+x(onsetH))/2,y:by+13,'text-anchor':'middle','font-family':'IBM Plex Mono','font-size':10,fill:'var(--ochre)'});
+  lt.textContent='≈ 40 h de lead-time'; svg.appendChild(lt);
+
+  // ── staggered reveal (opt-in; content stays visible without JS) ──
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    document.documentElement.classList.add('js-reveal');
+    const obs=new IntersectionObserver((es)=>es.forEach((e)=>{
+      if(e.isIntersecting){ e.target.classList.add('is-in'); obs.unobserve(e.target);}
+    }),{threshold:0.06, rootMargin:'0px 0px -8% 0px'});
+    document.querySelectorAll('.reveal').forEach(s=>obs.observe(s));
+  }
+</script>
+</body>
+</html>
