@@ -105,6 +105,20 @@ crossed at 2015-03-24 05:00 UTC — hours ahead of the documented flows, a
 timestamp the daily aggregate (107.6 mm on the 24th, no intra-day structure)
 cannot resolve.
 
+**Head-to-head (`resolution_headtohead`)** — same storm core, same I–D engine,
+CR2MET daily vs IMERG half-hourly:
+
+| | CR2MET daily (~5 km) | IMERG ½-hourly (~10 km) |
+|---|---|---|
+| event total | 30.1 mm | 108.5 mm |
+| max resolvable intensity | 0.66 mm/h | 40.0 mm/h |
+| I–D (a=4.0) | **no alert** (E ≤ 0.62) | **alert 24-Mar 04:30** (E≈12) |
+
+With a daily value the finest resolvable duration is 24 h, so the peak intensity
+is capped at *(total / 24 h)* and smeared below the I–D curve — the daily product
+**structurally cannot trigger**, regardless of total. Higher-resolution forcing
+overcomes the limit with no change to the engine (same `Forcing` trait).
+
 ## v0.2 — flood nowcasting from routed discharge (done)
 
 `nowcast-rainflow` wraps the `rainflow` GR4J/HBV engine. A flood's trigger is

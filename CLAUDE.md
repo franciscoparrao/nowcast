@@ -90,6 +90,15 @@ motores se enchufan como proveedores nativos en v0.2.
       IMERG aterrizable es Atacama 2015 (zona hiperárida → no es test de
       discriminación como Maipo, sí de resolución temporal). Confirma que el trait
       `Forcing` hace la resolución intercambiable.
+- [x] **Head-to-head de resolución** (`examples/resolution_headtohead.rs` +
+      `scripts/extract_atacama_cr2met.py`): mismo núcleo de tormenta, mismo motor
+      I-D, CR2MET diario vs IMERG semihorario. CR2MET ve 30.1 mm, intensidad
+      resoluble 0.66 mm/h (=total/24h) → E máx 0.62 → **NO gatilla**. IMERG ve
+      108.5 mm, peak 40 mm/h → **ALERTA 24-mar 04:30, E≈12**. Demuestra
+      cuantitativamente que la resolución diaria *estructuralmente* no puede
+      gatillar I-D (la intensidad máxima resoluble es total/24h), y que subir la
+      resolución de la forzante supera el límite sin tocar el motor. Es la
+      respuesta a "superar el límite de CR2MET".
 - [ ] (v0.2) Acople con Hydroflux y XAI (SHAP) para trazabilidad.
 
 ## Arquitectura tentativa

@@ -133,6 +133,22 @@
   .legend{display:flex; flex-wrap:wrap; gap:1.1rem; font-family:var(--f-mono); font-size:.74rem; color:var(--ink-soft); margin-top:1rem}
   .legend i{width:1.6em; height:.5em; display:inline-block; vertical-align:middle; margin-right:.45em; border-radius:1px}
 
+  /* ── Versus (resolution head-to-head) ─────────────────── */
+  .versus{margin-top:1.6rem}
+  .versus h3{font-size:1.25rem; margin-bottom:.2rem}
+  .versus .cap-l{color:var(--ink-soft); font-size:.92rem; max-width:64ch; margin-bottom:1.2rem}
+  .vs-grid{display:grid; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:3px; overflow:hidden}
+  @media(min-width:680px){ .vs-grid{grid-template-columns:1fr 1fr} }
+  .vs-col{background:var(--paper); padding:1.2rem 1.3rem}
+  .vs-col.feat{background:var(--paper-2)}
+  .vs-h{font-family:var(--f-mono); font-size:.74rem; letter-spacing:.06em; color:var(--ink-soft); text-transform:uppercase}
+  .vs-row{display:flex; justify-content:space-between; align-items:baseline; gap:1rem; padding:.55rem 0; border-bottom:1px solid var(--line)}
+  .vs-row span{font-size:.92rem; color:var(--ink-soft)}
+  .vs-row b{font-family:var(--f-display); font-weight:600; font-size:1.4rem; letter-spacing:-0.02em}
+  .vs-verdict{font-family:var(--f-mono); font-size:.82rem; margin-top:.9rem; padding:.5em .7em; border-radius:2px}
+  .vs-verdict.warn{color:var(--hazard); background:oklch(0.565 0.183 33 / 0.09)}
+  .vs-verdict.ok{color:var(--ok); background:oklch(0.585 0.118 150 / 0.10)}
+
   /* ── Terminal readouts ────────────────────────────────── */
   .terms{display:grid; gap:1.3rem; margin-top:2.4rem}
   @media(min-width:880px){ .terms{grid-template-columns:1fr 1fr} }
@@ -354,6 +370,25 @@
       <span><i style="background:var(--hazard)"></i>aluviones reportados</span>
       <span><i style="background:var(--paper-3)"></i>agregado diario</span>
     </div>
+
+    <div class="versus">
+      <h3>¿Se supera el límite? CR2MET diario vs GPM IMERG sub-diario</h3>
+      <p class="cap-l">Mismo núcleo de tormenta, mismo motor I–D. Con resolución diaria la intensidad máxima resoluble es (total / 24 h): el aguacero queda diluido bajo la curva y el producto diario <b>no gatilla</b>, sin importar el total. La forzante sub-diaria resuelve el peak real y dispara con horas de antelación.</p>
+      <div class="vs-grid">
+        <div class="vs-col">
+          <span class="vs-h">CR2MET · diario · ~5 km</span>
+          <div class="vs-row"><span>total del evento</span><b>30,1 mm</b></div>
+          <div class="vs-row"><span>intensidad resoluble</span><b>0,66 mm/h</b></div>
+          <div class="vs-verdict warn">I–D (a=4,0): sin alerta · E máx 0,62 &lt; 1</div>
+        </div>
+        <div class="vs-col feat">
+          <span class="vs-h">GPM IMERG · 30 min · ~10 km</span>
+          <div class="vs-row"><span>total del evento</span><b>108,5 mm</b></div>
+          <div class="vs-row"><span>intensidad resoluble</span><b>40,0 mm/h</b></div>
+          <div class="vs-verdict ok">I–D (a=4,0): ALERTA 24-mar 04:30 · E=12</div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -480,7 +515,9 @@ cargo run <span class="p">-p</span> nowcast-rainflow <span class="p">--example</
 <span class="c"># rain-on-snow distribuido por el DEM</span>
 cargo run <span class="p">-p</span> nowcast-snowmelt <span class="p">--example</span> rain_on_snow
 <span class="c"># lead-time sub-diario con GPM IMERG (Atacama 2015)</span>
-cargo run <span class="p">--example</span> atacama_subdaily</pre>
+cargo run <span class="p">--example</span> atacama_subdaily
+<span class="c"># head-to-head de resolución: CR2MET diario vs IMERG sub-diario</span>
+cargo run <span class="p">--example</span> resolution_headtohead</pre>
   </div>
 
   <div class="road">
