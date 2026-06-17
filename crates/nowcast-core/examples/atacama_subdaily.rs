@@ -8,7 +8,8 @@
 //! how much lead time does that give before the debris flows?
 //!
 //! Inputs (regenerate with `scripts/extract_atacama_imerg.py`, needs Earthdata):
-//!   - `data/atacama_imerg_hhr.csv`  datetime, mean_mm_hr, max_mm_hr (basin).
+//!   - `data/atacama_imerg_hhr.csv`  datetime, core_mm_hr, boxmean_mm_hr — the
+//!     fixed storm-core cell rate and a 3×3-cell box mean around it.
 //!
 //! Run with: `cargo run --example atacama_subdaily`
 //!
@@ -22,9 +23,10 @@ use nowcast_core::{
     Forcing, GridDims, IdThreshold, Nowcast, SusceptibilityMap, TriggerModel, UniformRain,
 };
 
-// Documented onset of the main Copiapó / El Salado debris flows: afternoon of
-// 25 March 2015. Used only to express lead time; approximate, from literature.
-const ONSET: &str = "2015-03-25T15:00:00";
+// IMERG timestamps are UTC (Chile is UTC−3). The main Copiapó / El Salado debris
+// flows are documented on the evening of 25 March 2015 local time (~18:00 local
+// ≈ 21:00 UTC). Used only to express lead time; approximate, from literature.
+const ONSET: &str = "2015-03-25T21:00:00";
 const DT_HALFHOUR: f64 = 0.5;
 const MAX_WINDOW_HH: usize = 48; // rolling I–D windows up to 24 h (48 half-hours)
 
@@ -52,9 +54,11 @@ fn read_series() -> (Vec<String>, Vec<f64>) {
     for line in text.lines().skip(1) {
         let mut f = line.split(',');
         let ts = f.next().unwrap().to_string();
-        let mean: f64 = f.next().unwrap().parse().unwrap_or(0.0);
+        // Fixed storm-core cell rate (mm/hr): the localised intensity where flows
+        // initiate (not a wandering box maximum). 3rd column is the 3×3 box mean.
+        let core: f64 = f.next().unwrap().parse().unwrap_or(0.0);
         stamps.push(ts);
-        rate.push(mean); // mm/hr, basin-mean
+        rate.push(core);
     }
     (stamps, rate)
 }
@@ -99,13 +103,13 @@ fn main() {
     };
 
     println!(
-        "Atacama 2015 — GPM IMERG half-hourly, {} steps ({} … {})",
+        "Atacama 2015 — GPM IMERG half-hourly (storm-core cell, times UTC), {} steps ({} … {})",
         n,
         &stamps[0],
         &stamps[n - 1]
     );
-    println!("Storm total (basin-mean): {total:.1} mm\n");
-    println!("Peak rolling intensity (basin-mean):");
+    println!("Storm total (storm core): {total:.1} mm\n");
+    println!("Peak rolling intensity (storm core):");
     for (label, w) in [("30 min", 1usize), ("1 h", 2), ("3 h", 6), ("6 h", 12), ("24 h", 48)] {
         let (i, at) = peak_intensity(w);
         println!("  {label:>6}: {i:5.2} mm/h  at {}", stamps[at]);

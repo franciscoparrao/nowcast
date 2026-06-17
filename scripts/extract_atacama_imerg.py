@@ -45,34 +45,59 @@ def file_time(path):
     return datetime.strptime(day + s, "%Y%m%d%H%M%S")
 
 
+def _grid(da, w, s, e, n):
+    """Subset a (lon, lat) DataArray to the bbox; return values + coords."""
+    da = da.sel(lon=slice(w, e), lat=slice(s, n)).squeeze("time")
+    return da
+
+
 def extract():
     files = sorted(glob.glob(os.path.join(RAW, "*.HDF5")), key=file_time)
     if not files:
         raise SystemExit("no HDF5 granules found — run download() first")
     w, s, e, n = BBOX
+
+    # Pass 1: per-cell storm total over the bbox → locate the storm core, so the
+    # series is a fixed point (no wandering maximum that over-counts the total).
+    total = None
+    lons = lats = None
+    for fp in files:
+        ds = xr.open_dataset(fp, group="Grid")
+        var = "precipitation" if "precipitation" in ds else "precipitationCal"
+        da = _grid(ds[var], w, s, e, n)
+        a = np.nan_to_num(np.asarray(da.values, dtype="float64"), nan=0.0)
+        a = np.clip(a, 0.0, None) * 0.5  # mm in this half-hour
+        total = a if total is None else total + a
+        if lons is None:
+            lons, lats = da["lon"].values, da["lat"].values
+        ds.close()
+    ci = np.unravel_index(np.argmax(total), total.shape)  # storm-core (lon_i, lat_i)
+    core_lon, core_lat = float(lons[ci[0]]), float(lats[ci[1]])
+    print(f"storm core at lon {core_lon:.2f}, lat {core_lat:.2f}; "
+          f"event total there {total[ci]:.1f} mm")
+
+    # Pass 2: fixed storm-core cell rate + a tight 3×3-cell box mean around it.
     rows = []
     for fp in files:
         ds = xr.open_dataset(fp, group="Grid")
         var = "precipitation" if "precipitation" in ds else "precipitationCal"
-        da = ds[var]  # dims (time, lon, lat), mm/hr
-        da = da.sel(lon=slice(w, e), lat=slice(s, n)).squeeze("time")
-        vals = np.asarray(da.values, dtype="float64")
-        vals = vals[np.isfinite(vals)]
-        vals = vals[vals >= 0]
-        if vals.size == 0:
-            mean_r = max_r = 0.0
-        else:
-            mean_r, max_r = float(vals.mean()), float(vals.max())
-        rows.append((file_time(fp).strftime("%Y-%m-%dT%H:%M:%S"), mean_r, max_r))
+        a = np.nan_to_num(np.asarray(_grid(ds[var], w, s, e, n).values, "float64"), nan=0.0)
+        a = np.clip(a, 0.0, None)
+        core = float(a[ci])
+        i0, i1 = max(0, ci[0] - 1), ci[0] + 2
+        j0, j1 = max(0, ci[1] - 1), ci[1] + 2
+        boxmean = float(a[i0:i1, j0:j1].mean())
+        rows.append((file_time(fp).strftime("%Y-%m-%dT%H:%M:%S"), core, boxmean))
         ds.close()
+
     with open(OUT, "w", newline="") as f:
         wri = csv.writer(f)
-        wri.writerow(["datetime", "mean_mm_hr", "max_mm_hr"])
+        wri.writerow(["datetime", "core_mm_hr", "boxmean_mm_hr"])
         wri.writerows(rows)
-    peak = max(rows, key=lambda r: r[2])
+    peak = max(rows, key=lambda r: r[1])
+    tot = sum(r[1] for r in rows) * 0.5
     print(f"wrote {len(rows)} half-hours to {OUT}")
-    print(f"peak cell rate {peak[2]:.1f} mm/hr at {peak[0]}; "
-          f"max basin-mean {max(r[1] for r in rows):.1f} mm/hr")
+    print(f"storm-core total {tot:.1f} mm; peak rate {peak[1]:.1f} mm/hr at {peak[0]}")
 
 
 if __name__ == "__main__":

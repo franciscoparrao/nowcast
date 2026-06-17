@@ -21,7 +21,7 @@ python3 scripts/extract_maipo_distributed.py  # distributed grid — also needs 
 
 | file | content | source |
 |---|---|---|
-| `atacama_imerg_hhr.csv` | half-hourly rainfall rate (basin-mean & peak, mm/hr) over the Mar 2015 Atacama event | **GPM IMERG** Final half-hourly `GPM_3IMERGHH` v07, ~0.1°, via `scripts/extract_atacama_imerg.py` (NASA GES DISC) |
+| `atacama_imerg_hhr.csv` | half-hourly rainfall rate (`core_mm_hr` = fixed storm-core cell, `boxmean_mm_hr` = 3×3-cell mean) over the Mar 2015 Atacama event | **GPM IMERG** Final half-hourly `GPM_3IMERGHH` v07, ~0.1°, via `scripts/extract_atacama_imerg.py` (NASA GES DISC). Storm core located at lon −70.45, lat −27.15 (108.5 mm event total). |
 
 > **Earthdata prerequisite.** GES DISC downloads require a one-time account step:
 > log into <https://urs.earthdata.nasa.gov> → *Applications → Authorized Apps* and

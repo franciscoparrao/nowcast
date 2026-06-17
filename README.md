@@ -98,10 +98,12 @@ cargo run --example atacama_subdaily
 ```
 
 Same engine, two resolutions: half-hourly pins the threshold crossing to a
-timestamp (hours of lead time before the flows), while the same rain aggregated
-to daily can only flag the day — no intra-day timing. (Logic smoke-tested;
-running on real IMERG needs the one-time Earthdata GES DISC authorization noted
-in `data/README.md`.)
+timestamp, while the same rain aggregated to daily can only flag the day — no
+intra-day timing. On the real IMERG data, the storm-core cell (lon −70.45,
+lat −27.15; 108.5 mm event total) peaks at 40 mm/h and the I–D threshold is
+crossed at 2015-03-24 05:00 UTC — hours ahead of the documented flows, a
+timestamp the daily aggregate (107.6 mm on the 24th, no intra-day structure)
+cannot resolve.
 
 ## v0.2 — flood nowcasting from routed discharge (done)
 
