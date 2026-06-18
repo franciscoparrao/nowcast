@@ -224,8 +224,8 @@
     </div>
     <p class="lede">Nowcasting dinámico de peligros geológicos: la susceptibilidad deja de ser estática y se modula en el tiempo con la forzante que la gatilla.</p>
     <div class="status">
-      <span class="chip"><span class="dot"></span><b>4</b> crates Rust</span>
-      <span class="chip"><span class="dot"></span><b>25</b> tests + doctests</span>
+      <span class="chip"><span class="dot"></span><b>5</b> crates Rust</span>
+      <span class="chip"><span class="dot"></span><b>31</b> tests + doctests</span>
       <span class="chip"><span class="dot"></span>clippy <b>-D warnings</b> limpio</span>
       <span class="chip"><span class="dot"></span>build <b>offline</b> (core std-only)</span>
       <span class="chip"><span class="dot"></span><b>8</b> commits</span>
@@ -290,6 +290,11 @@
       <span class="tag">trazabilidad</span>
       <h3>Explicabilidad exacta</h3>
       <p>Como el peligro es forma cerrada, cada alerta se descompone <em>exactamente</em> en terreno × clima, con la ventana I–D que la gatilló y un contrafactual ("¿qué lluvia faltaría?"). Sin caja negra que aproximar.</p>
+    </div>
+    <div class="cap feature">
+      <span class="tag">refinamiento físico</span>
+      <h3>Acople Hydroflux 2D</h3>
+      <p>Donde el nowcast alerta, corre el solver shallow-water (HLLC + Audusse + Manning) sobre el DEM local: la probabilidad gruesa se vuelve <em>profundidad de inundación</em> por celda. La física dice dónde llega el agua.</p>
     </div>
     <div class="cap">
       <span class="tag">ingeniería</span>
@@ -560,9 +565,36 @@ Contrafactual — intensidad de 1 h para alcanzar alerta 0.5:
 
 <hr class="rule">
 
+<!-- REFINAMIENTO FÍSICO -->
+<section class="wrap reveal">
+  <span class="sec-no">08 — Refinamiento físico</span>
+  <h2 class="title">De alerta probable a inundación real</h2>
+  <p class="sec-intro">El nowcast es rápido y grueso: dice <em>cuándo</em> y aproximadamente <em>dónde</em> el caudal cruza el umbral. El acople con <strong>Hydroflux</strong> (solver 2D de aguas someras) corre solo donde ya hay alerta y refina esa marca en una <strong>profundidad de inundación física</strong> sobre el DEM local — un acople unidireccional y bajo demanda.</p>
+
+  <div class="terms" style="grid-template-columns:1fr">
+    <div class="term">
+      <div class="term-bar"><span></span><span></span><span></span><span class="cmd">cargo run -p nowcast-hydroflux --example couple_flood</span></div>
+      <pre>Alerta nowcast: 40 mm/día sobre 50 km² → inflow <b>23.1 m³/s</b> (prob 0.7)
+
+Inundación física: profundidad máx <b>0.75 m</b> · media 0.04 m · <b>9%</b> del valle inundado
+
+Sección transversal (▏=0,1 m):
+  col  4 [banca]   0.00 m
+  col  5 [<u>canal</u>]   <b>0.44 m</b>  ▏▏▏▏
+  col  6 [banca]   0.00 m
+
+Peligro refinado: la prob 0.7 se concentra en <b>24/264</b> celdas realmente
+  inundadas — el resto del polígono de alerta queda en 0.</pre>
+      <p class="note">El agua se concentra en el canal y deja secas las bancas: la física localiza el riesgo que el polígono de alerta no resuelve.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
 <!-- CÓMO CORRER + ROADMAP -->
 <section class="wrap reveal">
-  <span class="sec-no">08 — Reproducir &amp; seguir</span>
+  <span class="sec-no">09 — Reproducir &amp; seguir</span>
   <h2 class="title">Corre en tu máquina</h2>
 
   <div class="run">
@@ -584,7 +616,9 @@ cargo run <span class="p">--example</span> resolution_headtohead
 <span class="c"># tabla de lead-time multi-evento (3 climas, GPM IMERG)</span>
 cargo run <span class="p">--example</span> multi_event_leadtime
 <span class="c"># explicabilidad: por qué se dispara (o no) cada alerta</span>
-cargo run <span class="p">--example</span> explain_alert</pre>
+cargo run <span class="p">--example</span> explain_alert
+<span class="c"># refinamiento físico: alerta → inundación 2D (Hydroflux)</span>
+cargo run <span class="p">-p</span> nowcast-hydroflux <span class="p">--example</span> couple_flood</pre>
   </div>
 
   <div class="road">
@@ -594,9 +628,9 @@ cargo run <span class="p">--example</span> explain_alert</pre>
       <p>QPE radar / satélite o rainflow-snowmelt sub-cuenca para superar el límite de CR2MET medido aquí.</p>
     </div>
     <div>
-      <span class="tag">v0.2</span>
-      <h3>Acople Hydroflux</h3>
-      <p>Modelo físico para zonas críticas. La trazabilidad exacta de cada alerta ya está (ver §07).</p>
+      <span class="tag">datos</span>
+      <h3>Lead-time multi-evento</h3>
+      <p>Más aluviones fechados (radar/satélite de alta resolución) para robustecer la tabla de antelación.</p>
     </div>
     <div>
       <span class="tag">interfaces</span>

@@ -117,7 +117,16 @@ motores se enchufan como proveedores nativos en v0.2.
       `IdThreshold::intensity_for_exceedance`. SHAP aplica río arriba al modelo ML
       de susceptibilidad (Smelt/PGML), que entra como input ya interpretable. Ver
       `examples/explain_alert.rs`.
-- [ ] (v0.2) Acople con Hydroflux (modelo físico zonas críticas).
+- [x] (v0.2) **Acople físico con Hydroflux**: crate `nowcast-hydroflux` envuelve
+      `hydroflux-solver-2d` (shallow-water 2D HLLC + Audusse + Manning). Acople
+      unidireccional y bajo demanda: donde el nowcast alerta, corre el solver
+      sobre el DEM local y devuelve `DepthField` (profundidad de inundación por
+      celda). `Inundation::{run_rain, run_point_sources}`, `discharge_to_inflow_m3s`
+      (mm/día×área → m³/s), `DepthField::refined_hazard` (downscaling de la prob
+      gruesa al footprint físico). Ejemplo `couple_flood.rs`: 23 m³/s en un valle
+      → agua concentrada en el canal, bancas secas, prob 0.7 en 24/264 celdas.
+      NOTA: arrastra surtgis-core (gdal opcional OFF, usa tiff puro-Rust) → build
+      online una vez (luego cache). El core sigue offline.
 
 ## Arquitectura tentativa
 - `nowcast-core`: motor de reglas/umbrales + combinación susceptibilidad×trigger.

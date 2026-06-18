@@ -161,10 +161,25 @@ an already-interpretable input.
 cargo run --example explain_alert
 ```
 
-## Roadmap
+## Physical refinement (Hydroflux coupling)
 
-- Acople with Hydroflux (physical model for critical zones). Exact per-alert
-  traceability is done (above).
+`nowcast-hydroflux` wraps the `hydroflux` 2D shallow-water solver (HLLC + Audusse
++ Manning). One-way, on-demand: where the nowcast flags a flood, route the
+discharge over the local DEM to turn the coarse probability into a **physical
+inundation depth** per cell. `discharge_to_inflow_m3s` converts a routed
+discharge to a volumetric inflow; `DepthField::refined_hazard` downscales the
+alert onto the inundation footprint.
+
+```bash
+cargo run -p nowcast-hydroflux --example couple_flood
+```
+
+On a synthetic valley a 23 m³/s inflow concentrates in the channel (0.44 m) and
+spares the banks — the coarse alert's 0.7 probability lands on the 24 of 264
+cells that actually flood. (Pulls the hydrodynamic stack, so it builds online
+once; the core stays offline.)
+
+## Roadmap
 - CLI runner and PyO3 bindings (`nowcast-cli`, `nowcast-python`), matching the
   family's crate layout.
 

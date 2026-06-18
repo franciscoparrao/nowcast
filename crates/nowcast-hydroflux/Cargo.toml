@@ -1,0 +1,15 @@
+[package]
+name = "nowcast-hydroflux"
+description = "v0.2 physical refinement: drive the Hydroflux 2D shallow-water solver where the nowcast flags a flood, turning a probabilistic alert into a physical inundation depth."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+nowcast-core = { path = "../nowcast-core" }
+# Sibling hydrodynamic engine (hydroflux workspace). ndarray must be
+# semver-compatible so `Array2` / `Conserved2D` unify across the boundary.
+hydroflux-solver-2d = { path = "../../../postdoc/hydroflux/solver-2d" }
+ndarray = "0.16"
