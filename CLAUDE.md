@@ -127,6 +127,30 @@ motores se enchufan como proveedores nativos en v0.2.
       → agua concentrada en el canal, bancas secas, prob 0.7 en 24/264 celdas.
       NOTA: arrastra surtgis-core (gdal opcional OFF, usa tiff puro-Rust) → build
       online una vez (luego cache). El core sigue offline.
+- [x] **Bridge geoespacial con SurtGIS** (keystone): crate `nowcast-surtgis`
+      convierte `Raster<f32>` ↔ `SusceptibilityMap`/`GriddedRain`/`HazardField`
+      (GeoTIFF nativo, sin GDAL). `susceptibility_from_raster`/`read_susceptibility`
+      (clamp [0,1], nodata→0), `gridded_rain_from_rasters`, `hazard_to_raster`/
+      `write_hazard_geotiff` + `Georef` (lleva transform+crs). Saca al motor de
+      grillas sintéticas a rasters reales georreferenciados. Ejemplo
+      `geotiff_roundtrip.rs` lee el RandomForest real del Maipo (5149×5855,
+      [0.001,0.965]) y escribe un GeoTIFF de peligro. NOTA: bandas 0-indexed;
+      el motor usa prefix-sums por celda → coarsen a la resolución de la forzante,
+      no correr 30M celdas directo.
+
+### Integración con el ecosistema (roles)
+- **SurtGIS** → sustrato (susceptibilidad + I/O GeoTIFF + CRS). Adapter LISTO.
+- **rainflow / snowmelt** → forzantes (caudal / rain+melt). Adapters LISTOS.
+- **hydroflux** → acople físico de **crecidas** (profundidad 2D). Adapter LISTO.
+- **insar-rs** → forzante de **deformación** (2º trigger, lluvia+deformación);
+  requiere generalizar el trigger a fuentes de exceedancia componibles. PENDIENTE
+  (insar-rs en IDEA).
+- **swarm-abm** → **modelado del evento con agentes**: el modelo debris-flow
+  (agentes lluvia+flujo sobre raster) es el **acople físico del path de
+  deslizamientos/aluviones** (footprint/runout), análogo a hydroflux que es para
+  crecidas. NO es evacuación aguas abajo. Adapter PENDIENTE.
+- **firespread** → peligro paralelo (fuego): acople físico tipo hydroflux +
+  cascada post-incendio que modifica la susceptibilidad. PENDIENTE.
 
 ## Arquitectura tentativa
 - `nowcast-core`: motor de reglas/umbrales + combinación susceptibilidad×trigger.

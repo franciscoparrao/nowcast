@@ -201,6 +201,23 @@ crates/nowcast-snowmelt/   # v0.2 distributed rain+melt Forcing provider
 crates/nowcast-rainflow/   # v0.2 flood provider: discharge-exceedance trigger
   src/lib.rs               RainflowForcing + FloodThreshold + FloodNowcast
   examples/itata_flood.rs
+crates/nowcast-hydroflux/  # v0.2 physical refinement: 2D shallow-water inundation
+  src/lib.rs               Inundation + DepthField (+ couple_flood example)
+crates/nowcast-surtgis/    # geospatial bridge: Raster<->grid, GeoTIFF in/out
+  src/lib.rs               susceptibility_from_raster / write_hazard_geotiff
+  examples/geotiff_roundtrip.rs
+```
+
+## Geospatial I/O (SurtGIS bridge)
+
+`nowcast-core` is I/O-free; `nowcast-surtgis` is how real georeferenced data
+enters and leaves. It converts SurtGIS `Raster<f32>` ↔ `SusceptibilityMap` /
+`GriddedRain` / `HazardField` and writes hazard fields to GeoTIFF (native, no
+GDAL). The example ingests the real 30 m RandomForest susceptibility of the Río
+Maipo (5149×5855) and writes a georeferenced hazard GeoTIFF.
+
+```bash
+cargo run -p nowcast-surtgis --example geotiff_roundtrip
 ```
 
 ## License

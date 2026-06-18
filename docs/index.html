@@ -224,8 +224,8 @@
     </div>
     <p class="lede">Nowcasting dinámico de peligros geológicos: la susceptibilidad deja de ser estática y se modula en el tiempo con la forzante que la gatilla.</p>
     <div class="status">
-      <span class="chip"><span class="dot"></span><b>5</b> crates Rust</span>
-      <span class="chip"><span class="dot"></span><b>31</b> tests + doctests</span>
+      <span class="chip"><span class="dot"></span><b>6</b> crates Rust</span>
+      <span class="chip"><span class="dot"></span><b>34</b> tests + doctests</span>
       <span class="chip"><span class="dot"></span>clippy <b>-D warnings</b> limpio</span>
       <span class="chip"><span class="dot"></span>build <b>offline</b> (core std-only)</span>
       <span class="chip"><span class="dot"></span><b>8</b> commits</span>
@@ -335,6 +335,14 @@
       <div class="crate hydro">
         <span class="name">nowcast-rainflow</span><span class="st">v0.2 ✓</span>
         <span class="desc">Proveedor de crecidas: hidrograma GR4J/HBV + gatillo de exceedancia de caudal.</span>
+      </div>
+      <div class="crate">
+        <span class="name">nowcast-hydroflux</span><span class="st">v0.2 ✓</span>
+        <span class="desc">Acople físico: solver 2D de aguas someras → profundidad de inundación.</span>
+      </div>
+      <div class="crate">
+        <span class="name">nowcast-surtgis</span><span class="st">✓</span>
+        <span class="desc">Bridge geoespacial: Raster ↔ susceptibilidad/peligro, GeoTIFF in/out.</span>
       </div>
       <div class="crate plan">
         <span class="name">nowcast-cli</span><span class="st">planificado</span>
@@ -618,7 +626,9 @@ cargo run <span class="p">--example</span> multi_event_leadtime
 <span class="c"># explicabilidad: por qué se dispara (o no) cada alerta</span>
 cargo run <span class="p">--example</span> explain_alert
 <span class="c"># refinamiento físico: alerta → inundación 2D (Hydroflux)</span>
-cargo run <span class="p">-p</span> nowcast-hydroflux <span class="p">--example</span> couple_flood</pre>
+cargo run <span class="p">-p</span> nowcast-hydroflux <span class="p">--example</span> couple_flood
+<span class="c"># bridge geoespacial: susceptibilidad real → GeoTIFF de peligro</span>
+cargo run <span class="p">-p</span> nowcast-surtgis <span class="p">--example</span> geotiff_roundtrip</pre>
   </div>
 
   <div class="road">
