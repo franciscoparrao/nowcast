@@ -51,6 +51,7 @@
 
 mod backtest;
 mod error;
+mod explain;
 mod forcing;
 mod grid;
 mod nowcast;
@@ -59,6 +60,7 @@ mod trigger;
 
 pub use backtest::{Contingency, MonthKey, monthly_contingency, spatial_monthly_contingency};
 pub use error::{Error, Result};
+pub use explain::{Driver, Explanation};
 pub use forcing::{Forcing, GriddedRain, UniformRain};
 pub use grid::{GridDims, SusceptibilityMap};
 pub use nowcast::{Alert, HazardField, Nowcast};

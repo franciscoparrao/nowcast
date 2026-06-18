@@ -225,7 +225,7 @@
     <p class="lede">Nowcasting dinámico de peligros geológicos: la susceptibilidad deja de ser estática y se modula en el tiempo con la forzante que la gatilla.</p>
     <div class="status">
       <span class="chip"><span class="dot"></span><b>4</b> crates Rust</span>
-      <span class="chip"><span class="dot"></span><b>24</b> tests + doctests</span>
+      <span class="chip"><span class="dot"></span><b>25</b> tests + doctests</span>
       <span class="chip"><span class="dot"></span>clippy <b>-D warnings</b> limpio</span>
       <span class="chip"><span class="dot"></span>build <b>offline</b> (core std-only)</span>
       <span class="chip"><span class="dot"></span><b>8</b> commits</span>
@@ -285,6 +285,11 @@
       <span class="tag">validación</span>
       <h3>Backtesting con métricas EWS</h3>
       <p>Contingencia mensual (POD / FAR / CSI / bias), matching espacial event-céntrico, ROC-AUC y POD@área. Calibración de umbral regional y split-sample.</p>
+    </div>
+    <div class="cap">
+      <span class="tag">trazabilidad</span>
+      <h3>Explicabilidad exacta</h3>
+      <p>Como el peligro es forma cerrada, cada alerta se descompone <em>exactamente</em> en terreno × clima, con la ventana I–D que la gatilló y un contrafactual ("¿qué lluvia faltaría?"). Sin caja negra que aproximar.</p>
     </div>
     <div class="cap">
       <span class="tag">ingeniería</span>
@@ -528,9 +533,36 @@ trigger I–D (a=4.0):
 
 <hr class="rule">
 
+<!-- TRAZABILIDAD / XAI -->
+<section class="wrap reveal">
+  <span class="sec-no">07 — Trazabilidad</span>
+  <h2 class="title">Por qué se dispara cada alerta</h2>
+  <p class="sec-intro">El peligro es <code>susceptibilidad × gatillo</code> en forma cerrada, así que la atribución es <strong>exacta</strong> — no una aproximación muestreada como SHAP sobre una caja negra. Cada alerta se descompone en su factor de terreno y su factor de clima, con la ventana intensidad–duración que la gatilló, y admite un contrafactual operacional. (SHAP vive una capa más arriba, explicando el modelo ML de susceptibilidad que aquí entra como un input ya interpretable.)</p>
+
+  <div class="terms" style="grid-template-columns:1fr">
+    <div class="term">
+      <div class="term-bar"><span></span><span></span><span></span><span class="cmd">cargo run --example explain_alert · transecto de ladera</span></div>
+      <pre>Atribución en el peak de tormenta (28 mm/h):
+
+<b>⚠ ALERTA</b>  escarpe (0,90)  peligro <b>0.88</b> = susc 0.90 × gatillo 0.97  [balanceado]
+           ventana I–D dominante: 1 h · 28.0 mm/h (crítica 14.8, E=1.89)
+· bajo    ladera  (0,50)  peligro 0.49 = susc 0.50 × gatillo 0.97  [<u>terreno-limitado</u>]
+· bajo    fondo   (0,15)  peligro 0.15 = susc 0.15 × gatillo 0.97  [<u>terreno-limitado</u>]
+
+Contrafactual — intensidad de 1 h para alcanzar alerta 0.5:
+  escarpe (0,90)   <b>15.6 mm/h</b>
+  ladera  (0,50)   inalcanzable — susceptibilidad &lt; 0.5 (cap del terreno)
+  fondo   (0,15)   inalcanzable — susceptibilidad &lt; 0.5 (cap del terreno)</pre>
+      <p class="note">Misma lluvia en las tres celdas: lo que separa la alerta es el terreno. El contrafactual dice cuánta lluvia faltaría — y dónde el terreno pone un techo que ninguna lluvia supera.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
 <!-- CÓMO CORRER + ROADMAP -->
 <section class="wrap reveal">
-  <span class="sec-no">07 — Reproducir &amp; seguir</span>
+  <span class="sec-no">08 — Reproducir &amp; seguir</span>
   <h2 class="title">Corre en tu máquina</h2>
 
   <div class="run">
@@ -550,7 +582,9 @@ cargo run <span class="p">--example</span> atacama_subdaily
 <span class="c"># head-to-head de resolución: CR2MET diario vs IMERG sub-diario</span>
 cargo run <span class="p">--example</span> resolution_headtohead
 <span class="c"># tabla de lead-time multi-evento (3 climas, GPM IMERG)</span>
-cargo run <span class="p">--example</span> multi_event_leadtime</pre>
+cargo run <span class="p">--example</span> multi_event_leadtime
+<span class="c"># explicabilidad: por qué se dispara (o no) cada alerta</span>
+cargo run <span class="p">--example</span> explain_alert</pre>
   </div>
 
   <div class="road">
@@ -561,8 +595,8 @@ cargo run <span class="p">--example</span> multi_event_leadtime</pre>
     </div>
     <div>
       <span class="tag">v0.2</span>
-      <h3>Acople Hydroflux + XAI</h3>
-      <p>Físico para zonas críticas y trazabilidad SHAP de cada alerta.</p>
+      <h3>Acople Hydroflux</h3>
+      <p>Modelo físico para zonas críticas. La trazabilidad exacta de cada alerta ya está (ver §07).</p>
     </div>
     <div>
       <span class="tag">interfaces</span>

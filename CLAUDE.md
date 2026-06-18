@@ -107,7 +107,17 @@ motores se enchufan como proveedores nativos en v0.2.
       o justo antes del día documentado en los tres; y en el Cajón del Maipo (ráfaga
       convectiva breve) el producto **diario NO gatilla** — solo lo sub-diario lo
       detecta. Cierra el caso de la forzante de alta resolución.
-- [ ] (v0.2) Acople con Hydroflux y XAI (SHAP) para trazabilidad.
+- [x] (v0.2) **XAI / trazabilidad exacta**: módulo `explain` (`Explanation`,
+      `Driver`) + `Nowcast::explain(cell, step)` + contrafactual
+      `Nowcast::intensity_to_alert`. Como el peligro es forma cerrada
+      (susc × gatillo), la atribución es EXACTA, no muestreada tipo SHAP:
+      descompone cada alerta en terreno × clima, expone la ventana I-D dominante
+      (duración, intensidad, E) y clasifica el driver (terreno/gatillo/balanceado).
+      Inversas añadidas: `TriggerModel::exceedance_for_factor`,
+      `IdThreshold::intensity_for_exceedance`. SHAP aplica río arriba al modelo ML
+      de susceptibilidad (Smelt/PGML), que entra como input ya interpretable. Ver
+      `examples/explain_alert.rs`.
+- [ ] (v0.2) Acople con Hydroflux (modelo físico zonas críticas).
 
 ## Arquitectura tentativa
 - `nowcast-core`: motor de reglas/umbrales + combinación susceptibilidad×trigger.

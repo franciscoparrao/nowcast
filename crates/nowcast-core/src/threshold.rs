@@ -57,6 +57,12 @@ impl IdThreshold {
         self.a * duration_h.powf(-self.b)
     }
 
+    /// Mean intensity (mm/h) that yields exceedance `e` at duration `duration_h`
+    /// — i.e. `e · I_crit(D)`. Used for counterfactual explanations.
+    pub fn intensity_for_exceedance(&self, e: f64, duration_h: f64) -> f64 {
+        e * self.critical_intensity(duration_h)
+    }
+
     /// Exceedance ratio `E = I_obs / I_crit(D)` for an observed mean intensity
     /// (mm/h) sustained over `duration_h` hours. `E >= 1` means the threshold is
     /// met or exceeded.

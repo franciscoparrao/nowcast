@@ -14,6 +14,7 @@
 //! O(cells · steps · max_window).
 
 use crate::error::{Error, Result};
+use crate::explain::Explanation;
 use crate::forcing::Forcing;
 use crate::grid::{GridDims, SusceptibilityMap};
 use crate::threshold::IdThreshold;
@@ -180,6 +181,59 @@ impl<F: Forcing> Nowcast<F> {
         best
     }
 
+    /// Worst exceedance and the rolling-window length (in steps) that produced
+    /// it, for cell `c` at step `t`.
+    fn dominant_window(&self, prefix: &[Vec<f64>], c: usize, t: usize) -> (f64, usize) {
+        let dt = self.forcing.dt_hours();
+        let max_m = self.max_window_steps.min(t + 1);
+        let row = &prefix[c];
+        let (mut best_e, mut best_m) = (0.0_f64, 1usize);
+        for m in 1..=max_m {
+            let window_depth = row[t + 1] - row[t + 1 - m];
+            let duration_h = m as f64 * dt;
+            let e = self.threshold.exceedance(window_depth / duration_h, duration_h);
+            if e > best_e {
+                best_e = e;
+                best_m = m;
+            }
+        }
+        (best_e, best_m)
+    }
+
+    /// Exact attribution of the hazard at `cell` / `step`: its two factors and
+    /// the intensity–duration window driving the trigger. See [`Explanation`].
+    pub fn explain(&self, cell: usize, step: usize) -> Explanation {
+        let prefix = self.depth_prefix_sums();
+        let (e, m) = self.dominant_window(&prefix, cell, step);
+        let dt = self.forcing.dt_hours();
+        let duration_h = m as f64 * dt;
+        let window_depth = prefix[cell][step + 1] - prefix[cell][step + 1 - m];
+        let mean_intensity = window_depth / duration_h;
+        Explanation::new(
+            cell,
+            step,
+            self.susceptibility.get(cell),
+            self.trigger.factor(e),
+            duration_h,
+            mean_intensity,
+            self.threshold.critical_intensity(duration_h),
+            e,
+        )
+    }
+
+    /// Counterfactual: the mean rainfall intensity (mm/h) sustained over
+    /// `duration_h` that would lift `cell`'s hazard to `alert_level`. `None` if
+    /// the cell's susceptibility alone cannot reach the level (terrain-capped).
+    pub fn intensity_to_alert(&self, cell: usize, alert_level: f64, duration_h: f64) -> Option<f64> {
+        let susc = self.susceptibility.get(cell);
+        let factor_needed = alert_level / susc;
+        if !(0.0..1.0).contains(&factor_needed) {
+            return None; // susc too low: even a saturated trigger can't reach it
+        }
+        let e_needed = self.trigger.exceedance_for_factor(factor_needed);
+        Some(self.threshold.intensity_for_exceedance(e_needed, duration_h))
+    }
+
     /// Compute the hazard field for a single time step.
     pub fn hazard_at(&self, step: usize) -> HazardField {
         let prefix = self.depth_prefix_sums();
@@ -294,6 +348,40 @@ mod tests {
         assert!(alerts[0].max_probability >= alerts.last().unwrap().max_probability);
         assert_eq!(alerts[0].n_cells, 1);
         assert!((alerts[0].fraction - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn explain_attributes_a_heavy_burst_to_terrain_cap() {
+        use crate::explain::Driver;
+        // 40 mm in one hour on susceptibility 0.8: trigger saturates, so the
+        // hazard is capped by the terrain, not the weather.
+        let nc = single_cell(vec![0.0, 0.0, 40.0, 0.0], 0.8);
+        let ex = nc.explain(0, 2);
+        assert!(ex.exceedance > 1.0, "burst should exceed the curve");
+        assert!(ex.trigger_factor > 0.9);
+        assert!((ex.mean_intensity_mm_h - 40.0).abs() < 1.0);
+        assert_eq!(ex.driver, Driver::TerrainLimited);
+        assert!((ex.hazard - ex.susceptibility * ex.trigger_factor).abs() < 1e-12);
+    }
+
+    #[test]
+    fn explain_attributes_a_dry_step_to_the_trigger() {
+        use crate::explain::Driver;
+        let nc = single_cell(vec![0.0, 0.0, 0.0], 0.9);
+        let ex = nc.explain(0, 1);
+        assert!(ex.trigger_factor < 0.1, "no rain → weak trigger");
+        assert_eq!(ex.driver, Driver::TriggerLimited);
+    }
+
+    #[test]
+    fn counterfactual_intensity_to_alert() {
+        let nc = single_cell(vec![0.0], 0.8);
+        // Susceptible cell: an attainable rainfall reaches the 0.5 alert level.
+        let i = nc.intensity_to_alert(0, 0.5, 1.0).unwrap();
+        assert!(i > 0.0 && i.is_finite());
+        // A barely-susceptible cell can never reach 0.5 (terrain-capped at susc).
+        let low = single_cell(vec![0.0], 0.3);
+        assert!(low.intensity_to_alert(0, 0.5, 1.0).is_none());
     }
 
     #[test]

@@ -147,9 +147,24 @@ GR4J on the CAMELS-CL Itata catchment (1979–2016) → discharge → flood haza
 the threshold (98th-percentile discharge) flags ~1.8% of days, and the largest
 events all fall in austral winter (Jun–Aug), as expected for central-south Chile.
 
+## Explainability (exact attribution)
+
+Because the hazard is closed-form (`susceptibility × trigger_factor`), every
+alert is **exactly** attributable — no surrogate model, no sampling. `explain`
+decomposes a cell/step into its terrain and weather factors, the I–D window that
+drove the trigger, and the binding constraint, plus a counterfactual
+(`intensity_to_alert`: how much rain would lift the cell to the alert level).
+SHAP applies one layer up, to the upstream ML susceptibility that enters here as
+an already-interpretable input.
+
+```bash
+cargo run --example explain_alert
+```
+
 ## Roadmap
 
-- Acople with Hydroflux and XAI (SHAP) for traceability.
+- Acople with Hydroflux (physical model for critical zones). Exact per-alert
+  traceability is done (above).
 - CLI runner and PyO3 bindings (`nowcast-cli`, `nowcast-python`), matching the
   family's crate layout.
 

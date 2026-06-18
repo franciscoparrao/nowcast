@@ -36,6 +36,20 @@ impl TriggerModel {
     pub fn factor(&self, exceedance: f64) -> f64 {
         1.0 / (1.0 + (-self.k * (exceedance - 1.0)).exp())
     }
+
+    /// Inverse: the exceedance ratio that produces trigger factor `f`.
+    ///
+    /// Used for counterfactual explanations ("how much rain to reach this hazard
+    /// level?"). `f <= 0` → `-inf`, `f >= 1` → `+inf`.
+    pub fn exceedance_for_factor(&self, f: f64) -> f64 {
+        if f <= 0.0 {
+            return f64::NEG_INFINITY;
+        }
+        if f >= 1.0 {
+            return f64::INFINITY;
+        }
+        1.0 + (f / (1.0 - f)).ln() / self.k
+    }
 }
 
 impl Default for TriggerModel {
