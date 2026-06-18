@@ -99,4 +99,13 @@ fn main() {
             field.probability()[0], // floodplain cell
         );
     }
+
+    // Exact attribution of the largest event (floodplain cell 0).
+    let top = idx[0];
+    println!("\nTrazabilidad del mayor evento ({}):", dates[top]);
+    println!("  {}", nowcast.explain(0, top).summary());
+    match nowcast.discharge_to_alert(2, ALERT_LEVEL) {
+        Some(qc) => println!("  contrafactual: la terraza (exp. 0,5) alertaría con Q ≥ {qc:.1} mm/día"),
+        None => println!("  contrafactual: la terraza no alcanza el nivel de alerta (cap de exposición)"),
+    }
 }

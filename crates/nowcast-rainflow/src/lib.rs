@@ -27,7 +27,7 @@
 //! expects a forcing.
 
 use nowcast_core::{
-    Alert, Forcing, GridDims, HazardField, SusceptibilityMap, TriggerModel,
+    Alert, Driver, Forcing, GridDims, HazardField, SusceptibilityMap, TriggerModel,
 };
 use rainflow_core::{Gr4j, Gr4jParams};
 use thiserror::Error;
@@ -239,6 +239,72 @@ impl FloodNowcast {
             .filter_map(|t| self.hazard_at(t).alert(level))
             .collect()
     }
+
+    /// Exact attribution of the flood hazard at `cell` / `step` — the closed-form
+    /// counterpart of the landslide `Nowcast::explain`. Floods carry no I–D
+    /// window: the trigger is discharge over threshold, `Q / Q_c`.
+    pub fn explain(&self, cell: usize, step: usize) -> FloodExplanation {
+        let q = self.discharge_mm_day[step];
+        let exceedance = self.threshold.exceedance(q);
+        let trigger_factor = self.trigger.factor(exceedance);
+        let susceptibility = self.susceptibility.get(cell);
+        FloodExplanation {
+            cell,
+            step,
+            hazard: susceptibility * trigger_factor,
+            susceptibility,
+            trigger_factor,
+            discharge_mm_day: q,
+            q_crit: self.threshold.q_crit,
+            exceedance,
+            driver: Driver::classify(susceptibility, trigger_factor, 0.15),
+        }
+    }
+
+    /// Counterfactual: the discharge (mm/day) that would lift `cell`'s flood
+    /// hazard to `alert_level`. `None` if the cell's exposure alone cannot reach
+    /// it (exposure-capped).
+    pub fn discharge_to_alert(&self, cell: usize, alert_level: f64) -> Option<f64> {
+        let factor_needed = alert_level / self.susceptibility.get(cell);
+        if !(0.0..1.0).contains(&factor_needed) {
+            return None;
+        }
+        Some(self.trigger.exceedance_for_factor(factor_needed) * self.threshold.q_crit)
+    }
+}
+
+/// Exact decomposition of a flood `hazard(cell, step)` into its drivers.
+#[derive(Debug, Clone, Copy)]
+pub struct FloodExplanation {
+    pub cell: usize,
+    pub step: usize,
+    pub hazard: f64,
+    /// Flood exposure at the cell (the "terrain" factor).
+    pub susceptibility: f64,
+    /// Discharge trigger factor in `[0, 1]` (the "hydrology" factor).
+    pub trigger_factor: f64,
+    pub discharge_mm_day: f64,
+    pub q_crit: f64,
+    /// Exceedance ratio `Q / Q_c`.
+    pub exceedance: f64,
+    pub driver: Driver,
+}
+
+impl FloodExplanation {
+    /// One-line account of why the flood hazard is what it is.
+    pub fn summary(&self) -> String {
+        let driver = match self.driver {
+            Driver::TriggerLimited => "limitado por el caudal (crecida insuficiente)",
+            Driver::TerrainLimited => "limitado por la exposición (zona poco inundable)",
+            Driver::Balanced => "exposición y caudal comparables",
+        };
+        format!(
+            "celda {} paso {}: peligro {:.2} = exposición {:.2} × caudal {:.2}; \
+             Q={:.1} mm/día vs Q_c={:.1} (E={:.2}); {driver}",
+            self.cell, self.step, self.hazard, self.susceptibility,
+            self.trigger_factor, self.discharge_mm_day, self.q_crit, self.exceedance,
+        )
+    }
 }
 
 #[cfg(test)]
@@ -294,6 +360,43 @@ mod tests {
         let alerts = nc.alerts(0.5);
         assert_eq!(alerts.len(), 1);
         assert_eq!(alerts[0].step, 2);
+    }
+
+    #[test]
+    fn explain_decomposes_a_flood_step() {
+        let susc = susc_2cell(0.3, 0.9);
+        let nc = FloodNowcast::new(
+            susc,
+            vec![10.0, 60.0],
+            FloodThreshold::new(20.0).unwrap(),
+            TriggerModel::default(),
+        )
+        .unwrap();
+        // Flood spike at step 1: discharge clears the threshold on both cells.
+        let ex = nc.explain(1, 1);
+        assert!((ex.exceedance - 3.0).abs() < 1e-9); // 60 / 20
+        assert!(ex.trigger_factor > 0.9);
+        assert!((ex.hazard - ex.susceptibility * ex.trigger_factor).abs() < 1e-12);
+        assert_eq!(ex.driver, Driver::Balanced); // exposure 0.9 ≈ saturated trigger
+        // Same flood, low-exposure cell → terrain (exposure) limited.
+        assert_eq!(nc.explain(0, 1).driver, Driver::TerrainLimited);
+        // Low-flow step → trigger-limited.
+        assert_eq!(nc.explain(1, 0).driver, Driver::TriggerLimited);
+    }
+
+    #[test]
+    fn discharge_to_alert_counterfactual() {
+        let nc = FloodNowcast::new(
+            susc_2cell(0.3, 0.9),
+            vec![5.0],
+            FloodThreshold::new(20.0).unwrap(),
+            TriggerModel::default(),
+        )
+        .unwrap();
+        // Exposed cell (0.9) can reach the 0.5 alert with enough discharge.
+        assert!(nc.discharge_to_alert(1, 0.5).unwrap() > 0.0);
+        // Barely-exposed cell (0.3) is exposure-capped below 0.5.
+        assert!(nc.discharge_to_alert(0, 0.5).is_none());
     }
 
     #[test]

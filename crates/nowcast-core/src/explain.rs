@@ -23,7 +23,10 @@ pub enum Driver {
 }
 
 impl Driver {
-    fn classify(susceptibility: f64, trigger_factor: f64, tol: f64) -> Self {
+    /// Classify the binding constraint of a `susceptibility × trigger_factor`
+    /// hazard: the smaller multiplicand (beyond `tol`) is the bottleneck. Shared
+    /// by the landslide and flood paths.
+    pub fn classify(susceptibility: f64, trigger_factor: f64, tol: f64) -> Self {
         if trigger_factor + tol < susceptibility {
             Driver::TriggerLimited
         } else if susceptibility + tol < trigger_factor {
