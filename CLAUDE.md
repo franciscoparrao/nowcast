@@ -99,6 +99,14 @@ motores se enchufan como proveedores nativos en v0.2.
       gatillar I-D (la intensidad máxima resoluble es total/24h), y que subir la
       resolución de la forzante supera el límite sin tocar el motor. Es la
       respuesta a "superar el límite de CR2MET".
+- [x] **Generalización multi-evento** (`examples/multi_event_leadtime.rs` +
+      `scripts/extract_event_imerg.py` con registro de eventos): IMERG semihorario
+      sobre 3 aluviones fechados de climas opuestos — Atacama/Copiapó 25-mar-2015
+      (árido, peak 40 mm/h), Cajón del Maipo 25-feb-2017 (convectivo verano, 5 mm/h)
+      y Villa Santa Lucía 16-dic-2017 (frontal sur, 17 mm/h). El cruce I-D cae sobre
+      o justo antes del día documentado en los tres; y en el Cajón del Maipo (ráfaga
+      convectiva breve) el producto **diario NO gatilla** — solo lo sub-diario lo
+      detecta. Cierra el caso de la forzante de alta resolución.
 - [ ] (v0.2) Acople con Hydroflux y XAI (SHAP) para trazabilidad.
 
 ## Arquitectura tentativa

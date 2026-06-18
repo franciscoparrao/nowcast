@@ -119,6 +119,19 @@ is capped at *(total / 24 h)* and smeared below the I–D curve — the daily pr
 **structurally cannot trigger**, regardless of total. Higher-resolution forcing
 overcomes the limit with no change to the engine (same `Forcing` trait).
 
+**Multi-event generalisation (`multi_event_leadtime`)** — three dated aluviones
+across opposite climates, same I–D engine on IMERG half-hourly:
+
+| event | climate | total | peak 1 h | I–D crossing (UTC) | documented day | daily fires? |
+|---|---|---|---|---|---|---|
+| Atacama / Copiapó | arid N · convective | 108 mm | 40 mm/h | 24-Mar 04:30 | 25-Mar-2015 | yes |
+| Cajón del Maipo | central Andes · summer | 28 mm | 5 mm/h | 25-Feb 16:30 | 25-Feb-2017 | **no** |
+| Villa Santa Lucía | humid S · frontal | 83 mm | 17 mm/h | 15-Dec 15:00 | 16-Dec-2017 | yes |
+
+The sub-daily crossing lands on or just before the documented day in all three.
+For the Cajón del Maipo convective burst the daily product never triggers — only
+sub-daily resolution detects it.
+
 ## v0.2 — flood nowcasting from routed discharge (done)
 
 `nowcast-rainflow` wraps the `rainflow` GR4J/HBV engine. A flood's trigger is
