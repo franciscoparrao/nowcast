@@ -6,6 +6,7 @@ members = [
     "crates/nowcast-rainflow",
     "crates/nowcast-hydroflux",
     "crates/nowcast-surtgis",
+    "crates/nowcast-swarm",
 ]
 # Future members (kept out of the default build until they exist):
 #   crates/nowcast-cli      — CLI runner / backtesting driver

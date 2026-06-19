@@ -142,13 +142,19 @@ motores se enchufan como proveedores nativos en v0.2.
 - **SurtGIS** → sustrato (susceptibilidad + I/O GeoTIFF + CRS). Adapter LISTO.
 - **rainflow / snowmelt** → forzantes (caudal / rain+melt). Adapters LISTOS.
 - **hydroflux** → acople físico de **crecidas** (profundidad 2D). Adapter LISTO.
-- **insar-rs** → forzante de **deformación** (2º trigger, lluvia+deformación);
-  requiere generalizar el trigger a fuentes de exceedancia componibles. PENDIENTE
-  (insar-rs en IDEA).
-- **swarm-abm** → **modelado del evento con agentes**: el modelo debris-flow
-  (agentes lluvia+flujo sobre raster) es el **acople físico del path de
-  deslizamientos/aluviones** (footprint/runout), análogo a hydroflux que es para
-  crecidas. NO es evacuación aguas abajo. Adapter PENDIENTE.
+- **swarm-abm** → **modelado del evento con agentes**: crate `nowcast-swarm`
+  envuelve el modelo `debris-flow` (lib `debris_flow` sobre `swarm-core`, agentes
+  lluvia+flujo sobre raster, calibrado a Atacama 2015). Es el **acople físico del
+  path de deslizamientos/aluviones** (footprint/runout), análogo a hydroflux que
+  es para crecidas. NO es evacuación aguas abajo. `run_runout` →
+  `Runout::refined_hazard`. Ejemplo `couple_runout.rs` sobre datos reales de
+  Copiapó (123 km² con params default; calibrados DE en data/best_params_de.json).
+  Adapter LISTO.
+- **insar-rs** → forzante de **deformación** (2º trigger, lluvia+deformación).
+  CORRECCIÓN: insar-rs NO está en IDEA — tiene ~5300 LOC (crates/core/cli/python,
+  PS-InSAR/SBAS, ISCE io, validado contra Fernandina). El adapter requiere
+  generalizar el trigger a fuentes de exceedancia componibles. PENDIENTE (solo el
+  adapter; el motor existe).
 - **firespread** → peligro paralelo (fuego): acople físico tipo hydroflux +
   cascada post-incendio que modifica la susceptibilidad. PENDIENTE.
 

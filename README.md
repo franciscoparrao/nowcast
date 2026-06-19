@@ -206,6 +206,20 @@ crates/nowcast-hydroflux/  # v0.2 physical refinement: 2D shallow-water inundati
 crates/nowcast-surtgis/    # geospatial bridge: Raster<->grid, GeoTIFF in/out
   src/lib.rs               susceptibility_from_raster / write_hazard_geotiff
   examples/geotiff_roundtrip.rs
+crates/nowcast-swarm/      # agent-based debris-flow runout refinement
+  src/lib.rs               run_runout + Runout (+ couple_runout example)
+```
+
+## Agent-based runout refinement (swarm-abm coupling)
+
+`nowcast-swarm` is the landslide-side counterpart of `nowcast-hydroflux`: where
+the nowcast flags a debris-flow alert, it runs the `swarm-abm` debris-flow model
+(rain + flow agents over the terrain, calibrated on the 2015 Atacama event) to
+simulate the **runout footprint**, then downscales the coarse probability onto
+it (`Runout::refined_hazard`).
+
+```bash
+cargo run -p nowcast-swarm --example couple_runout
 ```
 
 ## Geospatial I/O (SurtGIS bridge)

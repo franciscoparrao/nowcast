@@ -1,0 +1,14 @@
+[package]
+name = "nowcast-swarm"
+description = "Agent-based event refinement: run the swarm-abm debris-flow model where the nowcast flags a landslide, turning a probabilistic alert into a physical runout footprint."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+nowcast-core = { path = "../nowcast-core" }
+# Sibling ABM engine + the debris-flow model built on it (swarm-abm workspace).
+swarm-core = { path = "../../../swarm-abm/crates/swarm-core" }
+debris-flow = { path = "../../../swarm-abm/models/debris-flow" }
