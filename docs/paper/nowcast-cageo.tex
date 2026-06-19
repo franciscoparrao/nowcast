@@ -14,7 +14,7 @@
 \begin{frontmatter}
 
 \title{nowcast: a forcing-agnostic Rust engine for dynamic geohazard
-nowcasting, and why forcing resolution---not the model---sets the skill ceiling}
+nowcasting, and why forcing resolution, not the model, sets the skill ceiling}
 
 \author[1]{Francisco Parra-O.\corref{cor1}}
 \ead{francisco.parra.o@usach.cl}
@@ -29,34 +29,33 @@ nowcasting, and why forcing resolution---not the model---sets the skill ceiling}
 Landslide and flood susceptibility maps are static: fixed predisposing factors
 combined by physical or machine-learning models. Turning susceptibility into an
 operational \emph{nowcast} requires modulating it in time with the dynamic
-forcing that triggers failure---rainfall, snowmelt, routed discharge, ground
-deformation. We present \textbf{nowcast}, a dependency-light Rust engine that
-expresses time-varying hazard as $\mathrm{hazard}(\mathrm{cell},t)=
-\mathrm{susceptibility}(\mathrm{cell})\times\mathrm{trigger}(\mathrm{exceedance},t)$
-behind a single interchangeable forcing interface, so the hazard logic is
+forcing that triggers failure, such as rainfall, snowmelt, routed discharge or
+ground deformation. We present \textbf{nowcast}, a dependency-light Rust engine
+that writes time-varying hazard as a susceptibility field times a trigger factor,
+behind a single interchangeable forcing interface. The hazard logic is thereby
 decoupled from the data source and from the trigger family. The engine ships
 native providers that wrap sibling Rust models for rainfall--runoff, snowmelt,
 2-D shallow-water inundation, an agent-based debris-flow model, a geospatial
-raster substrate, and PS-InSAR/SBAS deformation; triggers are composable
-(rainfall intensity--duration, discharge, deformation rate) and physical
-refinement runs on demand only where the cheap nowcast alerts. Using the engine
-as an experimental instrument over Chilean basins, we hold the model fixed and
-vary the resolution of the forcing. A backtest of 157 dated rainfall-triggered
+raster substrate and PS-InSAR/SBAS deformation. Triggers are composable (rainfall
+intensity--duration, discharge, deformation rate), and physical refinement runs
+on demand only where the cheap nowcast alerts. We use the engine as an
+experimental instrument over Chilean basins, holding the model fixed and varying
+the resolution of the forcing. A backtest of 157 dated rainfall-triggered
 landslides in the R\'io Maipo basin shows that the global Caine (1980)
-intensity--duration threshold never fires on daily CR2MET forcing (probability
-of detection, POD $=0$), while a calibrated regional intercept transfers
+intensity--duration threshold never fires on daily CR2MET forcing (probability of
+detection, POD $=0$), whereas a calibrated regional intercept transfers
 split-sample (validation POD $\approx 0.50$). Distributing that daily forcing
 over the basin and weighting by a real machine-learning susceptibility raster
-does \emph{not} improve discrimination: the area under the ROC curve stays near
-random (AUC $\approx 0.48$) because, at 5\,km daily resolution, the gridded
-rainfall at event cell-months is no higher than average. The bottleneck is the
-\emph{resolution} of the forcing, not the model: at half-hourly GPM IMERG
+does not improve discrimination. The area under the ROC curve stays near random
+(AUC $\approx 0.48$): at 5\,km daily resolution the gridded rainfall at event
+cell-months is no higher than average. These results suggest that the bottleneck
+is the resolution of the forcing rather than the model. At half-hourly GPM IMERG
 resolution the same intensity--duration trigger pins the threshold crossing to a
 timestamp hours ahead of the documented flows, whereas the same rain aggregated
-to daily structurally cannot trigger (the finest resolvable mean intensity is
-total$/24$\,h, smeared below the curve). We reproduce this across three dated
-events spanning opposite Chilean climates. The engine, its backtesting framework
-and all examples are open and reproducible.
+to daily cannot trigger at all, because the finest resolvable mean intensity is
+total$/24$\,h, smeared below the curve. We reproduce this contrast across three
+dated events spanning opposite Chilean climates. The engine, its backtesting
+framework and all examples are open and reproducible.
 \end{abstract}
 
 \begin{highlights}
@@ -80,12 +79,12 @@ rainfall resolution \sep Rust \sep early warning \sep Chile
 
 Operational forecasting of rainfall-triggered geohazards sits between two
 well-developed but disjoint bodies of work. On one side, \emph{susceptibility}
-mapping combines static predisposing factors---slope, lithology, land cover,
-terrain indices---through statistical, physically-based or, increasingly,
+mapping combines static predisposing factors (slope, lithology, land cover,
+terrain indices) through statistical, physically-based or, increasingly,
 machine-learning models, to estimate \emph{where} failures are possible
-\citep{reichenbach2018}. On the other, empirical \emph{rainfall thresholds}---most
+\citep{reichenbach2018}. On the other, empirical \emph{rainfall thresholds}, most
 famously the intensity--duration (I--D) power law of \citet{caine1980} and its
-many regional successors \citep{guzzetti2007,segoni2018}---estimate \emph{when}
+many regional successors \citep{guzzetti2007,segoni2018}, estimate \emph{when}
 triggering rainfall has occurred. Operational early-warning, however, needs
 \emph{where} and \emph{when} together, as a hazard field that evolves through an
 event. The gap the geohazards community has flagged is precisely this dynamic
@@ -98,23 +97,23 @@ reanalysis product, a satellite quantitative precipitation estimate, a
 rainfall--runoff hydrograph, or an InSAR deformation field, each with its own
 grid, units and time step. Second, the \emph{trigger} family is hazard-dependent:
 landslides respond to rainfall I--D, floods to discharge over a threshold, slow
-slopes to deformation rate---yet all share the structure ``exceedance of a
+slopes to deformation rate, yet all share the structure ``exceedance of a
 critical level mapped to a hazard factor''. Third, validation against dated event
 inventories is itself a methods problem with non-obvious metric choices for rare,
 spatially sparse, incomplete records.
 
 We present \textbf{nowcast}, a Rust engine that addresses these three problems
-with one abstraction---an interchangeable \emph{forcing} interface and a
-composable \emph{trigger}---and that we then use as an experimental instrument to
+with one abstraction (an interchangeable \emph{forcing} interface and a
+composable \emph{trigger}), and we then use it as an experimental instrument to
 ask a question rarely posed directly: holding the model fixed, how much does the
 \emph{resolution of the forcing} determine attainable skill? The contributions
 are: (1) a forcing-agnostic, dependency-light engine; (2) a composable
 multi-trigger with exact, closed-form attribution of every alert; (3) a
 backtesting framework with metrics appropriate for sparse dated inventories; and
-(4) a resolution diagnosis---on real Chilean data, distributing daily forcing and
-adding real susceptibility does not improve discrimination, an honest null that,
-together with a sub-daily head-to-head, locates the binding constraint on the
-forcing resolution rather than the model.
+(4) a resolution diagnosis. On real Chilean data, distributing daily forcing and
+adding real susceptibility does not improve discrimination; this honest null,
+with a sub-daily head-to-head, locates the binding constraint on the forcing
+resolution rather than the model.
 
 \section{The nowcast engine}
 
@@ -134,7 +133,7 @@ modulation derived from the dynamic forcing. Both factors lie in $[0,1]$, so the
 product is a bounded hazard index. We deliberately call it an \emph{index}, not a
 calibrated probability (Section~\ref{sec:limits}).
 
-The trigger factor is a smooth function of an \emph{exceedance ratio} $E$---how
+The trigger factor is a smooth function of an \emph{exceedance ratio} $E$, how
 far the forcing has crossed a critical level. A hard threshold ($E\geq 1$ fires,
 else nothing) discards how far past the curve the forcing reached; instead we use
 a logistic,
@@ -195,13 +194,13 @@ triggers through a combination rule before modulating susceptibility:
 \label{eq:multi}
 \end{equation}
 Noisy-OR ($1-\prod(1-f_i)$) is the natural rule for independent triggers where
-any one may fire---for example \emph{rain I--D} OR \emph{deformation rate}. The
+any one may fire, for example \emph{rain I--D} OR \emph{deformation rate}. The
 per-trigger factors are exposed for traceability.
 
 \subsection{Physical refinement on demand}
 
 The susceptibility$\times$trigger product is a fast, coarse screen. Where it
-alerts, the engine couples---one-way and on demand---to a process model that
+alerts, the engine couples, one-way and on demand, to a process model that
 refines the alert into a physical field, only over the alerted area. For
 \textbf{floods}, a 2-D shallow-water solver (HLLC fluxes, Audusse well-balanced
 reconstruction \citep{audusse2004}, semi-implicit Manning friction) routes the
@@ -215,11 +214,11 @@ cheap nowcast already alerted.
 \subsection{Exact attribution}
 
 Because Eq.~\eqref{eq:hazard} is closed-form, every alert is \emph{exactly}
-attributable---there is no surrogate model to approximate, as post-hoc methods
+attributable, there is no surrogate model to approximate, as post-hoc methods
 such as SHAP \citep{lundberg2017} require for black boxes. For any cell and step
 the engine reports the two factors, the rolling I--D window that drove the trigger
 (its duration, mean intensity, critical intensity and exceedance), which
-side---terrain or forcing---is the binding constraint, and a counterfactual: the
+side, terrain or forcing, is the binding constraint, and a counterfactual: the
 rainfall intensity, at a given duration, that would lift the cell to the alert
 level. SHAP remains relevant one layer upstream, explaining the machine-learning
 \emph{susceptibility} that enters Eq.~\eqref{eq:hazard} as an
@@ -248,9 +247,9 @@ Sub-daily precipitation is GPM IMERG Final v07 half-hourly ($\sim$0.1$^\circ$;
 \citealp{huffman2020}). Catchment forcing for the flood path uses CAMELS-CL
 \citep{alvarez2018}. The dated event inventory is the SERNAGEOMIN
 landslide/flow catalogue; events are dated to year and month from the record
-identifier, and the month itself is only approximate---the Atacama event flows,
-for instance, are filed under March though the extreme rainfall fell over 24--26
-March 2015.
+identifier, and the month itself is only approximate: the Atacama event flows,
+for instance, are filed under March even though the extreme rainfall fell over
+24--26 March 2015.
 
 \begin{table}[ht]
 \centering
@@ -280,7 +279,7 @@ convective) and Villa Santa Luc\'ia (16 December 2017, humid south, frontal).
 \subsection{Backtesting metrics}
 
 Validation of a nowcast is binary forecast verification, giving a $2\times2$
-contingency table and the standard categorical scores---probability of detection
+contingency table and the standard categorical scores, probability of detection
 (POD), false-alarm ratio (FAR), critical success index (CSI), frequency bias.
 Because the inventory is dated only to $\sim$month, the matching unit is the
 calendar month, and matching is \emph{event-centred} with a $\pm$tolerance window
@@ -288,7 +287,7 @@ calendar month, and matching is \emph{event-centred} with a $\pm$tolerance windo
 alerted month far from any event) to avoid inflating misses when one event spans
 a tolerance window. For \emph{spatial} verification, per-cell month matching
 against a spatially sparse, \emph{incomplete} inventory makes CSI/FAR
-meaningless---almost every ``false alarm'' is a susceptible, wet cell with no
+meaningless, almost every ``false alarm'' is a susceptible, wet cell with no
 \emph{recorded} event. We therefore score discrimination, as the susceptibility
 and early-warning literatures do \citep{reichenbach2018}: ROC-AUC (does the hazard
 rank event cell-months above quiet ones?) and POD at a fixed alerted-area
@@ -310,7 +309,7 @@ Over 13\,880 daily steps (1979--2016) and 157 dated rainfall-triggered events, t
 global Caine threshold ($a=14.82$) \textbf{never fires} on CR2MET daily forcing
 (POD $=0$): the daily-mean intensity of even the wettest days sits below the curve
 at 24\,h duration. A calibrated regional intercept $a^\star\approx5.5$\,mm\,h$^{-1}$
-is robust---the full-period and odd-year calibrations agree---and transfers
+is robust, the full-period and odd-year calibrations agree, and transfers
 split-sample (validation POD $\approx 0.50$). The false-alarm ratio is high
 (FAR $\approx 0.92$) but structural: with an event base rate near 4\,\% and a
 single representative gauge in a Mediterranean wet-season climate, an I--D trigger
@@ -335,7 +334,7 @@ $a^\star=5.5$, tol. $\pm0/\pm1/\pm2/\pm3$\,mo & \multicolumn{2}{c}{POD 0.21/0.53
 \end{tabular}
 \end{table}
 
-\subsection{Distributed daily backtest---an honest null}
+\subsection{Distributed daily backtest, an honest null}
 
 Repeating the backtest with \emph{distributed} CR2MET rainfall over a
 $15\times18$ grid (270 cells, 123\,120 cell-months, 884 in the event footprint),
@@ -343,7 +342,7 @@ the \emph{real} RandomForest susceptibility resampled to that grid, and spatial
 verification, yields essentially \textbf{no discrimination}: ROC-AUC is 0.463 for
 a lumped basin-mean baseline weighted by susceptibility, 0.477 for distributed
 rainfall with uniform susceptibility, and 0.485 for distributed rainfall weighted
-by real susceptibility---all near the random 0.5. An independent re-computation in
+by real susceptibility, all near the random 0.5. An independent re-computation in
 Python confirms AUC $=0.488$; the mean 7-day rainfall at recorded event
 cell-months (45\,mm) is in fact \emph{lower} than the grid-wide average (49\,mm).
 At 5\,km daily resolution the gridded rainfall does not discriminate where and
@@ -360,7 +359,7 @@ lon $-70.45$, lat $-27.15$), with the identical I--D engine
 (Table~\ref{tab:headtohead}). With a daily value the finest resolvable duration is
 24\,h, so the maximum resolvable mean intensity is (daily total)$/24$\,h: CR2MET
 sees 30.1\,mm spread to 0.66\,mm\,h$^{-1}$, an exceedance of at most 0.62
-(regional $a=4.0$) or 0.17 (Caine)---the daily product \textbf{structurally cannot
+(regional $a=4.0$) or 0.17 (Caine), the daily product \textbf{structurally cannot
 trigger}, regardless of total. The same storm core in half-hourly IMERG peaks at
 40\,mm\,h$^{-1}$; the I--D threshold is crossed at 04:30 UTC on 24 March
 ($E\approx12$), hours before the documented flows. Higher-resolution forcing
@@ -387,7 +386,7 @@ I--D ($a=4.0$) & no alert ($E\leq0.62$) & alert 24-Mar 04:30 ($E\approx12$) \\
 The sub-daily result generalises across three dated debris-flow events in opposite
 climates (Table~\ref{tab:multievent}). In all three the half-hourly I--D crossing
 lands on or just before the documented day. For the Caj\'on del Maipo summer
-convective burst, the same rainfall aggregated to daily \textbf{never triggers}---only
+convective burst, the same rainfall aggregated to daily \textbf{never triggers}, only
 sub-daily resolution detects it. The inventory provides no event onset \emph{hour},
 so these are not formal lead-time skill scores but a demonstration that sub-daily
 forcing resolves the threshold-crossing time that daily forcing cannot.
@@ -424,7 +423,7 @@ $\oplus$ deformation}: on a transect whose LOS velocity rises from 2 to
 45\,mm\,yr$^{-1}$, a marginal sub-threshold rain day (rainfall factor 0.14
 everywhere) leaves the hazard low where the ground is stable but, fused by
 noisy-OR with the deformation trigger ($v_{\mathrm{crit}}=20$\,mm\,yr$^{-1}$),
-lifts the hazard above the alert level on the creeping cells---a slope already
+lifts the hazard above the alert level on the creeping cells, a slope already
 moving needs less rain to be flagged. Second, \emph{physical refinement}: on the
 real Copiap\'o terrain stack, the agent-based debris-flow model run from a nowcast
 alert produces a runout footprint onto which the coarse probability is
@@ -440,9 +439,9 @@ Distributing daily rainfall and adding a real susceptibility raster does not lif
 discrimination above chance, yet the identical trigger on sub-daily forcing
 resolves the threshold crossing to within hours. The binding constraint is
 therefore the resolution of the forcing, not the susceptibility model or the
-threshold logic. This is intuitive once stated---with a daily value the maximum
-resolvable intensity is total$/24$\,h, and short, intense, convective bursts are
-smeared below any I--D curve---but it is rarely isolated, because most studies
+threshold logic. This is intuitive once stated (with a daily value the maximum
+resolvable intensity is total$/24$\,h, so short, intense, convective bursts are
+smeared below any I--D curve), but it is rarely isolated, because most studies
 vary the model on one product rather than the product under one model. The
 practical corollary is that an I--D nowcast is only as good as its rainfall's
 temporal resolution; effort spent on susceptibility sophistication is wasted where
@@ -453,7 +452,7 @@ target. The inventory is dated to $\sim$month and is incomplete. Month-level
 dating alone accounts for a large fraction of apparent misses
 (Table~\ref{tab:lumped}), and incompleteness makes per-cell FAR uninformative.
 Credible discrimination and true lead-time skill require a day- or hour-resolution
-inventory, or event-segmented rainfall---a data problem, not a software one, and
+inventory, or event-segmented rainfall, a data problem, not a software one, and
 the single largest unlock for future validation.
 
 \textbf{The architecture as enabler.} That both diagnoses were even possible rests
@@ -469,8 +468,8 @@ alerted areas.
 We are explicit about what the engine does \emph{not} yet do. (i) The hazard is a
 bounded \emph{index}, not a calibrated probability; it carries no uncertainty,
 ensemble or reliability assessment. (ii) Trigger parameters are calibrated
-minimally; a formal calibration with uncertainty---for which the sibling
-rainfall--runoff engine already provides a DDS optimiser pattern---is future work,
+minimally; a formal calibration with uncertainty, for which the sibling
+rainfall--runoff engine already provides a DDS optimiser pattern, is future work,
 as is comparison against an operational baseline. (iii) Validation is hindcast;
 the engine has no real-time ingestion loop, which the name ultimately implies.
 (iv) Antecedent soil moisture is captured only implicitly through long rolling
@@ -488,15 +487,15 @@ interface and a composable trigger, with native providers for rainfall--runoff,
 snowmelt, shallow-water inundation, agent-based debris-flow runout, a geospatial
 substrate and InSAR deformation, and exact closed-form attribution of every alert.
 Used as an experimental instrument over Chilean basins, it yields an honest and,
-we argue, generalisable result: the resolution of the forcing---not the
-model---sets the skill ceiling of intensity--duration nowcasting. A global I--D
+we argue, generalisable result: the resolution of the forcing, not the
+model, sets the skill ceiling of intensity--duration nowcasting. A global I--D
 threshold never fires on daily forcing; a calibrated regional threshold transfers
 but, distributed at daily resolution, does not discriminate event locations
 (AUC $\approx 0.48$); the identical trigger on half-hourly satellite forcing pins
 the threshold crossing to a timestamp hours ahead of documented flows across three
 climatically distinct events. The engine, its backtesting framework and all
 examples are reproducible, and the architecture is designed so that
-higher-resolution forcing---the demonstrated path to skill---can be plugged in
+higher-resolution forcing, the demonstrated path to skill, can be plugged in
 without touching the hazard logic.
 
 \section*{Code and data availability}
@@ -518,7 +517,7 @@ landslide inventory.
 
 \bibitem[Alvarez-Garreton et al.(2018)]{alvarez2018}
 Alvarez-Garreton, C., et al., 2018. The CAMELS-CL dataset: catchment attributes
-and meteorology for large sample studies---Chile dataset. Hydrol.\ Earth Syst.\
+and meteorology for large sample studies, Chile dataset. Hydrol.\ Earth Syst.\
 Sci.\ 22, 5817--5846. \url{https://doi.org/10.5194/hess-22-5817-2018}.
 
 \bibitem[Audusse et al.(2004)]{audusse2004}
