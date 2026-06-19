@@ -208,6 +208,22 @@ crates/nowcast-surtgis/    # geospatial bridge: Raster<->grid, GeoTIFF in/out
   examples/geotiff_roundtrip.rs
 crates/nowcast-swarm/      # agent-based debris-flow runout refinement
   src/lib.rs               run_runout + Runout (+ couple_runout example)
+crates/nowcast-insar/      # InSAR deformation as a 2nd trigger
+  src/lib.rs               DeformationForcing + deformation_trigger
+  examples/rain_and_creep.rs
+```
+
+## Composable triggers (rainfall ⊕ deformation)
+
+The core generalises beyond a single rainfall trigger: a `Trigger` yields a
+factor per cell/step, and `MultiNowcast` fuses several (`Combine::{Max, NoisyOr,
+Product}`). `IdTrigger` is the rainfall I–D path; `ThresholdTrigger` a
+duration-independent value/threshold. `nowcast-insar` adds ground deformation:
+a LOS velocity field from `insar-rs` becomes a `DeformationForcing`, so a slope
+that is already creeping needs less rain to be flagged.
+
+```bash
+cargo run -p nowcast-insar --example rain_and_creep
 ```
 
 ## Agent-based runout refinement (swarm-abm coupling)

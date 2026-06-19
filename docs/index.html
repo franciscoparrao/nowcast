@@ -224,8 +224,8 @@
     </div>
     <p class="lede">Nowcasting dinámico de peligros geológicos: la susceptibilidad deja de ser estática y se modula en el tiempo con la forzante que la gatilla.</p>
     <div class="status">
-      <span class="chip"><span class="dot"></span><b>7</b> crates Rust</span>
-      <span class="chip"><span class="dot"></span><b>37</b> tests + doctests</span>
+      <span class="chip"><span class="dot"></span><b>8</b> crates Rust</span>
+      <span class="chip"><span class="dot"></span><b>43</b> tests + doctests</span>
       <span class="chip"><span class="dot"></span>clippy <b>-D warnings</b> limpio</span>
       <span class="chip"><span class="dot"></span>build <b>offline</b> (core std-only)</span>
       <span class="chip"><span class="dot"></span><b>8</b> commits</span>
@@ -297,6 +297,11 @@
       <p>Donde el nowcast alerta, corre el solver shallow-water (HLLC + Audusse + Manning) sobre el DEM local: la probabilidad gruesa se vuelve <em>profundidad de inundación</em> por celda. La física dice dónde llega el agua.</p>
     </div>
     <div class="cap">
+      <span class="tag">multi-trigger</span>
+      <h3>Lluvia ⊕ deformación</h3>
+      <p>El trigger es componible: <code>MultiNowcast</code> fusiona varias señales (lluvia I-D, deformación InSAR) por noisy-OR. Una ladera que ya repta necesita menos lluvia para alertar.</p>
+    </div>
+    <div class="cap">
       <span class="tag">ingeniería</span>
       <h3>Rust, sin deps en el núcleo</h3>
       <p><code>nowcast-core</code> depende solo de <code>std</code> + <code>thiserror</code>: compila y testea offline. Targets PyO3 y CLI en el roadmap, espejando la familia.</p>
@@ -347,6 +352,10 @@
       <div class="crate snow">
         <span class="name">nowcast-swarm</span><span class="st">✓</span>
         <span class="desc">Acople por agentes: runout de debris-flow (swarm-abm) para deslizamientos.</span>
+      </div>
+      <div class="crate">
+        <span class="name">nowcast-insar</span><span class="st">✓</span>
+        <span class="desc">2º trigger: deformación LOS (insar-rs) combinada con la lluvia I-D.</span>
       </div>
       <div class="crate plan">
         <span class="name">nowcast-cli</span><span class="st">planificado</span>
@@ -634,7 +643,9 @@ cargo run <span class="p">-p</span> nowcast-hydroflux <span class="p">--example<
 <span class="c"># bridge geoespacial: susceptibilidad real → GeoTIFF de peligro</span>
 cargo run <span class="p">-p</span> nowcast-surtgis <span class="p">--example</span> geotiff_roundtrip
 <span class="c"># acople por agentes: runout de debris-flow (Atacama 2015)</span>
-cargo run <span class="p">-p</span> nowcast-swarm <span class="p">--example</span> couple_runout</pre>
+cargo run <span class="p">-p</span> nowcast-swarm <span class="p">--example</span> couple_runout
+<span class="c"># multi-trigger: lluvia marginal ⊕ deformación InSAR</span>
+cargo run <span class="p">-p</span> nowcast-insar <span class="p">--example</span> rain_and_creep</pre>
   </div>
 
   <div class="road">

@@ -1,0 +1,15 @@
+[package]
+name = "nowcast-insar"
+description = "InSAR deformation as a second trigger: feed LOS velocity from insar-rs into a composable nowcast trigger (rainfall I-D + pre-failure creep)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+nowcast-core = { path = "../nowcast-core" }
+# Sibling PS-InSAR/SBAS engine (insar-rs workspace). ndarray must be
+# semver-compatible so `Array2` unifies across the boundary.
+insar-core = { path = "../../../insar-rs/crates/core" }
+ndarray = "0.16"

@@ -150,11 +150,15 @@ motores se enchufan como proveedores nativos en v0.2.
   `Runout::refined_hazard`. Ejemplo `couple_runout.rs` sobre datos reales de
   Copiapó (123 km² con params default; calibrados DE en data/best_params_de.json).
   Adapter LISTO.
-- **insar-rs** → forzante de **deformación** (2º trigger, lluvia+deformación).
-  CORRECCIÓN: insar-rs NO está en IDEA — tiene ~5300 LOC (crates/core/cli/python,
-  PS-InSAR/SBAS, ISCE io, validado contra Fernandina). El adapter requiere
-  generalizar el trigger a fuentes de exceedancia componibles. PENDIENTE (solo el
-  adapter; el motor existe).
+- **insar-rs** → forzante de **deformación** (2º trigger). LISTO: generalicé el
+  trigger del core (módulo `multi`: trait `Trigger`, `IdTrigger` lluvia I-D,
+  `ThresholdTrigger` valor/umbral, `Combine` Max/NoisyOr/Product, `MultiNowcast`
+  que fusiona varios triggers). `nowcast-insar` envuelve `insar-core`:
+  `DeformationForcing` (VelocityMap m/yr → tasa |v| mm/yr por celda, broadcast en
+  el tiempo) + `deformation_trigger`. Ejemplo `rain_and_creep.rs`: lluvia marginal
+  ⊕ deformación por noisy-OR — donde el terreno repta (v≳v_crit) el peligro cruza
+  el umbral aunque la lluvia sola no gatille. insar-core: ~5300 LOC, PS-InSAR/SBAS,
+  validado Fernandina; `run_sbas` produce el VelocityMap.
 - **firespread** → peligro paralelo (fuego): acople físico tipo hydroflux +
   cascada post-incendio que modifica la susceptibilidad. PENDIENTE.
 
