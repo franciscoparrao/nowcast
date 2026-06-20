@@ -6,6 +6,8 @@
 \usepackage{lineno}
 \usepackage{hyperref}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, fit, backgrounds}
 
 \journal{Computers \& Geosciences}
 
@@ -162,7 +164,33 @@ implementations are a single observed gauge broadcast over a grid, an independen
 series per cell (a gridded precipitation product) and, through the provider
 crates, snowmelt runoff and InSAR deformation. The same trait therefore admits a
 gauge, a reanalysis grid, a satellite product or a model output without touching
-the hazard logic.
+the hazard logic (Fig.~\ref{fig:arch}).
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\small, >=Stealth,
+  box/.style={draw, rounded corners=2pt, align=center, inner sep=4pt, minimum height=9mm},
+  src/.style={draw, align=center, inner sep=3pt, font=\footnotesize, fill=black!4},
+  core/.style={box, fill=orange!10},
+  outbox/.style={box, fill=teal!12}]
+\node[src] (forc) {gauge $\cdot$ CR2MET\\ IMERG $\cdot$ rainflow\\ snowmelt $\cdot$ InSAR};
+\node[core, right=7mm of forc] (trait) {\texttt{Forcing}\\ trait};
+\node[core, right=7mm of trait] (trig) {triggers\\ I--D, $Q/Q_c$,\\ deformation};
+\node[core, right=7mm of trig] (haz) {suscept.\\ $\times$ combine};
+\node[outbox, right=7mm of haz] (alert) {HazardField\\ + Alert};
+\node[outbox, below=6mm of alert] (couple) {on-demand\\ coupling};
+\draw[->] (forc)--(trait); \draw[->] (trait)--(trig); \draw[->] (trig)--(haz);
+\draw[->] (haz)--(alert); \draw[->] (alert)--(couple);
+\end{tikzpicture}
+\caption{Engine dataflow. Heterogeneous forcings enter through one
+\texttt{Forcing} interface; composable triggers map each to an exceedance factor;
+their combination modulates the static susceptibility into a per-step
+\texttt{HazardField} and \texttt{Alert}s. Where an alert fires, a process model is
+run on demand to refine it (2-D shallow water for floods, an agent-based
+debris-flow model for landslides). The geospatial substrate (GeoTIFF I/O, CRS)
+moves rasters in and out.}
+\label{fig:arch}
+\end{figure}
 
 \subsection{The rainfall intensity--duration trigger}
 
@@ -310,8 +338,8 @@ global Caine threshold ($a=14.82$) \textbf{never fires} on CR2MET daily forcing
 (POD $=0$): the daily-mean intensity of even the wettest days sits below the curve
 at 24\,h duration. A calibrated regional intercept $a^\star\approx5.5$\,mm\,h$^{-1}$
 is robust, the full-period and odd-year calibrations agree, and transfers
-split-sample (validation POD $\approx 0.50$). The false-alarm ratio is high
-(FAR $\approx 0.92$) but structural: with an event base rate near 4\,\% and a
+split-sample (validation POD $\approx 0.50$; Fig.~\ref{fig:idsweep}). The
+false-alarm ratio is high (FAR $\approx 0.92$) but structural: with an event base rate near 4\,\% and a
 single representative gauge in a Mediterranean wet-season climate, an I--D trigger
 alone over-predicts. The inventory's month-level dating caps attainable POD:
 widening the match tolerance from $\pm0$ to $\pm3$ months raises POD from 0.21 to
@@ -334,6 +362,16 @@ $a^\star=5.5$, tol. $\pm0/\pm1/\pm2/\pm3$\,mo & \multicolumn{2}{c}{POD 0.21/0.53
 \end{tabular}
 \end{table}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.62\linewidth]{figs/fig2_idsweep.pdf}
+\caption{Calibration of the I--D intercept $a$ on the lumped Maipo backtest
+(monthly contingency, $\pm1$-month match). POD falls and false-alarm ratio stays
+high across the sweep; the critical success index peaks at $a^\star\approx5.5$\,mm\,h$^{-1}$
+(dashed line), far below the Caine global value of 14.82.}
+\label{fig:idsweep}
+\end{figure}
+
 \subsection{Distributed daily backtest, an honest null}
 
 Repeating the backtest with \emph{distributed} CR2MET rainfall over a
@@ -351,6 +389,17 @@ loses its edge. Distributing the forcing does not help: the limiting factor is t
 \emph{resolution} of the forcing and susceptibility (and the month-level
 inventory), not the lumping.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.6\linewidth]{figs/fig4_hazard.pdf}
+\caption{Example distributed hazard field over the R\'io Maipo event region
+(15$\times$18 CR2MET grid) at the wettest step, with real RandomForest
+susceptibility and the regional I--D trigger ($a=5.5$). The field is
+spatially structured, but at 5\,km daily resolution it does not discriminate the
+recorded event cell-months (Section~5.2).}
+\label{fig:hazard}
+\end{figure}
+
 \subsection{Resolution head-to-head}
 
 The previous null motivates a controlled comparison of forcing resolution on the
@@ -362,8 +411,8 @@ sees 30.1\,mm spread to 0.66\,mm\,h$^{-1}$, an exceedance of at most 0.62
 (regional $a=4.0$) or 0.17 (Caine), the daily product \textbf{structurally cannot
 trigger}, regardless of total. The same storm core in half-hourly IMERG peaks at
 40\,mm\,h$^{-1}$; the I--D threshold is crossed at 04:30 UTC on 24 March
-($E\approx12$), hours before the documented flows. Higher-resolution forcing
-overcomes the limit with no change to the engine.
+($E\approx12$), hours before the documented flows (Fig.~\ref{fig:leadtime}).
+Higher-resolution forcing overcomes the limit with no change to the engine.
 
 \begin{table}[ht]
 \centering
@@ -380,6 +429,18 @@ I--D ($a=4.0$) & no alert ($E\leq0.62$) & alert 24-Mar 04:30 ($E\approx12$) \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.78\linewidth]{figs/fig3_leadtime.pdf}
+\caption{Forcing resolution at the Atacama storm core (24--26 March 2015). The
+GPM IMERG half-hourly intensity (blue) peaks at 40\,mm\,h$^{-1}$ and crosses the
+I--D curve at 04:30 UTC on 24 March; the same rainfall seen by a daily product
+(CR2MET, orange: total$/24$\,h) is a flat ${\sim}1$\,mm\,h$^{-1}$ that never
+reaches the curve. The daily product structurally cannot resolve the
+triggering burst.}
+\label{fig:leadtime}
+\end{figure}
 
 \subsection{Multi-event sub-daily lead time}
 
