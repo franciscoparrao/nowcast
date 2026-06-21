@@ -51,7 +51,8 @@ over the basin and weighting by a real machine-learning susceptibility raster
 does not improve discrimination. The area under the ROC curve is indistinguishable
 from random (AUC $\approx 0.48$; month-block bootstrap 95\,\% CI spans 0.5): at
 5\,km daily resolution the gridded rainfall at event cell-months is no higher
-than average. These results suggest that the bottleneck
+than average, and a supervised baseline trained on the same daily features fares
+no better (cross-validated AUC $\le 0.56$). These results suggest that the bottleneck
 is the resolution of the forcing rather than the model. At half-hourly GPM IMERG
 resolution the same intensity--duration trigger pins the threshold crossing to a
 timestamp hours ahead of the documented flows, whereas the same rain aggregated
@@ -355,7 +356,10 @@ rank event cell-months above quiet ones?) and POD at a fixed alerted-area
 fraction. Uncertainty on the AUC is estimated by a \emph{month-block} bootstrap
 (resampling calendar months with replacement, keeping each month's cells
 together) so that within-month spatial autocorrelation, the dominant structure
-when one storm wets many cells, is not mistaken for independent information.
+when one storm wets many cells, is not mistaken for independent information. As a
+model-agnostic check, we also train supervised baselines (logistic regression and
+gradient boosting) on per-cell-month susceptibility and rainfall features,
+evaluated by year-blocked \texttt{GroupKFold} cross-validation.
 
 \subsection{Threshold calibration and split-sample validation}
 
@@ -445,6 +449,21 @@ distributed $\times$ real susc.    & 0.485 & $[0.403, 0.565]$ & 0.34 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+A supervised baseline confirms this is a property of the data, not of our
+trigger. Logistic regression and gradient boosting trained on per-cell-month
+features (susceptibility; monthly total; maximum 1-day and 7-day rainfall;
+previous-month total), evaluated with year-blocked \texttt{GroupKFold}, reach a
+cross-validated AUC of only 0.56 and 0.52, barely above random. A single-feature
+analysis locates the little signal that exists: it comes from the static
+susceptibility (AUC 0.55) and weak antecedent wetness (0.52), whereas every
+rainfall-intensity feature is at or below random (max 7-day 0.49, max 1-day 0.46,
+monthly total 0.46). The daily rainfall therefore carries essentially no
+information about where and when these landslides occurred, and a flexible model
+cannot recover a signal the daily product does not contain. Our engine's 0.485
+even dips slightly below susceptibility alone, because multiplying susceptibility
+by a near-random daily-rainfall factor dilutes it: at this resolution the daily
+trigger is worse than none.
 
 \begin{figure}[t]
 \centering
@@ -598,8 +617,10 @@ We are explicit about what the engine does \emph{not} yet do. (i) The hazard is 
 bounded \emph{index}, not a calibrated probability; it carries no uncertainty,
 ensemble or reliability assessment. (ii) Trigger parameters are calibrated
 minimally; a formal calibration with uncertainty, for which the sibling
-rainfall--runoff engine already provides a DDS optimiser pattern, is future work,
-as is comparison against an operational baseline. (iii) Validation is hindcast;
+rainfall--runoff engine already provides a DDS optimiser pattern, is future work.
+We benchmark discrimination against supervised baselines (Section~5.2), but a
+comparison against an operational, published regional threshold remains to be
+done. (iii) Validation is hindcast;
 the engine has no real-time ingestion loop, which the name ultimately implies.
 (iv) Antecedent soil moisture is captured only implicitly through long rolling
 windows, not as an explicit state. (v) The multi-trigger combination weights and
