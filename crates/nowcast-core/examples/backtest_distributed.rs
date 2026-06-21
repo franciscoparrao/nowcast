@@ -323,4 +323,18 @@ fn main() {
              above the lumped baseline — resolving where rain fell and where the terrain is prone."
         );
     }
+
+    // Dump the cell-month score/label table for bootstrap-CI analysis (Python).
+    let mut out = String::from("month_idx,cell,label,s_lumped,s_dist1,s_distsusc\n");
+    for mi in 0..months.len() {
+        for c in 0..n {
+            let label = u8::from(pos.contains(&(mi * n + c)));
+            out.push_str(&format!(
+                "{mi},{c},{label},{:.4},{:.4},{:.4}\n",
+                haz_lumped_real[mi][c], haz_dist_flat[mi][c], haz_dist_real[mi][c]
+            ));
+        }
+    }
+    std::fs::write(data_dir().join("cellmonths.csv"), out).unwrap();
+    eprintln!("wrote {} cell-months to data/cellmonths.csv", months.len() * n);
 }

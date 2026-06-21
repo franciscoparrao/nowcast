@@ -48,9 +48,10 @@ intensity--duration threshold never fires on daily CR2MET forcing (probability o
 detection, POD $=0$), whereas a calibrated regional intercept transfers
 split-sample (validation POD $\approx 0.50$). Distributing that daily forcing
 over the basin and weighting by a real machine-learning susceptibility raster
-does not improve discrimination. The area under the ROC curve stays near random
-(AUC $\approx 0.48$): at 5\,km daily resolution the gridded rainfall at event
-cell-months is no higher than average. These results suggest that the bottleneck
+does not improve discrimination. The area under the ROC curve is indistinguishable
+from random (AUC $\approx 0.48$; month-block bootstrap 95\,\% CI spans 0.5): at
+5\,km daily resolution the gridded rainfall at event cell-months is no higher
+than average. These results suggest that the bottleneck
 is the resolution of the forcing rather than the model. At half-hourly GPM IMERG
 resolution the same intensity--duration trigger pins the threshold crossing to a
 timestamp hours ahead of the documented flows, whereas the same rain aggregated
@@ -351,7 +352,10 @@ meaningless, almost every ``false alarm'' is a susceptible, wet cell with no
 \emph{recorded} event. We therefore score discrimination, as the susceptibility
 and early-warning literatures do \citep{reichenbach2018}: ROC-AUC (does the hazard
 rank event cell-months above quiet ones?) and POD at a fixed alerted-area
-fraction.
+fraction. Uncertainty on the AUC is estimated by a \emph{month-block} bootstrap
+(resampling calendar months with replacement, keeping each month's cells
+together) so that within-month spatial autocorrelation, the dominant structure
+when one storm wets many cells, is not mistaken for independent information.
 
 \subsection{Threshold calibration and split-sample validation}
 
@@ -409,17 +413,38 @@ high across the sweep; the critical success index peaks at $a^\star\approx5.5$\,
 Repeating the backtest with \emph{distributed} CR2MET rainfall over a
 $15\times18$ grid (270 cells, 123\,120 cell-months, 884 in the event footprint),
 the \emph{real} RandomForest susceptibility resampled to that grid, and spatial
-verification, yields essentially \textbf{no discrimination}: ROC-AUC is 0.463 for
-a lumped basin-mean baseline weighted by susceptibility, 0.477 for distributed
-rainfall with uniform susceptibility, and 0.485 for distributed rainfall weighted
-by real susceptibility, all near the random 0.5. An independent re-computation in
-Python confirms AUC $=0.488$; the mean 7-day rainfall at recorded event
-cell-months (45\,mm) is in fact \emph{lower} than the grid-wide average (49\,mm).
+verification, yields essentially \textbf{no discrimination}
+(Table~\ref{tab:auc}): ROC-AUC is 0.463 for a lumped basin-mean baseline
+weighted by susceptibility, 0.477 for distributed rainfall with uniform
+susceptibility, and 0.485 for distributed rainfall weighted by real
+susceptibility. A month-block bootstrap (resampling months with replacement, so
+within-month spatial autocorrelation is preserved; $B=2000$) puts all three 95\,\%
+confidence intervals across the random 0.5 ($[0.40, 0.57]$ for the best
+configuration), and the bootstrap probability that AUC exceeds 0.5 is only
+0.21--0.34. None of the configurations is distinguishable from random. The mean
+7-day rainfall at recorded event cell-months (45\,mm) is in fact \emph{lower}
+than the grid-wide average (49\,mm).
 At 5\,km daily resolution the gridded rainfall does not discriminate where and
 when these landslides were recorded, and 30\,m susceptibility averaged to 5\,km
 loses its edge. Distributing the forcing does not help: the limiting factor is the
 \emph{resolution} of the forcing and susceptibility (and the month-level
 inventory), not the lumping.
+
+\begin{table}[ht]
+\centering
+\caption{Distributed-backtest discrimination (ROC-AUC) with month-block
+bootstrap 95\,\% confidence intervals ($B=2000$). Every interval spans 0.5.}
+\label{tab:auc}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+configuration & AUC & 95\,\% CI & $P(\mathrm{AUC}>0.5)$ \\
+\midrule
+lumped (basin-mean) $\times$ susc. & 0.463 & $[0.375, 0.550]$ & 0.21 \\
+distributed, susc.\ $=1$           & 0.477 & $[0.399, 0.560]$ & 0.30 \\
+distributed $\times$ real susc.    & 0.485 & $[0.403, 0.565]$ & 0.34 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{figure}[t]
 \centering
