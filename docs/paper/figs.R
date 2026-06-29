@@ -16,6 +16,36 @@ theme_pub <- theme_bw(base_size = 9) + theme(
   plot.margin = margin(4, 6, 4, 4)
 )
 
+## ── Fig 1 — study-area locator map (Chile) ──────────────────────────────────
+suppressMessages({library(sf); library(rnaturalearth)})
+sa <- ne_countries(continent = "South America", scale = "medium", returnclass = "sf")
+sites <- data.frame(
+  name = c("Atacama / Copiapó (2015)", "Río Maipo basin\n+ Cajón del Maipo (2017)",
+           "Río Itata (flood gauge)", "Villa Santa Lucía (2017)"),
+  lon  = c(-70.30, -70.20, -72.00, -72.30),
+  lat  = c(-27.35, -33.65, -37.15, -43.40),
+  type = c("Landslide / debris flow", "Landslide / debris flow",
+           "Flood (discharge)", "Landslide / debris flow")
+)
+mapcol <- c("Landslide / debris flow" = "#D55E00", "Flood (discharge)" = "#0072B2")
+p1 <- ggplot() +
+  geom_sf(data = sa, fill = "grey92", colour = "grey70", linewidth = 0.25) +
+  geom_point(data = sites, aes(lon, lat, colour = type, shape = type), size = 1.9) +
+  geom_text(data = sites, aes(lon, lat, label = name), hjust = 1, nudge_x = -0.6,
+            size = 2.2, lineheight = 0.85, colour = "grey15") +
+  scale_colour_manual(values = mapcol, name = NULL) +
+  scale_shape_manual(values = c("Landslide / debris flow" = 16, "Flood (discharge)" = 17), name = NULL) +
+  coord_sf(xlim = c(-80, -65.5), ylim = c(-46.5, -25.5), expand = FALSE) +
+  annotate("text", x = -76.0, y = -30, label = "Pacific\nOcean", size = 2.4,
+           fontface = "italic", colour = "grey55", lineheight = 0.85) +
+  annotate("text", x = -70.2, y = -25.0, label = "Chile", size = 3, colour = "grey35") +
+  labs(x = NULL, y = NULL) +
+  theme_pub + theme(legend.position = "bottom", legend.direction = "vertical",
+                    panel.background = element_rect(fill = "white"),
+                    legend.key.size = unit(0.7, "lines"), legend.text = element_text(size = 7),
+                    legend.margin = margin(0, 0, 0, 0), legend.spacing.y = unit(1, "pt"))
+ggsave(file.path(outdir, "fig1_studyarea.pdf"), p1, width = 3.0, height = 4.0, device = cairo_pdf)
+
 ## ── Fig 2 — I–D calibration sweep (lumped Maipo) ────────────────────────────
 sw <- read.csv("data/fig_idsweep.csv")
 swl <- data.frame(
@@ -59,6 +89,36 @@ p3 <- ggplot() +
   theme_pub + theme(legend.position = c(0.70, 0.85),
                     legend.background = element_rect(fill = "white", colour = "grey80", linewidth = 0.3))
 ggsave(file.path(outdir, "fig3_leadtime.pdf"), p3, width = 4.6, height = 2.6, device = cairo_pdf)
+
+## ── Fig (synthetic) — discrimination vs forcing resolution ──────────────────
+## Controlled experiment: planted sub-daily bursts, identical field aggregated to
+## coarser resolution. AUC and operational catch rate (POD@5%) vs resolution.
+sr <- read.csv("data/synthetic_resolution.csv")
+srl <- data.frame(
+  dt = rep(sr$dt_h, 2),
+  metric = factor(rep(c("ROC-AUC (× susc.)", "POD @ 5% area"), each = nrow(sr)),
+                  levels = c("ROC-AUC (× susc.)", "POD @ 5% area")),
+  value = c(sr$auc_realsusc_mean, sr$pod_mean),
+  sd = c(sr$auc_realsusc_sd, sr$pod_sd)
+)
+psyn <- ggplot(srl, aes(dt, value, colour = metric, fill = metric, shape = metric)) +
+  geom_hline(yintercept = 0.5, linetype = 3, colour = "grey60", linewidth = 0.35) +
+  annotate("text", x = 0.5, y = 0.52, label = "AUC = 0.5 (random)", hjust = 0, vjust = 0,
+           size = 2.3, colour = "grey45") +
+  geom_ribbon(aes(ymin = value - sd, ymax = value + sd), colour = NA, alpha = 0.15) +
+  geom_line(linewidth = 0.6) + geom_point(size = 1.4) +
+  scale_colour_manual(values = c("ROC-AUC (× susc.)" = ok[["POD"]],
+                                 "POD @ 5% area" = ok[["FAR"]]), name = NULL) +
+  scale_fill_manual(values = c("ROC-AUC (× susc.)" = ok[["POD"]],
+                               "POD @ 5% area" = ok[["FAR"]]), name = NULL) +
+  scale_shape_manual(values = c(16, 17), name = NULL) +
+  scale_x_log10(breaks = c(0.5, 1, 3, 6, 12, 24),
+                labels = c("0.5", "1", "3", "6", "12", "24")) +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
+  labs(x = "forcing resolution (h, log scale)", y = "skill") +
+  theme_pub + theme(legend.position = c(0.30, 0.22),
+                    legend.background = element_rect(fill = "white", colour = "grey80", linewidth = 0.3))
+ggsave(file.path(outdir, "fig_synthetic.pdf"), psyn, width = 3.4, height = 2.5, device = cairo_pdf)
 
 ## ── Fig 4 — distributed hazard map (Maipo, wettest step) ─────────────────────
 hz <- read.csv("data/fig_hazard.csv")
