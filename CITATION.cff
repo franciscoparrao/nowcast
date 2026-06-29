@@ -1,0 +1,42 @@
+cff-version: 1.2.0
+title: "nowcast: a forcing-agnostic Rust engine for dynamic geohazard nowcasting"
+message: "If you use this software or the derived results, please cite the manuscript below."
+type: software
+authors:
+  - given-names: Francisco
+    family-names: Parra Ortiz
+    affiliation: "Departamento de Ingeniería Informática, Universidad de Santiago de Chile, Santiago, Chile"
+    email: francisco.parra.o@usach.cl
+    # orcid: "https://orcid.org/TODO"   # add before archival
+version: 0.1.0
+date-released: 2026-06-24
+license: "MIT OR Apache-2.0"
+repository-code: "https://github.com/franciscoparrao/nowcast"
+keywords:
+  - nowcasting
+  - landslides
+  - floods
+  - intensity-duration threshold
+  - rainfall resolution
+  - early warning
+  - Rust
+  - geohazards
+  - Chile
+abstract: >-
+  nowcast is a dependency-light Rust engine that turns static geohazard
+  susceptibility into a time-varying hazard via an interchangeable forcing
+  interface and a composable trigger, with native providers for rainfall-runoff,
+  snowmelt, 2-D shallow-water inundation, agent-based debris-flow runout, a
+  geospatial raster substrate and PS-InSAR/SBAS deformation, and exact
+  closed-form attribution of every alert.
+preferred-citation:
+  type: article
+  title: "nowcast: a forcing-agnostic Rust engine for dynamic geohazard nowcasting, and why forcing resolution, not the model, sets the skill ceiling"
+  authors:
+    - given-names: Francisco
+      family-names: Parra Ortiz
+      affiliation: "Departamento de Ingeniería Informática, Universidad de Santiago de Chile, Santiago, Chile"
+  journal: "Computers & Geosciences"
+  year: 2026
+  # doi: "TODO"            # add on acceptance
+  # volume / start / end:  # add on publication
