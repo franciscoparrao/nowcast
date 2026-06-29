@@ -159,12 +159,32 @@ motores se enchufan como proveedores nativos en v0.2.
   ⊕ deformación por noisy-OR — donde el terreno repta (v≳v_crit) el peligro cruza
   el umbral aunque la lluvia sola no gatille. insar-core: ~5300 LOC, PS-InSAR/SBAS,
   validado Fernandina; `run_sbas` produce el VelocityMap.
-- **firespread** → peligro paralelo (fuego): acople físico tipo hydroflux +
-  cascada post-incendio que modifica la susceptibilidad. PENDIENTE.
+- **firespread** → peligro paralelo (fuego): crate `nowcast-firespread` envuelve
+  `firespread-core` (Rothermel + minimum-travel-time). `run_fire`→`FireField`
+  (arrival/ROS/intensidad por celda, `fire_hazard` normalizado) y la **cascada
+  post-incendio** `post_fire_susceptibility` que amplifica la susceptibilidad en
+  la cicatriz quemada → realimenta el nowcast de lluvia (debris flow post-fuego).
+  Ejemplo `couple_fire.rs`: misma tormenta deja 0 celdas en alerta pre-incendio y
+  317 post-incendio. Adapter LISTO.
 
 ## Arquitectura tentativa
 - `nowcast-core`: motor de reglas/umbrales + combinación susceptibilidad×trigger.
-- Targets: native (Rayon) + Python (PyO3) + CLI; posible servicio en loop.
+- Targets: native (Rayon) + CLI (`nowcast-cli`: run/backtest/explain/watch) +
+  **Python (PyO3) LISTOS**. `nowcast-python` (cdylib, abi3-py39, maturin; fuera de
+  `default-members` para que el gate offline no requiera Python) expone `Nowcast`
+  (uniform/gridded, run/alerts/explain), `LiveNowcast` (push, bit-idéntico) y
+  `Calibrator`/`reliability`/`brier_score`. Verificado: import + round-trip Python
+  coincide con el motor Rust. Build: `cd crates/nowcast-python && maturin develop`.
+- **Loop tiempo real LISTO**: módulo `live` (`LiveNowcast` streaming push-based,
+  ring-buffer de prefix-sums por celda, **bit-idéntico** al batch; trait
+  `StepSource` + `ReplaySource` + driver `run_live`). Ejemplo `live_loop.rs` (con
+  aserción de paridad) y verbo CLI `nowcast watch`. Falta solo el feed de datos en
+  vivo + validación operacional (limitación iii del paper, ahora parcial).
+- **Probabilidad calibrada LISTA**: módulo `calibrate` (`Calibrator::fit_isotonic`
+  PAV índice→probabilidad monótona; `reliability` con diagrama de fiabilidad,
+  intervalos de Wilson, Brier/skill, ECE). Ejemplo `calibrated_probability.rs`
+  (índice crudo skill −0.04 → calibrado +0.24, ECE 20× menor). Falta solo ajuste
+  sobre eventos reales held-out (limitación i del paper, ahora parcial).
 - Orquesta rásters de SurtGIS + salidas de rainflow/snowmelt + modelo Smelt.
 
 ## Validación

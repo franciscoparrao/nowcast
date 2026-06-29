@@ -13,6 +13,23 @@ Part of the author's Rust geohazard family (SurtGIS, Hydroflux, Smelt, Anvil,
 Cantus, Criterium) and a downstream integrator of `rainflow` (rainfall–runoff)
 and `snowmelt-rs` (snowmelt).
 
+## Building
+
+`nowcast-core` is self-contained (`std` + `thiserror`) and builds and tests with no
+network and no system libraries — it carries the paper's headline resolution
+results on its own:
+
+```bash
+cargo test -p nowcast-core
+cargo run -p nowcast-core --release --example synthetic_resolution
+```
+
+The **provider crates** (`nowcast-rainflow`, `-snowmelt`, `-hydroflux`, `-surtgis`,
+`-swarm`, `-insar`, `-firespread`) wrap sibling engines from the author's Rust
+geohazard family through **path dependencies**, so building the *full* workspace
+requires those repositories checked out in the same parent directory as this one.
+Without them, build `nowcast-core` and its examples on their own.
+
 ## Status — v0.1 (decoupled core)
 
 `nowcast-core` is functional and dependency-light (`std` + `thiserror`), so it
@@ -179,9 +196,95 @@ spares the banks — the coarse alert's 0.7 probability lands on the 24 of 264
 cells that actually flood. (Pulls the hydrodynamic stack, so it builds online
 once; the core stays offline.)
 
+## Python bindings (`nowcast-python`)
+
+PyO3 bindings expose the engine to Python (abi3 wheel, CPython ≥ 3.9) so it can be
+driven from the susceptibility pipeline. Build with maturin:
+
+```bash
+cd crates/nowcast-python && maturin develop --release
+```
+
+```python
+import nowcast as nc
+m = nc.Nowcast.uniform([0.8]*9, 3, 3, [2, 5, 40, 80, 3], 24.0, id_a=6.0)
+m.alerts(0.5)                 # [(step, n_cells, fraction, max_prob), ...]
+m.explain(0, 3)              # exact terrain × trigger attribution (dict)
+
+live = nc.LiveNowcast([0.8]*9, 3, 3, 24.0, id_a=6.0)
+haz = live.push([40.0]*9)   # streaming, bit-identical to the batch engine
+
+cal = nc.Calibrator.fit_isotonic(scores, outcomes)
+nc.reliability(cal.calibrate(scores), outcomes, 10)   # Brier, skill, ECE, Wilson CIs
+```
+
+## Calibrated probability (`calibrate`)
+
+The hazard is a bounded *index*, not a probability. The `calibrate` module turns
+it into one and quantifies the uncertainty, dependency-free:
+
+- `Calibrator::fit_isotonic(scores, outcomes)` fits a monotone *index →
+  probability* map by isotonic regression (pool-adjacent-violators);
+- `reliability(preds, outcomes, n_bins)` returns a reliability diagram (predicted
+  vs observed per bin with **Wilson 95 % intervals**), the **Brier** score and
+  skill, and the expected calibration error.
+
+```bash
+cargo run --example calibrated_probability
+```
+
+In the example the raw index scores *worse* than climatology (Brier skill −0.04);
+isotonic calibration lifts it to +0.24 and cuts the calibration error ~20×, with
+honest per-bin uncertainty bands.
+
+## Real-time loop (`LiveNowcast`)
+
+The batch engine replays a whole series; `LiveNowcast` ingests forcing **one step
+at a time** and emits a hazard field immediately, keeping only a bounded ring
+buffer of recent prefix sums per cell (O(`max_window`) memory). It is
+**bit-identical** to the batch engine on the same data — the streaming path is a
+memory optimisation, not an approximation:
+
+```rust
+let mut engine = LiveNowcast::new(susc, threshold, trigger, max_window, dt_h)?;
+let field = engine.push(&depths_this_step)?;     // alert as each step arrives
+if let Some(a) = field.alert(0.5) { /* notify */ }
+```
+
+A `StepSource` abstracts where steps come from (a replayed forcing, a growing
+file, a polled feed); `run_live` drives a source through the engine. See
+`examples/live_loop.rs` (with a batch-parity assertion) and the `nowcast watch`
+CLI verb.
+
+## Command-line interface (`nowcast-cli`)
+
+The `nowcast` binary exposes the engine without writing Rust:
+
+```bash
+# Run: susceptibility × rainfall → per-step hazard GeoTIFFs + alerts
+nowcast run --susc susceptibility.tif --rain-rasters r0.tif,r1.tif,r2.tif \
+            --dt-hours 0.5 --id-a 4.0 --out-dir hazard/
+nowcast run --uniform-susc 0.8 --rain-csv gauge.csv --ncols 3 --id-a 6.0
+
+# Backtest the I–D trigger against a dated inventory, sweeping the intercept
+nowcast backtest --rain-csv data/maipo_cr2met_pr_1979_2016.csv \
+                 --events-csv data/maipo_events_dated.csv --sweep 2:16:0.5
+
+# Explain one cell/step: exact terrain × trigger attribution
+nowcast explain --uniform-susc 0.8 --rain-csv gauge.csv --ncols 3 --cell 0 --step 3
+
+# Watch: stream a gauge CSV through the real-time engine, alerting step by step
+nowcast watch --uniform-susc 0.7 --rain-csv gauge.csv --ncols 4 --id-a 6.0
+```
+
+Susceptibility is a GeoTIFF (georeferenced output) or a uniform value; rainfall
+is a single-gauge CSV column (broadcast over the grid) or a stack of per-step
+GeoTIFFs (distributed forcing). Build with `cargo build -p nowcast-cli --release`.
+
 ## Roadmap
-- CLI runner and PyO3 bindings (`nowcast-cli`, `nowcast-python`), matching the
-  family's crate layout.
+- A live data feed for the real-time loop and validation of the probability
+  calibration on real held-out events (the machinery is in place; see the
+  limitations in the manuscript).
 
 ## Workspace layout
 
@@ -211,6 +314,25 @@ crates/nowcast-swarm/      # agent-based debris-flow runout refinement
 crates/nowcast-insar/      # InSAR deformation as a 2nd trigger
   src/lib.rs               DeformationForcing + deformation_trigger
   examples/rain_and_creep.rs
+crates/nowcast-firespread/ # wildfire hazard path + post-fire susceptibility cascade
+  src/lib.rs               run_fire + FireField + post_fire_susceptibility
+  examples/couple_fire.rs
+crates/nowcast-cli/        # command-line runner: run / backtest / explain
+  src/main.rs              `nowcast` binary (clap)
+```
+
+## Wildfire and the post-fire cascade (firespread coupling)
+
+`nowcast-firespread` adds fire as a parallel hazard and, more importantly, the
+**post-fire cascade**: a burn scar sharply lowers the rainfall needed to trigger a
+debris flow. `run_fire` drives the `firespread` engine (Rothermel + minimum travel
+time) to a burn footprint; `post_fire_susceptibility` amplifies the static
+susceptibility inside the scar; the ordinary rainfall nowcast then sees the
+elevated hazard. In the example, a modest storm that leaves the unburned slope
+below threshold flips hundreds of scar cells into alert.
+
+```bash
+cargo run -p nowcast-firespread --example couple_fire
 ```
 
 ## Composable triggers (rainfall ⊕ deformation)
@@ -250,6 +372,41 @@ Maipo (5149×5855) and writes a georeferenced hazard GeoTIFF.
 cargo run -p nowcast-surtgis --example geotiff_roundtrip
 ```
 
+## Reproducibility
+
+The core builds and tests fully offline (`std` + `thiserror`); the provider
+crates pull in sibling engines but vendor no system libraries (GeoTIFF I/O is
+pure-Rust, no GDAL). Every result and figure in the manuscript is produced by a
+runnable example — there are no hidden scripts:
+
+```bash
+cargo test --workspace            # full unit + doc test suite
+cargo clippy --workspace -- -D warnings
+cargo run --release --example backtest               # lumped Maipo I–D backtest
+cargo run --release --example published_thresholds   # 35 published I–D curves (Guzzetti et al. 2007)
+cargo run --release --example synthetic_resolution   # controlled resolution experiment
+cargo run -p nowcast-rainflow --release --example itata_validation  # flood path vs observed Q
+```
+
+Derived per-event data are regenerated by the `scripts/extract_*.py` helpers
+(Python 3 with `numpy`/`xarray`); raw inputs are third-party and openly
+documented (CR2MET v2.5, GPM IMERG Final v07, CAMELS-CL, the SERNAGEOMIN
+inventory). Figures are rendered by `docs/paper/figs.R` (R + `ggplot2`).
+
+## Citation
+
+If you use this software or its results, please cite the manuscript (see
+`CITATION.cff`). A citable archive with a DOI will be deposited on Zenodo at
+submission.
+
 ## License
 
-MIT OR Apache-2.0
+Dual-licensed under either of
+
+- Apache License, Version 2.0 ([`LICENSE-APACHE`](LICENSE-APACHE))
+- MIT license ([`LICENSE-MIT`](LICENSE-MIT))
+
+at your option. Unless you explicitly state otherwise, any contribution
+intentionally submitted for inclusion in the work by you, as defined in the
+Apache-2.0 license, shall be dual-licensed as above, without any additional
+terms or conditions.

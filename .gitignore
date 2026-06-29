@@ -9,6 +9,9 @@ Cargo.lock.bak
 # IMERG raw HDF5 (large, downloaded) — keep derived CSV only
 /data/imerg_hhr/
 
+# Internal working notes (not part of the published artifact)
+docs/paper/revision-plan.md
+
 # Python bytecode
 __pycache__/
 *.pyc
