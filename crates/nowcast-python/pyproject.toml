@@ -1,0 +1,24 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "nowcast"
+description = "Dynamic geohazard nowcasting engine in Rust, with Python bindings"
+requires-python = ">=3.9"
+license = { text = "MIT OR Apache-2.0" }
+authors = [{ name = "Francisco Parra-O." }]
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/franciscoparrao/nowcast"
+
+[tool.maturin]
+# The crate lives in a Cargo workspace; point maturin at its manifest.
+manifest-path = "Cargo.toml"
+features = ["pyo3/extension-module"]

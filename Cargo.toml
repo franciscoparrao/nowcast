@@ -8,10 +8,24 @@ members = [
     "crates/nowcast-surtgis",
     "crates/nowcast-swarm",
     "crates/nowcast-insar",
+    "crates/nowcast-firespread",
+    "crates/nowcast-cli",
+    "crates/nowcast-python",
 ]
-# Future members (kept out of the default build until they exist):
-#   crates/nowcast-cli      — CLI runner / backtesting driver
-#   crates/nowcast-python   — PyO3 bindings (built with maturin)
+# The PyO3 cdylib is built by maturin, not the default cargo gate, so it is kept
+# out of `default-members` (bare `cargo build`/`test`/`clippy` stay offline and
+# need no Python build environment).
+default-members = [
+    "crates/nowcast-core",
+    "crates/nowcast-snowmelt",
+    "crates/nowcast-rainflow",
+    "crates/nowcast-hydroflux",
+    "crates/nowcast-surtgis",
+    "crates/nowcast-swarm",
+    "crates/nowcast-insar",
+    "crates/nowcast-firespread",
+    "crates/nowcast-cli",
+]
 
 [workspace.package]
 version = "0.1.0"

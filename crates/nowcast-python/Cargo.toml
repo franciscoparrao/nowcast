@@ -1,0 +1,21 @@
+[package]
+name = "nowcast-python"
+description = "Python bindings (PyO3) for the nowcast geohazard nowcasting engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+name = "nowcast"
+crate-type = ["cdylib"]
+
+[dependencies]
+nowcast-core = { path = "../nowcast-core" }
+
+[dependencies.pyo3]
+version = "0.23"
+# abi3-py39: one wheel works on CPython 3.9+; extension-module leaves the
+# libpython symbols to be resolved at import time (no link-time dependency).
+features = ["extension-module", "abi3-py39"]

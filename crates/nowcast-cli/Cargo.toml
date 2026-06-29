@@ -1,0 +1,19 @@
+[package]
+name = "nowcast-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Command-line runner for the nowcast geohazard engine (run, backtest, explain)."
+
+[[bin]]
+name = "nowcast"
+path = "src/main.rs"
+
+[dependencies]
+nowcast-core = { path = "../nowcast-core" }
+nowcast-surtgis = { path = "../nowcast-surtgis" }
+surtgis-core = { path = "../../../surtgis/crates/core" }
+clap.workspace = true
+anyhow.workspace = true
