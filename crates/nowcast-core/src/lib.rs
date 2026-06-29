@@ -50,20 +50,24 @@
 //! ```
 
 mod backtest;
+mod calibrate;
 mod error;
 mod explain;
 mod forcing;
 mod grid;
+mod live;
 mod multi;
 mod nowcast;
 mod threshold;
 mod trigger;
 
 pub use backtest::{Contingency, MonthKey, monthly_contingency, spatial_monthly_contingency};
+pub use calibrate::{Calibrator, Reliability, ReliabilityBin, brier_score, reliability};
 pub use error::{Error, Result};
 pub use explain::{Driver, Explanation};
 pub use forcing::{Forcing, GriddedRain, UniformRain};
 pub use grid::{GridDims, SusceptibilityMap};
+pub use live::{LiveNowcast, ReplaySource, StepSource, run_live};
 pub use multi::{Combine, IdTrigger, MultiNowcast, ThresholdTrigger, Trigger};
 pub use nowcast::{Alert, HazardField, Nowcast};
 pub use threshold::IdThreshold;

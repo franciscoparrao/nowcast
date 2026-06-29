@@ -162,25 +162,6 @@ impl<F: Forcing> Nowcast<F> {
         prefix
     }
 
-    /// Worst I–D exceedance for cell `c` at step `t`, over all rolling window
-    /// lengths up to `max_window_steps`, using precomputed prefix sums.
-    fn max_exceedance(&self, prefix: &[Vec<f64>], c: usize, t: usize) -> f64 {
-        let dt = self.forcing.dt_hours();
-        let max_m = self.max_window_steps.min(t + 1);
-        let row = &prefix[c];
-        let mut best = 0.0_f64;
-        for m in 1..=max_m {
-            let window_depth = row[t + 1] - row[t + 1 - m];
-            let duration_h = m as f64 * dt;
-            let mean_intensity = window_depth / duration_h;
-            let e = self.threshold.exceedance(mean_intensity, duration_h);
-            if e > best {
-                best = e;
-            }
-        }
-        best
-    }
-
     /// Worst exceedance and the rolling-window length (in steps) that produced
     /// it, for cell `c` at step `t`.
     fn dominant_window(&self, prefix: &[Vec<f64>], c: usize, t: usize) -> (f64, usize) {
@@ -241,25 +222,44 @@ impl<F: Forcing> Nowcast<F> {
     }
 
     fn hazard_at_with(&self, prefix: &[Vec<f64>], step: usize) -> HazardField {
-        let dims = self.susceptibility.dims();
-        let mut probability = vec![0.0; dims.len()];
-        for (c, p) in probability.iter_mut().enumerate() {
-            let e = self.max_exceedance(prefix, c, step);
-            *p = self.susceptibility.get(c) * self.trigger.factor(e);
-        }
-        HazardField {
+        hazard_field(
+            &self.susceptibility,
+            &self.threshold,
+            &self.trigger,
+            self.forcing.dt_hours(),
+            self.max_window_steps,
+            prefix,
             step,
-            dims,
-            probability,
-        }
+        )
     }
 
     /// Run the full nowcast, returning one [`HazardField`] per time step.
+    ///
+    /// Steps are independent given the read-only prefix sums. With the
+    /// `parallel` feature the per-step loop runs on Rayon; the closure captures
+    /// only the shared prefix buffer and `Copy`/`Sync` parameters (never the
+    /// forcing), so no `F: Sync` bound is imposed and the output is identical to
+    /// the serial path (Rayon's indexed `collect` preserves order).
     pub fn run(&self) -> Vec<HazardField> {
         let prefix = self.depth_prefix_sums();
-        (0..self.forcing.n_steps())
-            .map(|t| self.hazard_at_with(&prefix, t))
-            .collect()
+        let n_steps = self.forcing.n_steps();
+        #[cfg(feature = "parallel")]
+        {
+            use rayon::prelude::*;
+            let susc = &self.susceptibility;
+            let threshold = self.threshold;
+            let trigger = self.trigger;
+            let dt = self.forcing.dt_hours();
+            let mw = self.max_window_steps;
+            (0..n_steps)
+                .into_par_iter()
+                .map(|t| hazard_field(susc, &threshold, &trigger, dt, mw, &prefix, t))
+                .collect()
+        }
+        #[cfg(not(feature = "parallel"))]
+        {
+            (0..n_steps).map(|t| self.hazard_at_with(&prefix, t)).collect()
+        }
     }
 
     /// Run the nowcast and emit an [`Alert`] for every step whose peak hazard
@@ -269,6 +269,56 @@ impl<F: Forcing> Nowcast<F> {
             .into_iter()
             .filter_map(|field| field.alert(level))
             .collect()
+    }
+}
+
+/// Worst I–D exceedance for cell `c` at step `t`, over all rolling window lengths
+/// up to `max_window`, using precomputed prefix sums. Free function (no `F` in
+/// scope) so both the serial and the Rayon drivers share one implementation.
+fn max_exceedance_at(
+    threshold: &IdThreshold,
+    dt: f64,
+    max_window: usize,
+    prefix: &[Vec<f64>],
+    c: usize,
+    t: usize,
+) -> f64 {
+    let max_m = max_window.min(t + 1);
+    let row = &prefix[c];
+    let mut best = 0.0_f64;
+    for m in 1..=max_m {
+        let window_depth = row[t + 1] - row[t + 1 - m];
+        let duration_h = m as f64 * dt;
+        let e = threshold.exceedance(window_depth / duration_h, duration_h);
+        if e > best {
+            best = e;
+        }
+    }
+    best
+}
+
+/// Hazard field for one step: `susceptibility × trigger_factor(max exceedance)`
+/// per cell. Captures only `Sync` inputs, so the parallel `run` need not bound
+/// `F: Sync`.
+fn hazard_field(
+    susc: &SusceptibilityMap,
+    threshold: &IdThreshold,
+    trigger: &TriggerModel,
+    dt: f64,
+    max_window: usize,
+    prefix: &[Vec<f64>],
+    step: usize,
+) -> HazardField {
+    let dims = susc.dims();
+    let mut probability = vec![0.0; dims.len()];
+    for (c, p) in probability.iter_mut().enumerate() {
+        let e = max_exceedance_at(threshold, dt, max_window, prefix, c, step);
+        *p = susc.get(c) * trigger.factor(e);
+    }
+    HazardField {
+        step,
+        dims,
+        probability,
     }
 }
 

@@ -9,5 +9,12 @@ repository.workspace = true
 
 [dependencies]
 thiserror.workspace = true
+rayon = { version = "1", optional = true }
+
+[features]
+# Off by default so the core builds and tests offline with std only. With
+# `--features parallel`, `Nowcast::run` parallelises the (independent) per-step
+# loop with Rayon; the prefix-sum buffer is read-only and shared across threads.
+parallel = ["dep:rayon"]
 
 [dev-dependencies]
