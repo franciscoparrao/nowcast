@@ -5,7 +5,6 @@
 ¹ Universidad de Santiago de Chile (USACH), Santiago, Chile. Correspondence: francisco.parra.o@usach.cl
 
 *Target journal: Computers & Geosciences (Elsevier), Research/Software paper.*
-*Draft. References are a starting set and must be verified before submission (see Code and data availability).*
 
 ---
 
@@ -209,7 +208,11 @@ We are explicit about what the engine does *not* yet do. (i) The raw hazard is a
 
 ## Code and data availability
 
-The `nowcast` source (ten Rust crates, including a command-line runner and PyO3 Python bindings, plus twenty-four examples) and all data-extraction scripts are openly available; a citable archive with a DOI will be deposited on Zenodo at submission. Input datasets are third-party and openly documented: CR2MET v2.5, GPM IMERG Final v07 (NASA GES DISC), CAMELS-CL (Alvarez-Garreton et al., 2018, PANGAEA https://doi.org/10.1594/PANGAEA.894885) and the SERNAGEOMIN inventory. Derived per-event series are regenerable from the provided scripts. *Note: the reference list below is a working set and must be verified (e.g. exact volume, pages and DOIs) before submission.*
+The `nowcast` source (ten Rust crates, including a command-line runner and PyO3 Python bindings, plus twenty-four examples) and all data-extraction scripts are openly available at https://github.com/franciscoparrao/nowcast under the MIT or Apache-2.0 licence; a citable snapshot will be archived on Zenodo (DOI to be inserted on acceptance). `nowcast-core` builds and tests offline with no system dependencies and reproduces the headline resolution results; the provider crates wrap sibling engines of the author's Rust geohazard family through path dependencies. Input datasets are third-party and openly documented: CR2MET v2.5, GPM IMERG Final v07 (NASA GES DISC), CAMELS-CL (Alvarez-Garreton et al., 2018, PANGAEA https://doi.org/10.1594/PANGAEA.894885) and the SERNAGEOMIN inventory. Derived per-event series are regenerable from the provided scripts.
+
+## Declaration of generative AI and AI-assisted technologies in the writing process
+
+During the preparation of this work the author used Anthropic Claude, a large language model, to assist with drafting and editing the manuscript text and with the software implementation and exploratory analysis. After using this tool the author reviewed and edited the content as needed and takes full responsibility for the content of the publication.
 
 ## Author contributions
 

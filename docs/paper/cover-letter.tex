@@ -1,0 +1,83 @@
+\documentclass[11pt]{letter}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\signature{Francisco Parra-O.\\
+Departamento de Ingenier\'ia Inform\'atica\\
+Universidad de Santiago de Chile\\
+francisco.parra.o@usach.cl}
+
+\address{Francisco Parra-O.\\
+Departamento de Ingenier\'ia Inform\'atica\\
+Universidad de Santiago de Chile\\
+Av. V\'ictor Jara 3659\\
+Santiago 9170124, Chile}
+
+\begin{document}
+
+\begin{letter}{Editor-in-Chief\\
+Computers \& Geosciences\\
+Elsevier}
+
+\opening{Dear Editor,}
+
+I am pleased to submit my manuscript entitled ``\textbf{nowcast: a forcing-agnostic
+Rust engine for dynamic geohazard nowcasting, and why forcing resolution, not the
+model, sets the skill ceiling}'' for consideration for publication in
+\textit{Computers \& Geosciences}.
+
+Susceptibility mapping is mature but static; empirical rainfall thresholds say
+\emph{when} but not \emph{where}. Operational early-warning needs both, yet existing
+systems weld a specific forcing, trigger and susceptibility model into one
+product-specific chain. I present \textbf{nowcast}, an open, dependency-light Rust
+engine that expresses time-varying hazard as a susceptibility field times a
+composable trigger behind a single interchangeable forcing interface, and I then
+use it as an experimental instrument to ask a question a fixed chain cannot: holding
+the model fixed, how much does the \emph{resolution of the forcing} determine
+attainable skill?
+
+\textbf{Key contributions:}
+\begin{itemize}
+    \item A forcing-agnostic engine (ten Rust crates) in which rainfall, routed
+    discharge, snowmelt and InSAR deformation enter through one interface, with a
+    composable multi-trigger and exact, closed-form attribution of every alert.
+    \item A backtesting framework with metrics appropriate for rare, spatially
+    sparse, month-dated inventories (event-centred contingency, ROC-AUC,
+    probability-of-detection-at-area, split-sample calibration).
+    \item A reproducible \emph{resolution diagnosis}: on the R\'io Maipo, distributing
+    daily forcing and weighting by a real machine-learning susceptibility raster does
+    not lift discrimination above chance (AUC $\approx 0.48$), and applying the full
+    ensemble of 35 published intensity--duration thresholds does not rescue it; a
+    controlled experiment with known ground truth shows the same engine discriminates
+    planted sub-daily bursts almost perfectly but loses all operational catch rate
+    under daily aggregation. The binding constraint is the forcing resolution, not
+    the model.
+    \item A validated counterpart: half-hourly satellite forcing pins the
+    threshold crossing hours ahead of documented flows across three climatically
+    distinct events, and a discharge path validated against observed streamflow on
+    the R\'io Itata discriminates floods out of sample (ROC-AUC 0.90).
+\end{itemize}
+
+\textbf{Relevance to Computers \& Geosciences:} the work contributes a novel
+computational architecture and a methods result for geohazard early-warning, with
+emphasis on reproducibility: the engine, its backtesting framework and every
+result are open-source and accompanied by runnable examples and data-extraction
+scripts. This fits the journal's focus on computational methods and software for
+the geosciences.
+
+The manuscript reports an honest negative result (the daily null) alongside its
+positive ones; I believe this transparency is a strength for a methods paper and is
+well suited to the journal's readership of practitioners and method developers.
+
+This manuscript has not been published elsewhere and is not under consideration by
+any other journal. I declare no competing interests. The code and data supporting
+this study are publicly available as indicated in the manuscript.
+
+Thank you for considering my submission. I look forward to your response.
+
+\closing{Sincerely,}
+
+\end{letter}
+\end{document}
