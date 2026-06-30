@@ -29,6 +29,11 @@ the roadmap is to *enchufar* the SOTA, not to rewrite the engine.
   predictive probability.
 - **Fit / effort:** direct (one `Forcing` impl + an external model via PyO3/ONNX).
   Standalone paper. **This is the natural continuation of the resolution thesis.**
+- **Status:** the *engine side* is prototyped — `nowcast_core::ensemble_hazard`
+  runs the engine over an ensemble of forcing members and returns a probabilistic
+  hazard (exceedance probability, mean, spread); the exceedance probability feeds
+  the calibration tools (example `ensemble_nowcast`). What remains is wiring a real
+  ensemble QPF model (pySTEPS / DGMR) as a `Forcing` and validating on a case study.
 
 ## 2 · Explicit antecedent state (soil moisture)
 

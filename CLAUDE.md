@@ -185,6 +185,13 @@ motores se enchufan como proveedores nativos en v0.2.
   intervalos de Wilson, Brier/skill, ECE). Ejemplo `calibrated_probability.rs`
   (índice crudo skill −0.04 → calibrado +0.24, ECE 20× menor). Falta solo ajuste
   sobre eventos reales held-out (limitación i del paper, ahora parcial).
+- **Nowcasting por ensemble (prototipo eje 1 SOTA)**: módulo `ensemble`
+  (`ensemble_hazard`) corre el motor sobre un ensemble de forzantes (miembros vía
+  trait `Forcing`) → `EnsembleField` con probabilidad de excedencia, media y spread.
+  Es la maquinaria engine-side de la forzante pronosticada; el QPF real (pySTEPS/
+  DGMR) enchufa por el mismo `Forcing`. Ejemplo `ensemble_nowcast.rs` (prob cruda
+  vence al determinístico, lleva incertidumbre, y la calibración isotónica la vuelve
+  reliable). Ver `docs/sota-roadmap.md` eje 1.
 - Orquesta rásters de SurtGIS + salidas de rainflow/snowmelt + modelo Smelt.
 
 ## Validación

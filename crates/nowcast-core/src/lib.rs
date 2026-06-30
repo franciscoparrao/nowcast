@@ -51,6 +51,7 @@
 
 mod backtest;
 mod calibrate;
+mod ensemble;
 mod error;
 mod explain;
 mod forcing;
@@ -63,6 +64,7 @@ mod trigger;
 
 pub use backtest::{Contingency, MonthKey, monthly_contingency, spatial_monthly_contingency};
 pub use calibrate::{Calibrator, Reliability, ReliabilityBin, brier_score, reliability};
+pub use ensemble::{EnsembleField, ensemble_hazard};
 pub use error::{Error, Result};
 pub use explain::{Driver, Explanation};
 pub use forcing::{Forcing, GriddedRain, UniformRain};

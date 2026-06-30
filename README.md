@@ -218,6 +218,23 @@ cal = nc.Calibrator.fit_isotonic(scores, outcomes)
 nc.reliability(cal.calibrate(scores), outcomes, 10)   # Brier, skill, ECE, Wilson CIs
 ```
 
+## Ensemble (probabilistic) nowcasting (`ensemble`)
+
+The engine side of forecast forcing (SOTA roadmap axis 1). Given an ensemble of
+forcing members — e.g. an ensemble rainfall nowcast (pySTEPS, or a deep generative
+model such as DGMR) — `ensemble_hazard` runs the engine on each member and
+aggregates to a **probabilistic hazard**: per-cell exceedance probability, mean and
+spread. The members enter through the ordinary `Forcing` interface, so a real QPF
+ensemble plugs in without touching the hazard logic; the exceedance probability
+feeds the calibration tools.
+
+```bash
+cargo run --release --example ensemble_nowcast
+```
+
+The example shows the raw exceedance probability beating a deterministic forecast
+and carrying uncertainty (spread), then isotonic calibration making it reliable.
+
 ## Calibrated probability (`calibrate`)
 
 The hazard is a bounded *index*, not a probability. The `calibrate` module turns
