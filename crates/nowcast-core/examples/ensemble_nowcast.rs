@@ -107,7 +107,7 @@ fn main() {
     println!("                              Brier     skill      ECE");
     println!("  raw exceedance prob.       {:.4}   {:>+.3}   {:.4}", raw_rel.brier, raw_rel.brier_skill, raw_rel.ece);
     println!("  calibrated (isotonic)      {:.4}   {:>+.3}   {:.4}", cal_rel.brier, cal_rel.brier_skill, cal_rel.ece);
-    println!("  deterministic (0/1)        {:.4}      —       —\n", brier_score(&det[split..], out_te));
+    println!("  deterministic (0/1)        {:.4}      —       —\n", brier_score(&det[split..], out_te).unwrap());
 
     println!("Reliability of the CALIBRATED ensemble probability (Wilson 95% intervals):");
     println!("  pred    obs     95% CI            n");

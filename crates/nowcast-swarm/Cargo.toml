@@ -10,5 +10,5 @@ repository.workspace = true
 [dependencies]
 nowcast-core = { path = "../nowcast-core" }
 # Sibling ABM engine + the debris-flow model built on it (swarm-abm workspace).
-swarm-core = { path = "../../../swarm-abm/crates/swarm-core" }
+swarm-abm = { path = "../../../swarm-abm/crates/swarm-abm" }
 debris-flow = { path = "../../../swarm-abm/models/debris-flow" }

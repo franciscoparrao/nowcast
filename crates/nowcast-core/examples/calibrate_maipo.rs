@@ -187,7 +187,7 @@ fn main() {
     println!("  calibrated      {:.5}   {:>+.3}   {:.4}", cal_rel.brier, cal_rel.brier_skill, cal_rel.ece);
     println!(
         "  (calibrated Brier {:.5}; climatology Brier {:.5})\n",
-        brier_score(&cal_test, &te_o),
+        brier_score(&cal_test, &te_o).unwrap(),
         base * (1.0 - base)
     );
 

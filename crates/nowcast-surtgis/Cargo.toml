@@ -12,5 +12,5 @@ nowcast-core = { path = "../nowcast-core" }
 # Geospatial substrate of the family. Native GeoTIFF I/O (no GDAL by default).
 # ndarray must be semver-compatible so `Array2` unifies across the boundary.
 surtgis-core = { path = "../../../surtgis/crates/core" }
-ndarray = "0.16"
+ndarray.workspace = true
 thiserror.workspace = true

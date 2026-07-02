@@ -12,4 +12,4 @@ nowcast-core = { path = "../nowcast-core" }
 # Sibling hydrodynamic engine (hydroflux workspace). ndarray must be
 # semver-compatible so `Array2` / `Conserved2D` unify across the boundary.
 hydroflux-solver-2d = { path = "../../../postdoc/hydroflux/solver-2d" }
-ndarray = "0.16"
+ndarray.workspace = true

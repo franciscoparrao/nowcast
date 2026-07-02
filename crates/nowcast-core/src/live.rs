@@ -97,7 +97,10 @@ impl LiveNowcast {
     }
 
     /// Ingest one step's per-cell water-input depth (mm) and return the hazard
-    /// field for that step. The slice length must equal the grid size.
+    /// field for that step. The slice length must equal the grid size, and every
+    /// depth must be finite and non-negative — a single `NaN` accepted here would
+    /// poison this cell's running prefix sums (and thus every future hazard)
+    /// silently, so the operational boundary rejects it up front.
     pub fn push(&mut self, depths: &[f64]) -> Result<HazardField> {
         let dims = self.susceptibility.dims();
         let n = dims.len();
@@ -109,8 +112,22 @@ impl LiveNowcast {
                 nrows: dims.nrows,
             });
         }
+        if let Some((c, d)) = depths
+            .iter()
+            .enumerate()
+            .find(|(_, d)| !d.is_finite() || **d < 0.0)
+        {
+            return Err(Error::InvalidParameter {
+                name: "depths",
+                reason: format!(
+                    "depth at cell {c} is {d} at step {}; must be finite and non-negative",
+                    self.step
+                ),
+            });
+        }
         let cap = self.max_window_steps + 1;
         let t = self.step;
+        let (threshold, trigger, dt) = (self.threshold, self.trigger, self.dt_hours);
         let mut probability = vec![0.0; n];
         for (c, p) in probability.iter_mut().enumerate() {
             // Advance this cell's prefix sums: prefix[t+1] = prefix[t] + depth.
@@ -120,21 +137,17 @@ impl LiveNowcast {
             if buf.len() > cap {
                 buf.pop_front();
             }
-            // Worst exceedance over windows m = 1..=max_m, with the same
-            // subtraction the batch engine uses (bit-identical).
+            // Worst exceedance over windows m = 1..=max_m, through the shared
+            // I-D kernel with the same subtraction the batch engine uses
+            // (bit-identical; see the parity test).
+            let buf = &self.prefix[c];
             let back = buf.len() - 1; // index of prefix[t+1]
             let prefix_now = buf[back]; // prefix[t+1]
             let max_m = back; // = min(max_window_steps, t+1)
-            let mut best_e = 0.0_f64;
-            for m in 1..=max_m {
-                let window_depth = prefix_now - buf[back - m]; // prefix[t+1] - prefix[t+1-m]
-                let duration_h = m as f64 * self.dt_hours;
-                let e = self.threshold.exceedance(window_depth / duration_h, duration_h);
-                if e > best_e {
-                    best_e = e;
-                }
-            }
-            *p = self.susceptibility.get(c) * self.trigger.factor(best_e);
+            let best_e = threshold
+                .worst_window(dt, max_m, |m| prefix_now - buf[back - m])
+                .0;
+            *p = self.susceptibility.get(c) * trigger.factor(best_e);
         }
         self.step += 1;
         HazardField::new(t, dims, probability)
@@ -278,6 +291,21 @@ mod tests {
         assert!(live.push(&[1.0, 2.0]).is_err()); // grid is 4 cells
         assert!(live.push(&[1.0, 2.0, 3.0, 4.0]).is_ok());
         assert_eq!(live.step_index(), 1);
+    }
+
+    #[test]
+    fn push_rejects_non_finite_and_negative_depths() {
+        let dims = GridDims::new(2, 1);
+        let susc = SusceptibilityMap::uniform(dims, 0.5).unwrap();
+        let mut live =
+            LiveNowcast::new(susc, IdThreshold::caine(), TriggerModel::default(), 4, 1.0).unwrap();
+        assert!(live.push(&[1.0, f64::NAN]).is_err());
+        assert!(live.push(&[f64::INFINITY, 1.0]).is_err());
+        assert!(live.push(&[-0.5, 1.0]).is_err());
+        // A rejected push must not have advanced the stream nor the sums.
+        assert_eq!(live.step_index(), 0);
+        let field = live.push(&[10.0, 10.0]).unwrap();
+        assert_eq!(field.step, 0);
     }
 
     #[test]

@@ -204,7 +204,7 @@ version = "0.3.0"
 dependencies = [
  "rayon",
  "serde_json",
- "swarm-core",
+ "swarm-abm",
 ]
 
 [[package]]
@@ -375,7 +375,7 @@ version = "0.1.0-dev"
 dependencies = [
  "hydroflux-autograd",
  "ndarray",
- "surtgis-core",
+ "surtgis-core 0.16.3",
  "thiserror",
 ]
 
@@ -445,7 +445,7 @@ dependencies = [
  "roxmltree",
  "serde",
  "serde_json",
- "surtgis-core",
+ "surtgis-core 0.17.0",
  "thiserror",
 ]
 
@@ -580,7 +580,8 @@ dependencies = [
  "clap",
  "nowcast-core",
  "nowcast-surtgis",
- "surtgis-core",
+ "serde_json",
+ "surtgis-core 0.17.0",
 ]
 
 [[package]]
@@ -588,6 +589,7 @@ name = "nowcast-core"
 version = "0.1.0"
 dependencies = [
  "rayon",
+ "serde",
  "thiserror",
 ]
 
@@ -622,6 +624,7 @@ name = "nowcast-python"
 version = "0.1.0"
 dependencies = [
  "nowcast-core",
+ "numpy",
  "pyo3",
 ]
 
@@ -649,7 +652,7 @@ version = "0.1.0"
 dependencies = [
  "ndarray",
  "nowcast-core",
- "surtgis-core",
+ "surtgis-core 0.17.0",
  "thiserror",
 ]
 
@@ -659,7 +662,7 @@ version = "0.1.0"
 dependencies = [
  "debris-flow",
  "nowcast-core",
- "swarm-core",
+ "swarm-abm",
 ]
 
 [[package]]
@@ -709,6 +712,21 @@ checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
  "libm",
+]
+
+[[package]]
+name = "numpy"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b94caae805f998a07d33af06e6a3891e38556051b8045c615470a71590e13e78"
+dependencies = [
+ "libc",
+ "ndarray",
+ "num-complex",
+ "num-integer",
+ "num-traits",
+ "pyo3",
+ "rustc-hash",
 ]
 
 [[package]]
@@ -942,6 +960,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustc-hash"
+version = "2.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94300abf3f1ae2e2b8ffb7b58043de3d399c73fa6f4b73826402a5c457614dbe"
+
+[[package]]
 name = "rustversion"
 version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1058,7 +1082,24 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "surtgis-core"
-version = "0.16.2"
+version = "0.16.3"
+source = "git+https://github.com/franciscoparrao/surtgis?rev=7348ac2b7642d43f800d6d3d7a7eed5b1577edec#7348ac2b7642d43f800d6d3d7a7eed5b1577edec"
+dependencies = [
+ "anyhow",
+ "geo",
+ "geo-types",
+ "ndarray",
+ "num-traits",
+ "ordered-float",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tiff",
+]
+
+[[package]]
+name = "surtgis-core"
+version = "0.17.0"
 dependencies = [
  "anyhow",
  "geo",
@@ -1074,12 +1115,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "swarm-core"
+name = "swarm-abm"
 version = "0.3.0"
 dependencies = [
  "rand",
  "rand_chacha",
  "rayon",
+ "swarm-abm-derive",
+]
+
+[[package]]
+name = "swarm-abm-derive"
+version = "0.3.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

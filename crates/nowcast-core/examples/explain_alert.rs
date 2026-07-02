@@ -34,7 +34,7 @@ fn main() {
 
     println!("Attribution at the storm peak (step {peak}, 28 mm/h):\n");
     for (cell, label) in labels.iter().enumerate() {
-        let ex = nowcast.explain(cell, peak);
+        let ex = nowcast.explain(cell, peak).unwrap();
         let mark = if ex.hazard >= alert_level { "⚠ ALERTA" } else { "· bajo  " };
         let driver = match ex.driver {
             Driver::TriggerLimited => "gatillo-limitado",
@@ -60,5 +60,5 @@ fn main() {
     }
 
     println!("\nLínea de explicación (trazable para un boletín):");
-    println!("  {}", nowcast.explain(0, peak).summary());
+    println!("  {}", nowcast.explain(0, peak).unwrap().summary());
 }

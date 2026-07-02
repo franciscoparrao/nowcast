@@ -5,15 +5,16 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-description = "Command-line runner for the nowcast geohazard engine (run, backtest, explain)."
+description = "Command-line runner for the nowcast geohazard engine (run, backtest, explain, watch, calibrate)."
 
 [[bin]]
 name = "nowcast"
 path = "src/main.rs"
 
 [dependencies]
-nowcast-core = { path = "../nowcast-core" }
+nowcast-core = { path = "../nowcast-core", features = ["serde"] }
 nowcast-surtgis = { path = "../nowcast-surtgis" }
 surtgis-core = { path = "../../../surtgis/crates/core" }
 clap.workspace = true
 anyhow.workspace = true
+serde_json = "1"

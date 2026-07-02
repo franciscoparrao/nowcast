@@ -49,7 +49,10 @@ fn main() {
     let _ = Side::North; // (Side re-exported for custom BC wiring)
     let sources = vec![PointSource { row: 0, col: CENTER, q_mass: inflow }];
 
-    let field = Inundation::new(valley(), bcs, 1200.0).run_point_sources(&sources);
+    let (field, stats) = Inundation::new(valley(), bcs, 1200.0)
+        .expect("positive duration")
+        .run_point_sources(&sources);
+    assert!(!stats.truncated, "integration hit the step cap");
 
     println!(
         "Inundación física: profundidad máx {:.2} m · media {:.3} m · {:.0}% del valle inundado\n",
@@ -70,11 +73,11 @@ fn main() {
     }
 
     // Downscale the coarse alert onto the physical footprint.
-    let refined = field.refined_hazard(nowcast_prob, 0.05);
-    let flagged = refined.iter().filter(|&&p| p > 0.0).count();
+    let refined = field.refined_hazard(0, nowcast_prob, 0.05).unwrap();
+    let flagged = refined.probability().iter().filter(|&&p| p > 0.0).count();
     println!(
         "\nPeligro refinado: la probabilidad {nowcast_prob} se concentra en {flagged}/{} celdas\n  \
          realmente inundadas — el resto del polígono de alerta queda en 0. La física localiza el riesgo.",
-        refined.len()
+        refined.probability().len()
     );
 }

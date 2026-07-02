@@ -11,7 +11,14 @@
 //! 3. Modulate susceptibility: `P(c, t) = susceptibility(c) · T`.
 //!
 //! Step 1 uses per-cell prefix sums so each window sum is O(1); the whole run is
-//! O(cells · steps · max_window).
+//! O(cells · steps · max_window) time. The prefix buffer is computed **once**
+//! (lazily, shared by `run`, `hazard_at` and `explain`) and costs
+//! `8 · cells · (steps + 1)` bytes — the engine's dominant memory footprint, so
+//! coarsen a fine grid to the forcing's resolution before running continental
+//! rasters. `explain` on a cold engine skips the grid-wide buffer entirely and
+//! prefixes only the queried cell.
+
+use std::sync::OnceLock;
 
 use crate::error::{Error, Result};
 use crate::explain::Explanation;
@@ -61,6 +68,36 @@ impl HazardField {
         })
     }
 
+    /// Build a field that carries `probability` on the `true` cells of a
+    /// row-major mask and `0` elsewhere — the shared "downscale a coarse alert
+    /// onto a physical footprint" combiner used by the refinement adapters
+    /// (hydroflux inundation depth, swarm debris-flow runout). Fails if the mask
+    /// length does not match `dims` or `probability` lies outside `[0, 1]`.
+    pub fn masked(step: usize, dims: GridDims, mask: &[bool], probability: f64) -> Result<Self> {
+        if mask.len() != dims.len() {
+            return Err(Error::GridSizeMismatch {
+                expected: dims.len(),
+                got: mask.len(),
+                ncols: dims.ncols,
+                nrows: dims.nrows,
+            });
+        }
+        if !(0.0..=1.0).contains(&probability) {
+            return Err(Error::InvalidParameter {
+                name: "probability",
+                reason: format!("mask probability is {probability}, expected within [0, 1]"),
+            });
+        }
+        Ok(Self {
+            step,
+            dims,
+            probability: mask
+                .iter()
+                .map(|&hit| if hit { probability } else { 0.0 })
+                .collect(),
+        })
+    }
+
     pub fn dims(&self) -> GridDims {
         self.dims
     }
@@ -88,6 +125,7 @@ impl HazardField {
 
 /// A step whose hazard field reached or exceeded the alert level somewhere.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Alert {
     pub step: usize,
     /// Number of cells at or above the alert level.
@@ -105,6 +143,10 @@ pub struct Nowcast<F: Forcing> {
     threshold: IdThreshold,
     trigger: TriggerModel,
     max_window_steps: usize,
+    /// Lazily computed per-cell prefix sums, flat and row-major per cell:
+    /// `prefix[c * (n_steps + 1) + t]` is the total depth over steps `0..t`.
+    /// One allocation, computed at most once per engine (see module docs).
+    prefix: OnceLock<Vec<f64>>,
 }
 
 impl<F: Forcing> Nowcast<F> {
@@ -141,6 +183,7 @@ impl<F: Forcing> Nowcast<F> {
             threshold,
             trigger,
             max_window_steps,
+            prefix: OnceLock::new(),
         })
     }
 
@@ -148,49 +191,82 @@ impl<F: Forcing> Nowcast<F> {
         self.susceptibility.dims().len()
     }
 
-    /// Per-cell prefix sums of water-input depth: `prefix[c][t]` is the total
-    /// depth over steps `0..t` (so `prefix[c]` has length `n_steps + 1`).
-    fn depth_prefix_sums(&self) -> Vec<Vec<f64>> {
-        let n_steps = self.forcing.n_steps();
-        let n_cells = self.n_cells();
-        let mut prefix = vec![vec![0.0; n_steps + 1]; n_cells];
-        for (c, row) in prefix.iter_mut().enumerate() {
-            for t in 0..n_steps {
-                row[t + 1] = row[t] + self.forcing.depth_mm(c, t);
+    /// Length of one cell's prefix row (`n_steps + 1`).
+    fn row_len(&self) -> usize {
+        self.forcing.n_steps() + 1
+    }
+
+    /// Per-cell prefix sums of water-input depth, computed once and cached:
+    /// `prefix[c * row_len + t]` is the total depth over steps `0..t`. Shared by
+    /// `run`, `hazard_at` and (when already materialised) `explain`.
+    fn depth_prefix_sums(&self) -> &[f64] {
+        self.prefix.get_or_init(|| {
+            let n_steps = self.forcing.n_steps();
+            let row_len = n_steps + 1;
+            let mut prefix = vec![0.0; self.n_cells() * row_len];
+            for (c, row) in prefix.chunks_exact_mut(row_len).enumerate() {
+                for t in 0..n_steps {
+                    row[t + 1] = row[t] + self.forcing.depth_mm(c, t);
+                }
             }
+            prefix
+        })
+    }
+
+    /// Prefix row of a single cell, without materialising the grid-wide buffer —
+    /// the O(n_steps) path behind [`Nowcast::explain`] on a cold engine.
+    fn cell_prefix(&self, cell: usize) -> Vec<f64> {
+        let n_steps = self.forcing.n_steps();
+        let mut row = vec![0.0; n_steps + 1];
+        for t in 0..n_steps {
+            row[t + 1] = row[t] + self.forcing.depth_mm(cell, t);
         }
-        prefix
+        row
     }
 
     /// Worst exceedance and the rolling-window length (in steps) that produced
-    /// it, for cell `c` at step `t`.
-    fn dominant_window(&self, prefix: &[Vec<f64>], c: usize, t: usize) -> (f64, usize) {
-        let dt = self.forcing.dt_hours();
-        let max_m = self.max_window_steps.min(t + 1);
-        let row = &prefix[c];
-        let (mut best_e, mut best_m) = (0.0_f64, 1usize);
-        for m in 1..=max_m {
-            let window_depth = row[t + 1] - row[t + 1 - m];
-            let duration_h = m as f64 * dt;
-            let e = self.threshold.exceedance(window_depth / duration_h, duration_h);
-            if e > best_e {
-                best_e = e;
-                best_m = m;
-            }
-        }
-        (best_e, best_m)
+    /// it, over one cell's prefix `row` at step `t`.
+    fn dominant_window(&self, row: &[f64], t: usize) -> (f64, usize) {
+        self.threshold.worst_window(
+            self.forcing.dt_hours(),
+            self.max_window_steps.min(t + 1),
+            |m| row[t + 1] - row[t + 1 - m],
+        )
     }
 
     /// Exact attribution of the hazard at `cell` / `step`: its two factors and
     /// the intensity–duration window driving the trigger. See [`Explanation`].
-    pub fn explain(&self, cell: usize, step: usize) -> Explanation {
-        let prefix = self.depth_prefix_sums();
-        let (e, m) = self.dominant_window(&prefix, cell, step);
+    /// Errors if `cell` or `step` is out of range.
+    ///
+    /// Cost: O(n_steps) — it reuses the cached prefix buffer when some run
+    /// already materialised it, and otherwise prefixes only the queried cell
+    /// (never the whole grid).
+    pub fn explain(&self, cell: usize, step: usize) -> Result<Explanation> {
+        let n_cells = self.n_cells();
+        if cell >= n_cells {
+            return Err(Error::OutOfRange { name: "cell", index: cell, len: n_cells });
+        }
+        let n_steps = self.forcing.n_steps();
+        if step >= n_steps {
+            return Err(Error::OutOfRange { name: "step", index: step, len: n_steps });
+        }
+        let owned;
+        let row: &[f64] = match self.prefix.get() {
+            Some(prefix) => {
+                let rl = self.row_len();
+                &prefix[cell * rl..(cell + 1) * rl]
+            }
+            None => {
+                owned = self.cell_prefix(cell);
+                &owned
+            }
+        };
+        let (e, m) = self.dominant_window(row, step);
         let dt = self.forcing.dt_hours();
         let duration_h = m as f64 * dt;
-        let window_depth = prefix[cell][step + 1] - prefix[cell][step + 1 - m];
+        let window_depth = row[step + 1] - row[step + 1 - m];
         let mean_intensity = window_depth / duration_h;
-        Explanation::new(
+        Ok(Explanation::new(
             cell,
             step,
             self.susceptibility.get(cell),
@@ -199,7 +275,7 @@ impl<F: Forcing> Nowcast<F> {
             mean_intensity,
             self.threshold.critical_intensity(duration_h),
             e,
-        )
+        ))
     }
 
     /// Counterfactual: the mean rainfall intensity (mm/h) sustained over
@@ -215,13 +291,14 @@ impl<F: Forcing> Nowcast<F> {
         Some(self.threshold.intensity_for_exceedance(e_needed, duration_h))
     }
 
-    /// Compute the hazard field for a single time step.
+    /// Compute the hazard field for a single time step. The prefix buffer is
+    /// computed on first use and cached, so repeated calls (or a later `run`)
+    /// do not recompute it.
     pub fn hazard_at(&self, step: usize) -> HazardField {
-        let prefix = self.depth_prefix_sums();
-        self.hazard_at_with(&prefix, step)
+        self.hazard_at_with(self.depth_prefix_sums(), step)
     }
 
-    fn hazard_at_with(&self, prefix: &[Vec<f64>], step: usize) -> HazardField {
+    fn hazard_at_with(&self, prefix: &[f64], step: usize) -> HazardField {
         hazard_field(
             &self.susceptibility,
             &self.threshold,
@@ -229,6 +306,7 @@ impl<F: Forcing> Nowcast<F> {
             self.forcing.dt_hours(),
             self.max_window_steps,
             prefix,
+            self.row_len(),
             step,
         )
     }
@@ -251,14 +329,15 @@ impl<F: Forcing> Nowcast<F> {
             let trigger = self.trigger;
             let dt = self.forcing.dt_hours();
             let mw = self.max_window_steps;
+            let rl = self.row_len();
             (0..n_steps)
                 .into_par_iter()
-                .map(|t| hazard_field(susc, &threshold, &trigger, dt, mw, &prefix, t))
+                .map(|t| hazard_field(susc, &threshold, &trigger, dt, mw, prefix, rl, t))
                 .collect()
         }
         #[cfg(not(feature = "parallel"))]
         {
-            (0..n_steps).map(|t| self.hazard_at_with(&prefix, t)).collect()
+            (0..n_steps).map(|t| self.hazard_at_with(prefix, t)).collect()
         }
     }
 
@@ -273,46 +352,42 @@ impl<F: Forcing> Nowcast<F> {
 }
 
 /// Worst I–D exceedance for cell `c` at step `t`, over all rolling window lengths
-/// up to `max_window`, using precomputed prefix sums. Free function (no `F` in
-/// scope) so both the serial and the Rayon drivers share one implementation.
+/// up to `max_window`, using the flat precomputed prefix sums (`row_len` values
+/// per cell). Free function (no `F` in scope) so both the serial and the Rayon
+/// drivers share one implementation.
 fn max_exceedance_at(
     threshold: &IdThreshold,
     dt: f64,
     max_window: usize,
-    prefix: &[Vec<f64>],
+    prefix: &[f64],
+    row_len: usize,
     c: usize,
     t: usize,
 ) -> f64 {
-    let max_m = max_window.min(t + 1);
-    let row = &prefix[c];
-    let mut best = 0.0_f64;
-    for m in 1..=max_m {
-        let window_depth = row[t + 1] - row[t + 1 - m];
-        let duration_h = m as f64 * dt;
-        let e = threshold.exceedance(window_depth / duration_h, duration_h);
-        if e > best {
-            best = e;
-        }
-    }
-    best
+    let row = &prefix[c * row_len..(c + 1) * row_len];
+    threshold
+        .worst_window(dt, max_window.min(t + 1), |m| row[t + 1] - row[t + 1 - m])
+        .0
 }
 
 /// Hazard field for one step: `susceptibility × trigger_factor(max exceedance)`
 /// per cell. Captures only `Sync` inputs, so the parallel `run` need not bound
 /// `F: Sync`.
+#[allow(clippy::too_many_arguments)] // internal plumbing between the two drivers
 fn hazard_field(
     susc: &SusceptibilityMap,
     threshold: &IdThreshold,
     trigger: &TriggerModel,
     dt: f64,
     max_window: usize,
-    prefix: &[Vec<f64>],
+    prefix: &[f64],
+    row_len: usize,
     step: usize,
 ) -> HazardField {
     let dims = susc.dims();
     let mut probability = vec![0.0; dims.len()];
     for (c, p) in probability.iter_mut().enumerate() {
-        let e = max_exceedance_at(threshold, dt, max_window, prefix, c, step);
+        let e = max_exceedance_at(threshold, dt, max_window, prefix, row_len, c, step);
         *p = susc.get(c) * trigger.factor(e);
     }
     HazardField {
@@ -406,7 +481,7 @@ mod tests {
         // 40 mm in one hour on susceptibility 0.8: trigger saturates, so the
         // hazard is capped by the terrain, not the weather.
         let nc = single_cell(vec![0.0, 0.0, 40.0, 0.0], 0.8);
-        let ex = nc.explain(0, 2);
+        let ex = nc.explain(0, 2).unwrap();
         assert!(ex.exceedance > 1.0, "burst should exceed the curve");
         assert!(ex.trigger_factor > 0.9);
         assert!((ex.mean_intensity_mm_h - 40.0).abs() < 1.0);
@@ -418,7 +493,7 @@ mod tests {
     fn explain_attributes_a_dry_step_to_the_trigger() {
         use crate::explain::Driver;
         let nc = single_cell(vec![0.0, 0.0, 0.0], 0.9);
-        let ex = nc.explain(0, 1);
+        let ex = nc.explain(0, 1).unwrap();
         assert!(ex.trigger_factor < 0.1, "no rain → weak trigger");
         assert_eq!(ex.driver, Driver::TriggerLimited);
     }
@@ -432,6 +507,46 @@ mod tests {
         // A barely-susceptible cell can never reach 0.5 (terrain-capped at susc).
         let low = single_cell(vec![0.0], 0.3);
         assert!(low.intensity_to_alert(0, 0.5, 1.0).is_none());
+    }
+
+    #[test]
+    fn explain_is_identical_cold_and_warm() {
+        // Cold: no run() yet, explain prefixes only the queried cell.
+        // Warm: after run(), explain reads the cached grid-wide buffer.
+        // Both paths must produce bit-identical attributions.
+        let mk = || single_cell(vec![3.0, 12.0, 40.0, 0.0, 7.0], 0.7);
+        let cold = mk();
+        let cold_ex = cold.explain(0, 3).unwrap();
+        let warm = mk();
+        let _ = warm.run(); // materialises the cache
+        let warm_ex = warm.explain(0, 3).unwrap();
+        assert_eq!(cold_ex.hazard.to_bits(), warm_ex.hazard.to_bits());
+        assert_eq!(cold_ex.exceedance.to_bits(), warm_ex.exceedance.to_bits());
+        assert_eq!(cold_ex.critical_duration_h, warm_ex.critical_duration_h);
+        assert_eq!(
+            cold_ex.mean_intensity_mm_h.to_bits(),
+            warm_ex.mean_intensity_mm_h.to_bits()
+        );
+    }
+
+    #[test]
+    fn explain_rejects_out_of_range_indices() {
+        let nc = single_cell(vec![10.0, 20.0], 0.5); // 1 cell, 2 steps
+        assert!(nc.explain(0, 1).is_ok());
+        assert!(nc.explain(1, 0).is_err(), "cell 1 does not exist");
+        assert!(nc.explain(0, 2).is_err(), "step 2 does not exist");
+    }
+
+    #[test]
+    fn masked_field_carries_probability_on_the_footprint() {
+        let dims = GridDims::new(2, 2);
+        let f = HazardField::masked(3, dims, &[true, false, false, true], 0.8).unwrap();
+        assert_eq!(f.probability(), &[0.8, 0.0, 0.0, 0.8]);
+        assert_eq!(f.step, 3);
+        // Wrong mask length and out-of-range probability are rejected.
+        assert!(HazardField::masked(0, dims, &[true; 3], 0.8).is_err());
+        assert!(HazardField::masked(0, dims, &[true; 4], 1.2).is_err());
+        assert!(HazardField::masked(0, dims, &[true; 4], f64::NAN).is_err());
     }
 
     #[test]

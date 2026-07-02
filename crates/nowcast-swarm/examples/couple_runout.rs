@@ -36,7 +36,8 @@ fn main() {
         data.pixel_size,
         42,
         300,
-    );
+    )
+    .expect("positive pixel size");
 
     println!(
         "Runout simulado: {} celdas alcanzadas · {:.1} km² (pixel {:.0} m)",
@@ -45,7 +46,7 @@ fn main() {
         data.pixel_size,
     );
 
-    let hazard = runout.refined_hazard(0, nowcast_prob);
+    let hazard = runout.refined_hazard(0, nowcast_prob).unwrap();
     let flagged = hazard.probability().iter().filter(|&&p| p > 0.0).count();
     println!(
         "Peligro refinado: la prob {nowcast_prob} del nowcast se concentra en {flagged}/{} celdas\n  \

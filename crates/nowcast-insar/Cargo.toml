@@ -12,4 +12,4 @@ nowcast-core = { path = "../nowcast-core" }
 # Sibling PS-InSAR/SBAS engine (insar-rs workspace). ndarray must be
 # semver-compatible so `Array2` unifies across the boundary.
 insar-core = { path = "../../../insar-rs/crates/core" }
-ndarray = "0.16"
+ndarray.workspace = true

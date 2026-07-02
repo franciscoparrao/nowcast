@@ -127,10 +127,21 @@ with one abstraction (an interchangeable \emph{forcing} interface and a
 composable \emph{trigger}), and we then use it as an experimental instrument to
 ask a question rarely posed directly: holding the model fixed, how much does the
 \emph{resolution of the forcing} determine attainable skill? The contributions
-are: (1) a forcing-agnostic, dependency-light engine; (2) a composable
-multi-trigger with exact, closed-form attribution of every alert; (3) a
-backtesting framework with metrics appropriate for sparse dated inventories; and
-(4) a resolution diagnosis. On real Chilean data, distributing daily forcing and
+are computational rather than a new hazard law. (1)~A \emph{forcing-agnostic}
+design whose random-access forcing trait makes online streaming and dated-event
+replay backtesting fall out of one interface, so the same engine is both an
+operational nowcaster and an experimental instrument, and the hazard logic never
+changes when the rainfall product, the trigger family or the physical-refinement
+model is swapped. (2)~A composable multi-trigger with \emph{exact, closed-form}
+attribution of every alert, an analytic decomposition into terrain and forcing
+drivers that needs no perturbation sampling (contrast SHAP), afforded by the
+closed-form hazard. (3)~An on-demand coupling that confines expensive 2-D physics
+to the cells the cheap nowcast has already flagged. (4)~A backtesting framework
+with metrics appropriate for sparse, month-dated inventories, and the resolution
+diagnosis that this instrument makes possible. The established components (the
+Caine I--D law, a logistic factor, prefix-sum windows) enter as building blocks
+and are not claimed as novel; the contribution is the architecture that makes
+them independently swappable and the diagnosis that architecture enables. On real Chilean data, distributing daily forcing and
 adding real susceptibility does not improve discrimination; this honest null,
 with a sub-daily head-to-head, locates the binding constraint on the forcing
 resolution rather than the model; a flood path validated against observed
@@ -296,6 +307,10 @@ post-fire susceptibility cascade; a command-line runner exposes the engine
 (run, backtest, explain) and PyO3 bindings expose it to Python. The codebase is covered by
 $\sim$58 unit and documentation tests, the linter runs clean under
 \texttt{-D warnings}, and twenty-four runnable examples reproduce every result below.
+Each provider is a dependency-isolated crate implementing the same \texttt{Forcing}
+trait, so the design is reusable and extensible by construction: adding a hazard
+forcing is a new crate, not an edit to the core. That separation, not any single
+algorithm it orchestrates, is the engine's computational contribution.
 
 \subsection{Computational performance}
 

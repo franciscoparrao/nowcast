@@ -38,6 +38,10 @@ pub enum Error {
     /// Inputs disagreed on grid shape.
     #[error("grid shape mismatch: {0}")]
     Shape(String),
+    /// Inputs share a shape but not a georeference (origin/resolution/CRS) —
+    /// stacking them would silently misalign the forcing against the grid.
+    #[error("georeference mismatch: {0}")]
+    Georef(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -95,8 +99,26 @@ pub fn read_susceptibility<P: AsRef<std::path::Path>>(
     Ok((susceptibility_from_raster(&raster)?, georef))
 }
 
+/// `true` when two geotransforms describe the same grid placement, within a
+/// tight relative tolerance (f64 serialization noise, not real offsets).
+fn same_transform(a: &GeoTransform, b: &GeoTransform) -> bool {
+    let close = |x: f64, y: f64| (x - y).abs() <= 1e-9 + 1e-9 * x.abs().max(y.abs());
+    close(a.origin_x, b.origin_x)
+        && close(a.origin_y, b.origin_y)
+        && close(a.pixel_width, b.pixel_width)
+        && close(a.pixel_height, b.pixel_height)
+        && close(a.row_rotation, b.row_rotation)
+        && close(a.col_rotation, b.col_rotation)
+}
+
 /// Stack per-step precipitation rasters (mm) into a [`GriddedRain`] forcing. All
-/// rasters must share the same shape; `dt_hours` is the step length.
+/// rasters must share the same shape **and georeference**; `dt_hours` is the
+/// step length.
+///
+/// The georeference check (origin, resolution, rotation, and CRS when both
+/// declare one) is what catches the realistic failure: a tile from a different
+/// grid with the same shape — same-sized CR2MET and IMERG cutouts, say — which
+/// would otherwise stack silently and misalign rain against susceptibility.
 pub fn gridded_rain_from_rasters(rasters: &[Raster<f32>], dt_hours: f64) -> Result<GriddedRain> {
     let first = rasters
         .first()
@@ -107,6 +129,18 @@ pub fn gridded_rain_from_rasters(rasters: &[Raster<f32>], dt_hours: f64) -> Resu
     for (s, r) in rasters.iter().enumerate() {
         if dims_of(r) != dims {
             return Err(Error::Shape(format!("raster {s} differs from raster 0")));
+        }
+        if !same_transform(r.transform(), first.transform()) {
+            return Err(Error::Georef(format!(
+                "raster {s} has a different geotransform than raster 0 (same shape, different grid)"
+            )));
+        }
+        if let (Some(ca), Some(cb)) = (r.crs(), first.crs())
+            && ca != cb
+        {
+            return Err(Error::Georef(format!(
+                "raster {s} has a different CRS than raster 0"
+            )));
         }
         let nodata = r.nodata();
         depths.extend(r.data().iter().map(|&v| {
@@ -176,6 +210,38 @@ mod tests {
         assert_eq!(rain.depth_mm(0, 0), 0.0);
         assert_eq!(rain.depth_mm(5, 0), 5.0);
         assert_eq!(rain.depth_mm(2, 1), 12.0);
+    }
+
+    #[test]
+    fn gridded_rain_rejects_a_misgeoreferenced_tile() {
+        // Same 2×3 shape, but the second raster comes from another grid: a
+        // shifted origin (and separately, a different pixel size) must error
+        // instead of stacking silently.
+        let r0 = raster_2x3([0.0; 6], None);
+        let mut shifted = raster_2x3([1.0; 6], None);
+        shifted.set_transform(GeoTransform::new(350_900.0, 6_300_000.0, 30.0, 30.0));
+        assert!(matches!(
+            gridded_rain_from_rasters(&[r0.clone(), shifted], 24.0),
+            Err(Error::Georef(_))
+        ));
+
+        let mut coarser = raster_2x3([1.0; 6], None);
+        coarser.set_transform(GeoTransform::new(350_000.0, 6_300_000.0, 90.0, 90.0));
+        assert!(matches!(
+            gridded_rain_from_rasters(&[r0.clone(), coarser], 24.0),
+            Err(Error::Georef(_))
+        ));
+
+        // Different declared CRS also errors; an undeclared one is tolerated.
+        let mut other_crs = raster_2x3([1.0; 6], None);
+        other_crs.set_crs(Some(CRS::from_epsg(32719)));
+        let mut base_crs = r0.clone();
+        base_crs.set_crs(Some(CRS::from_epsg(4326)));
+        assert!(matches!(
+            gridded_rain_from_rasters(&[base_crs, other_crs.clone()], 24.0),
+            Err(Error::Georef(_))
+        ));
+        assert!(gridded_rain_from_rasters(&[r0, other_crs], 24.0).is_ok());
     }
 
     #[test]

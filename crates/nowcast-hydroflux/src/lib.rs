@@ -21,7 +21,7 @@ use hydroflux_solver_2d::{
     Boundaries2D, Conserved2D, GRAVITY,
 };
 use ndarray::Array2;
-use nowcast_core::GridDims;
+use nowcast_core::{Error, GridDims, HazardField, Result};
 
 // Re-export the building blocks so callers need only this crate.
 pub use hydroflux_solver_2d::{Boundary, Conserved2D as State, Mesh2D, PointSource, H_DRY};
@@ -80,12 +80,32 @@ impl DepthField {
 
     /// Downscale a coarse nowcast flood probability onto this fine field: the
     /// probability where physically inundated (depth ≥ `min_depth`), else 0.
-    pub fn refined_hazard(&self, nowcast_prob: f64, min_depth: f64) -> Vec<f64> {
-        self.depth
-            .iter()
-            .map(|&h| if h >= min_depth { nowcast_prob } else { 0.0 })
-            .collect()
+    /// Same shape as `nowcast-swarm`'s runout refinement — both go through
+    /// [`HazardField::masked`], so `nowcast_prob` outside `[0, 1]` is an error,
+    /// not a panic.
+    pub fn refined_hazard(
+        &self,
+        step: usize,
+        nowcast_prob: f64,
+        min_depth: f64,
+    ) -> nowcast_core::Result<HazardField> {
+        let mask: Vec<bool> = self.depth.iter().map(|&h| h >= min_depth).collect();
+        HazardField::masked(step, self.dims, &mask, nowcast_prob)
     }
+}
+
+/// What the integration actually did — so a capped run can never masquerade as
+/// a completed one.
+#[derive(Debug, Clone, Copy)]
+pub struct IntegrationStats {
+    /// Simulated time actually reached (s); equals the requested duration when
+    /// `truncated` is false.
+    pub t_reached_s: f64,
+    /// Time steps taken.
+    pub steps: usize,
+    /// `true` if the step cap was hit before reaching the requested duration —
+    /// the returned depth field is then a **partial** inundation.
+    pub truncated: bool,
 }
 
 /// A configured 2D inundation run over a DEM mesh.
@@ -101,24 +121,67 @@ pub struct Inundation {
 impl Inundation {
     /// New run on `mesh` with the given boundaries, integrated to `duration_s`
     /// seconds. Defaults: CFL 0.4, dry tolerance [`H_DRY`], 200 000-step cap.
-    pub fn new(mesh: Mesh2D, boundaries: Boundaries2D, duration_s: f64) -> Self {
-        Self {
+    /// Errors on a non-positive or non-finite duration.
+    pub fn new(mesh: Mesh2D, boundaries: Boundaries2D, duration_s: f64) -> Result<Self> {
+        if !duration_s.is_finite() || duration_s <= 0.0 {
+            return Err(Error::InvalidParameter {
+                name: "duration_s",
+                reason: format!("must be finite and > 0, got {duration_s}"),
+            });
+        }
+        Ok(Self {
             mesh,
             boundaries,
             duration_s,
             cfl: 0.4,
             dry_tol: H_DRY,
             max_steps: 200_000,
-        }
+        })
     }
 
-    pub fn with_cfl(mut self, cfl: f64) -> Self {
+    /// CFL number in `(0, 1]`.
+    pub fn with_cfl(mut self, cfl: f64) -> Result<Self> {
+        if !cfl.is_finite() || cfl <= 0.0 || cfl > 1.0 {
+            return Err(Error::InvalidParameter {
+                name: "cfl",
+                reason: format!("must be within (0, 1], got {cfl}"),
+            });
+        }
         self.cfl = cfl;
-        self
+        Ok(self)
+    }
+
+    /// Step cap for the integration (≥ 1). When the cap is hit,
+    /// [`IntegrationStats::truncated`] reports it — raise the cap or shorten
+    /// the duration.
+    pub fn with_max_steps(mut self, max_steps: usize) -> Result<Self> {
+        if max_steps == 0 {
+            return Err(Error::InvalidParameter {
+                name: "max_steps",
+                reason: "must be >= 1".into(),
+            });
+        }
+        self.max_steps = max_steps;
+        Ok(self)
+    }
+
+    /// Dry-cell tolerance (m, ≥ 0) for the friction step.
+    pub fn with_dry_tol(mut self, dry_tol: f64) -> Result<Self> {
+        if !dry_tol.is_finite() || dry_tol < 0.0 {
+            return Err(Error::InvalidParameter {
+                name: "dry_tol",
+                reason: format!("must be finite and >= 0, got {dry_tol}"),
+            });
+        }
+        self.dry_tol = dry_tol;
+        Ok(self)
     }
 
     /// Integrate, applying `source(&mut states, dt)` each step before the update.
-    fn integrate<F: FnMut(&mut Array2<Conserved2D>, f64)>(&self, mut source: F) -> DepthField {
+    fn integrate<F: FnMut(&mut Array2<Conserved2D>, f64)>(
+        &self,
+        mut source: F,
+    ) -> (DepthField, IntegrationStats) {
         let (nr, nc) = self.mesh.bed.dim();
         let mut states = Array2::from_elem((nr, nc), Conserved2D::dry());
         // Fallback step for the dry start, before any wave exists.
@@ -136,17 +199,26 @@ impl Inundation {
             t += dt;
             steps += 1;
         }
-        DepthField::from_states(&states)
+        let stats = IntegrationStats {
+            t_reached_s: t,
+            steps,
+            truncated: t < self.duration_s,
+        };
+        (DepthField::from_states(&states), stats)
     }
 
-    /// Run with a uniform rainfall rate (m/s) over the whole domain.
-    pub fn run_rain(&self, rate_m_s: f64) -> DepthField {
+    /// Run with a uniform rainfall rate (m/s) over the whole domain. The stats
+    /// say how far the integration actually got — check
+    /// [`IntegrationStats::truncated`] before trusting the field in an alert.
+    pub fn run_rain(&self, rate_m_s: f64) -> (DepthField, IntegrationStats) {
         self.integrate(|s, dt| apply_rain(s, rate_m_s, dt))
     }
 
     /// Run with volumetric point inflows (m³/s) — e.g. the alerting discharge
-    /// entering the basin at its inlet cell(s).
-    pub fn run_point_sources(&self, sources: &[PointSource]) -> DepthField {
+    /// entering the basin at its inlet cell(s). The stats say how far the
+    /// integration actually got — check [`IntegrationStats::truncated`] before
+    /// trusting the field in an alert.
+    pub fn run_point_sources(&self, sources: &[PointSource]) -> (DepthField, IntegrationStats) {
         let (dx, dy) = (self.mesh.dx, self.mesh.dy);
         self.integrate(|s, dt| apply_point_sources(s, sources, dt, dx, dy))
     }
@@ -166,9 +238,11 @@ mod tests {
     fn closed_basin_rain_conserves_mass() {
         // Walls everywhere + flat bed: rain has nowhere to go, so the mean depth
         // equals (rate × duration). A clean mass-conservation check.
-        let inund = Inundation::new(flat_mesh(6, 6), Boundaries2D::WALLS, 200.0);
+        let inund = Inundation::new(flat_mesh(6, 6), Boundaries2D::WALLS, 200.0).unwrap();
         let rate = 1.0e-3; // m/s
-        let field = inund.run_rain(rate);
+        let (field, stats) = inund.run_rain(rate);
+        assert!(!stats.truncated, "6×6 for 200 s must finish well under the cap");
+        assert!((stats.t_reached_s - 200.0).abs() < 1e-9);
         let expected = rate * 200.0; // 0.2 m
         assert!(
             (field.mean_depth() - expected).abs() < 0.02,
@@ -180,19 +254,47 @@ mod tests {
 
     #[test]
     fn point_source_floods_the_domain() {
-        let inund = Inundation::new(flat_mesh(9, 9), Boundaries2D::WALLS, 120.0);
+        let inund = Inundation::new(flat_mesh(9, 9), Boundaries2D::WALLS, 120.0).unwrap();
         let src = vec![PointSource { row: 4, col: 4, q_mass: 5.0 }]; // 5 m³/s inflow
-        let field = inund.run_point_sources(&src);
+        let (field, stats) = inund.run_point_sources(&src);
+        assert!(!stats.truncated);
         assert!(field.max_depth() > 0.0, "no water from the inflow");
         assert!(field.inundated_fraction(H_DRY) > 0.0);
     }
 
     #[test]
     fn refined_hazard_gates_by_physical_inundation() {
-        let inund = Inundation::new(flat_mesh(4, 4), Boundaries2D::WALLS, 100.0);
-        let field = inund.run_rain(1.0e-3); // ~0.1 m everywhere
-        let refined = field.refined_hazard(0.8, 0.01);
-        assert!(refined.iter().all(|&p| (p - 0.8).abs() < 1e-9));
+        let inund = Inundation::new(flat_mesh(4, 4), Boundaries2D::WALLS, 100.0).unwrap();
+        let (field, _) = inund.run_rain(1.0e-3); // ~0.1 m everywhere
+        let refined = field.refined_hazard(0, 0.8, 0.01).unwrap();
+        assert!(refined.probability().iter().all(|&p| (p - 0.8).abs() < 1e-9));
+        // A probability outside [0,1] is rejected, not a panic.
+        assert!(field.refined_hazard(0, 1.5, 0.01).is_err());
+    }
+
+    #[test]
+    fn a_capped_run_reports_truncation_instead_of_lying() {
+        // One step is nowhere near 300 s of simulated time: the run must say so.
+        let inund = Inundation::new(flat_mesh(6, 6), Boundaries2D::WALLS, 300.0)
+            .unwrap()
+            .with_max_steps(1)
+            .unwrap();
+        let (_, stats) = inund.run_rain(1.0e-3);
+        assert!(stats.truncated, "1-step cap cannot reach 300 s");
+        assert_eq!(stats.steps, 1);
+        assert!(stats.t_reached_s < 300.0);
+    }
+
+    #[test]
+    fn builders_reject_bad_parameters() {
+        let mk = || Inundation::new(flat_mesh(3, 3), Boundaries2D::WALLS, 10.0).unwrap();
+        assert!(Inundation::new(flat_mesh(3, 3), Boundaries2D::WALLS, 0.0).is_err());
+        assert!(Inundation::new(flat_mesh(3, 3), Boundaries2D::WALLS, f64::NAN).is_err());
+        assert!(mk().with_cfl(0.0).is_err());
+        assert!(mk().with_cfl(1.5).is_err());
+        assert!(mk().with_max_steps(0).is_err());
+        assert!(mk().with_dry_tol(-1.0).is_err());
+        assert!(mk().with_cfl(0.9).and_then(|i| i.with_max_steps(10)).is_ok());
     }
 
     #[test]

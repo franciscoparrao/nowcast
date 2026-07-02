@@ -16,6 +16,27 @@
 use crate::error::{Error, Result};
 use crate::grid::GridDims;
 
+/// Numeric values of one 0-based CSV `column`: one record per line, fields
+/// split on `,`. Lines whose target field is empty, non-numeric or non-finite
+/// (`NaN`/`inf` sentinels are common in gauge exports) are skipped, which
+/// tolerates a header row.
+///
+/// This is **the** CSV column parser — [`UniformRain::from_csv`] and the CLI
+/// verbs all go through it, so every entry point applies the same finite-only
+/// filter (a `NaN` accepted by one path would poison the prefix sums).
+///
+/// Note that skipped lines also shift the time axis: a gappy series should be
+/// gap-filled upstream, not fed with missing rows.
+pub fn csv_column(text: &str, column: usize) -> Vec<f64> {
+    text.lines()
+        .filter_map(|line| line.split(',').nth(column))
+        .filter_map(|field| match field.trim().parse::<f64>() {
+            Ok(v) if v.is_finite() => Some(v),
+            _ => None,
+        })
+        .collect()
+}
+
 /// A source of dynamic water-input forcing over a grid and a time axis.
 ///
 /// `depth_mm` returns the water-input depth (mm) deposited at a cell during a
@@ -71,28 +92,17 @@ impl UniformRain {
 
     /// Parse a single observed rainfall column from CSV text.
     ///
-    /// Minimal `std`-only parser (no `csv` dependency in the core): one record
-    /// per line, fields split on `,`. `column` is the 0-based field holding the
-    /// rainfall depth (mm). Lines whose target field is empty or non-numeric are
-    /// skipped, which tolerates a header row and gappy gauge exports.
+    /// Minimal `std`-only parser (no `csv` dependency in the core), built on
+    /// [`csv_column`]: `column` is the 0-based field holding the rainfall depth
+    /// (mm); lines whose target field is empty, non-numeric or non-finite are
+    /// skipped, which tolerates a header row.
     pub fn from_csv(
         text: &str,
         column: usize,
         dims: GridDims,
         dt_hours: f64,
     ) -> Result<Self> {
-        let mut depths = Vec::new();
-        for line in text.lines() {
-            let line = line.trim();
-            if line.is_empty() {
-                continue;
-            }
-            let field = line.split(',').nth(column).map(str::trim).unwrap_or("");
-            match field.parse::<f64>() {
-                Ok(v) if v.is_finite() => depths.push(v),
-                _ => continue, // header / blank / sentinel → skip
-            }
-        }
+        let depths = csv_column(text, column);
         if depths.is_empty() {
             return Err(Error::Parse(format!(
                 "no numeric values found in column {column}"

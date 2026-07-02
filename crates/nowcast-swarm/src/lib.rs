@@ -14,22 +14,22 @@
 //!
 //! [`nowcast-hydroflux`]: https://docs.rs/nowcast-hydroflux
 //!
-//! Grid convention: `swarm_core::Grid2D` is indexed by `Pos { x, y }` (x = col,
+//! Grid convention: `swarm_abm::Grid2D` is indexed by `Pos { x, y }` (x = col,
 //! y = row); the nowcast [`GridDims`] is `{ncols, nrows}` with flat index
 //! `y * ncols + x`. The two line up cell-for-cell.
 
 use std::sync::Arc;
 
 use debris_flow::{DebrisFlowModel, Params};
-use nowcast_core::{GridDims, HazardField, SusceptibilityMap};
-use swarm_core::prelude::{Activation, Grid2D, Pos, Schedule, Simulation};
+use nowcast_core::{GridDims, HazardField, Result, SusceptibilityMap};
+use swarm_abm::prelude::{Activation, Grid2D, Pos, Schedule, Simulation};
 
 // Re-export the model building blocks so callers need only this crate.
 pub use debris_flow::raster::{CopiapoData, Window, load};
 pub use debris_flow::{Layers, Params as DebrisParams};
-pub use swarm_core::prelude::Grid2D as SwarmGrid;
+pub use swarm_abm::prelude::Grid2D as SwarmGrid;
 
-/// Convert a nowcast [`SusceptibilityMap`] into a `swarm_core::Grid2D<f32>`
+/// Convert a nowcast [`SusceptibilityMap`] into a `swarm_abm::Grid2D<f32>`
 /// (e.g. to assemble the debris-flow model's susceptibility layer).
 pub fn grid_from_susceptibility(s: &SusceptibilityMap) -> Grid2D<f32> {
     let d = s.dims();
@@ -82,14 +82,10 @@ impl Runout {
 
     /// Downscale a coarse nowcast probability onto the physical footprint: the
     /// probability where the flow reached, `0` elsewhere — the landslide analogue
-    /// of `nowcast-hydroflux`'s depth-gated refinement.
-    pub fn refined_hazard(&self, step: usize, nowcast_prob: f64) -> HazardField {
-        let probability = self
-            .footprint
-            .iter()
-            .map(|&f| if f { nowcast_prob } else { 0.0 })
-            .collect();
-        HazardField::new(step, self.dims, probability).expect("hazard within [0,1]")
+    /// of `nowcast-hydroflux`'s depth-gated refinement. Errors if `nowcast_prob`
+    /// lies outside `[0, 1]` (the caller's probability is not assumed valid).
+    pub fn refined_hazard(&self, step: usize, nowcast_prob: f64) -> Result<HazardField> {
+        HazardField::masked(step, self.dims, &self.footprint, nowcast_prob)
     }
 }
 
@@ -97,18 +93,26 @@ impl Runout {
 ///
 /// `layers` is the model's input stack (DEM, slope, rain, susceptibility, …);
 /// `params` are the physical parameters ([`Params::default`] or a calibrated
-/// set); `steps` bounds the simulated hours.
+/// set); `steps` bounds the simulated hours (one ABM step ≡ one hour in the
+/// debris-flow model). Errors on a non-positive/non-finite `pixel_size`, which
+/// would silently corrupt every area statistic downstream.
 pub fn run_runout(
     layers: Arc<Layers>,
     params: Params,
     pixel_size: f64,
     seed: u64,
     steps: u64,
-) -> Runout {
+) -> Result<Runout> {
+    if !pixel_size.is_finite() || pixel_size <= 0.0 {
+        return Err(nowcast_core::Error::InvalidParameter {
+            name: "pixel_size",
+            reason: format!("must be finite and > 0 metres, got {pixel_size}"),
+        });
+    }
     let model = DebrisFlowModel::new(layers, params, pixel_size, seed);
     let mut sim = Simulation::new(model, seed).with_schedule(Schedule::new(Activation::Ordered));
     sim.run(steps);
-    Runout::from_footprint(&sim.model.footprint, pixel_size)
+    Ok(Runout::from_footprint(&sim.model.footprint, pixel_size))
 }
 
 #[cfg(test)]
@@ -137,8 +141,10 @@ mod tests {
         assert_eq!(runout.affected_cells(), 2);
         assert!((runout.affected_km2() - 2.0 * 900.0 / 1.0e6).abs() < 1e-12);
 
-        let hz = runout.refined_hazard(0, 0.8);
+        let hz = runout.refined_hazard(0, 0.8).unwrap();
         assert_eq!(hz.probability(), &[0.8, 0.0, 0.0, 0.8]);
+        // A probability outside [0,1] is rejected, not a panic.
+        assert!(runout.refined_hazard(0, 1.0001).is_err());
     }
 
     #[test]
@@ -155,7 +161,7 @@ mod tests {
             susceptibility: g(|_| 0.6),
             streams: g(|_| 0.0),
         };
-        let runout = run_runout(Arc::new(layers), Params::default(), 30.0, 42, 12);
+        let runout = run_runout(Arc::new(layers), Params::default(), 30.0, 42, 12).unwrap();
         assert_eq!(runout.dims(), GridDims::new(24, 24));
         // affected_km2 is well-defined regardless of how far the flow spread.
         assert!(runout.affected_km2() >= 0.0);

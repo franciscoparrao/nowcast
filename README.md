@@ -26,9 +26,24 @@ cargo run -p nowcast-core --release --example synthetic_resolution
 
 The **provider crates** (`nowcast-rainflow`, `-snowmelt`, `-hydroflux`, `-surtgis`,
 `-swarm`, `-insar`, `-firespread`) wrap sibling engines from the author's Rust
-geohazard family through **path dependencies**, so building the *full* workspace
-requires those repositories checked out in the same parent directory as this one.
-Without them, build `nowcast-core` and its examples on their own.
+geohazard family through **path dependencies**. Building the *full* workspace
+(the bare `cargo build` / `cargo test` default) requires those repositories
+checked out at these exact paths relative to this repository's root:
+
+| Crate               | Engine dependency     | Expected checkout            |
+|---------------------|-----------------------|------------------------------|
+| `nowcast-rainflow`  | `rainflow-core`       | `../rainflow`                |
+| `nowcast-snowmelt`  | `snowmelt-core`       | `../snowmelt-rs`             |
+| `nowcast-surtgis`   | `surtgis-core`        | `../surtgis`                 |
+| `nowcast-swarm`     | `swarm-abm` + `debris-flow` | `../swarm-abm`        |
+| `nowcast-insar`     | `insar-core`          | `../insar-rs`                |
+| `nowcast-firespread`| `firespread-core`     | `../firespread`              |
+| `nowcast-hydroflux` | `hydroflux-solver-2d` | `../postdoc/hydroflux`       |
+| `nowcast-cli`       | `surtgis-core`        | `../surtgis`                 |
+
+`scripts/check_siblings.sh` verifies the layout. **Without the siblings, build
+`nowcast-core` and its examples on their own** (`cargo test -p nowcast-core`) —
+the core is self-contained and carries all headline results.
 
 ## Status — v0.1 (decoupled core)
 

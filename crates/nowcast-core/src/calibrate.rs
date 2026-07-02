@@ -22,7 +22,12 @@ use crate::error::{Error, Result};
 const Z95: f64 = 1.959_963_984_540_054; // 97.5th percentile of the standard normal
 
 /// A monotone calibration map fitted by isotonic regression.
+///
+/// With the `serde` feature the fitted map serializes — fit offline on backtest
+/// pairs, persist to JSON, and load it in an operational `watch`. Deserialized
+/// data is trusted to be engine-produced (block means ascending).
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Calibrator {
     /// Block mean scores (ascending).
     xs: Vec<f64>,
@@ -113,6 +118,7 @@ impl Calibrator {
 
 /// One bin of a reliability diagram.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ReliabilityBin {
     /// Mean predicted probability of the bin's members.
     pub p_pred_mean: f64,
@@ -128,6 +134,7 @@ pub struct ReliabilityBin {
 
 /// Reliability of probabilistic predictions against binary outcomes.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Reliability {
     /// Brier score (mean squared error of the probabilities); lower is better.
     pub brier: f64,
@@ -142,9 +149,20 @@ pub struct Reliability {
 }
 
 /// Brier score: mean squared error between probabilities and `{0,1}` outcomes.
-pub fn brier_score(preds: &[f64], outcomes: &[bool]) -> f64 {
+/// Errors on length mismatch or empty input — a silently truncated `zip` here
+/// would return a numerically wrong score for the engine's calibration claim.
+pub fn brier_score(preds: &[f64], outcomes: &[bool]) -> Result<f64> {
+    if preds.len() != outcomes.len() {
+        return Err(Error::InvalidParameter {
+            name: "outcomes",
+            reason: format!("{} preds but {} outcomes", preds.len(), outcomes.len()),
+        });
+    }
     if preds.is_empty() {
-        return f64::NAN;
+        return Err(Error::InvalidParameter {
+            name: "preds",
+            reason: "need at least one (prediction, outcome) pair".into(),
+        });
     }
     let s: f64 = preds
         .iter()
@@ -154,7 +172,7 @@ pub fn brier_score(preds: &[f64], outcomes: &[bool]) -> f64 {
             (p - y) * (p - y)
         })
         .sum();
-    s / preds.len() as f64
+    Ok(s / preds.len() as f64)
 }
 
 /// Wilson score interval for `k` successes in `n` trials at `z` standard normals.
@@ -224,7 +242,7 @@ pub fn reliability(preds: &[f64], outcomes: &[bool], n_bins: usize) -> Result<Re
         bins.push(ReliabilityBin { p_pred_mean, p_obs, n: count[b], ci_low, ci_high });
     }
 
-    let brier = brier_score(preds, outcomes);
+    let brier = brier_score(preds, outcomes)?; // lengths validated above
     let brier_ref = base_rate * (1.0 - base_rate); // climatology Brier
     let brier_skill = if brier_ref > 0.0 { 1.0 - brier / brier_ref } else { f64::NAN };
 
@@ -276,9 +294,9 @@ mod tests {
             raw.push(s * s);
             outcomes.push(rng.unit() < s);
         }
-        let before = brier_score(&raw, &outcomes);
+        let before = brier_score(&raw, &outcomes).unwrap();
         let cal = Calibrator::fit_isotonic(&raw, &outcomes).unwrap();
-        let after = brier_score(&cal.calibrate(&raw), &outcomes);
+        let after = brier_score(&cal.calibrate(&raw), &outcomes).unwrap();
         assert!(after <= before + 1e-12, "calibration should not worsen Brier");
         assert!(after < before, "calibration should improve a miscalibrated model");
     }
@@ -308,5 +326,10 @@ mod tests {
         assert!(Calibrator::fit_isotonic(&[0.1], &[true, false]).is_err());
         assert!(Calibrator::fit_isotonic(&[], &[]).is_err());
         assert!(reliability(&[0.5], &[true], 0).is_err());
+        // brier_score must refuse mismatched lengths (a silent zip-truncation
+        // here returned a wrong score before) and empty input.
+        assert!(brier_score(&[0.5, 0.5], &[true]).is_err());
+        assert!(brier_score(&[], &[]).is_err());
+        assert!((brier_score(&[1.0], &[true]).unwrap()).abs() < 1e-12);
     }
 }

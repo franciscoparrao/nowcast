@@ -66,8 +66,8 @@ fn main() {
     println!("  calibrated      {:.4}   {:>+.3}   {:.4}", cal_rel.brier, cal_rel.brier_skill, cal_rel.ece);
     println!(
         "  (Brier {:.4}→{:.4}, ECE {:.4}→{:.4})\n",
-        brier_score(raw_test, out_test),
-        brier_score(&cal_test, out_test),
+        brier_score(raw_test, out_test).unwrap(),
+        brier_score(&cal_test, out_test).unwrap(),
         raw_rel.ece,
         cal_rel.ece
     );

@@ -73,4 +73,32 @@ impl IdThreshold {
         }
         mean_intensity_mm_h / crit
     }
+
+    /// Worst (max) exceedance over rolling windows `m = 1..=max_m` ending at the
+    /// current step, and the window length that produced it.
+    ///
+    /// `window_depth(m)` returns the accumulated depth (mm) over the trailing
+    /// window of `m` steps; `dt_hours` is the step length. This is **the** I–D
+    /// window kernel: the batch engine ([`Nowcast`](crate::Nowcast)), the
+    /// composable [`IdTrigger`](crate::IdTrigger) and the streaming
+    /// [`LiveNowcast`](crate::LiveNowcast) all call it, so the window scheme
+    /// lives in exactly one place and every driver stays bit-identical (see the
+    /// parity tests in `live` and `multi`).
+    pub fn worst_window(
+        &self,
+        dt_hours: f64,
+        max_m: usize,
+        window_depth: impl Fn(usize) -> f64,
+    ) -> (f64, usize) {
+        let (mut best_e, mut best_m) = (0.0_f64, 1usize);
+        for m in 1..=max_m {
+            let duration_h = m as f64 * dt_hours;
+            let e = self.exceedance(window_depth(m) / duration_h, duration_h);
+            if e > best_e {
+                best_e = e;
+                best_m = m;
+            }
+        }
+        (best_e, best_m)
+    }
 }

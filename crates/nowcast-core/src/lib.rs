@@ -62,15 +62,20 @@ mod nowcast;
 mod threshold;
 mod trigger;
 
-pub use backtest::{Contingency, MonthKey, monthly_contingency, spatial_monthly_contingency};
+pub use backtest::{
+    Contingency, DayKey, MonthKey, csv_events, csv_month_keys, lead_times, monthly_contingency,
+    pod_at_area, pr_auc, roc_auc, spatial_daily_contingency, spatial_monthly_contingency,
+};
 pub use calibrate::{Calibrator, Reliability, ReliabilityBin, brier_score, reliability};
 pub use ensemble::{EnsembleField, ensemble_hazard};
 pub use error::{Error, Result};
 pub use explain::{Driver, Explanation};
-pub use forcing::{Forcing, GriddedRain, UniformRain};
+pub use forcing::{Forcing, GriddedRain, UniformRain, csv_column};
 pub use grid::{GridDims, SusceptibilityMap};
 pub use live::{LiveNowcast, ReplaySource, StepSource, run_live};
-pub use multi::{Combine, IdTrigger, MultiNowcast, ThresholdTrigger, Trigger};
+pub use multi::{
+    AntecedentTrigger, Combine, IdMapTrigger, IdTrigger, MultiNowcast, ThresholdTrigger, Trigger,
+};
 pub use nowcast::{Alert, HazardField, Nowcast};
 pub use threshold::IdThreshold;
 pub use trigger::TriggerModel;

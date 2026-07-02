@@ -12,4 +12,4 @@ nowcast-core = { path = "../nowcast-core" }
 # Sibling engine (snowmelt-rs workspace). ndarray must be semver-compatible with
 # snowmelt-core's so the `Array2<f64>` types unify across the crate boundary.
 snowmelt-core = { path = "../../../snowmelt-rs/crates/snowmelt-core" }
-ndarray = "0.16"
+ndarray.workspace = true

@@ -34,6 +34,22 @@ pub enum Error {
         forc_rows: usize,
     },
 
+    /// A cell or step index beyond the grid or series bounds.
+    #[error("{name} index {index} is out of range ({len} {name}s available)")]
+    OutOfRange {
+        name: &'static str,
+        index: usize,
+        len: usize,
+    },
+
+    /// An external engine wrapped by an adapter crate failed (the simulation
+    /// itself, not a nowcast parameter) — e.g. firespread, hydroflux.
+    #[error("{engine} engine error: {reason}")]
+    Engine {
+        engine: &'static str,
+        reason: String,
+    },
+
     /// Failed to parse an observed forcing series from text/CSV.
     #[error("failed to parse forcing series: {0}")]
     Parse(String),

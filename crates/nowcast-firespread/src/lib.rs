@@ -30,8 +30,9 @@ use nowcast_core::{Error, GridDims, HazardField, Result, SusceptibilityMap};
 pub use firespread_core::{FuelModel, Landscape, Moisture, SpreadResult, Weather};
 
 fn map_err(e: firespread_core::FireError) -> Error {
-    Error::InvalidParameter {
-        name: "firespread",
+    // A failed simulation is an engine error, not an invalid nowcast parameter.
+    Error::Engine {
+        engine: "firespread",
         reason: e.to_string(),
     }
 }
@@ -83,7 +84,7 @@ impl FireField {
     /// burned cells (0 elsewhere); `intensity_ref_kw_m` saturates the scale (a
     /// common reference is 1730 kW/m, the limit of direct manual attack).
     pub fn fire_hazard(&self, intensity_ref_kw_m: f64) -> Result<HazardField> {
-        if intensity_ref_kw_m <= 0.0 || intensity_ref_kw_m.is_nan() {
+        if !intensity_ref_kw_m.is_finite() || intensity_ref_kw_m <= 0.0 {
             return Err(Error::InvalidParameter {
                 name: "intensity_ref_kw_m",
                 reason: "must be a positive, finite reference intensity".into(),
@@ -141,7 +142,7 @@ pub fn post_fire_susceptibility(
             forc_rows: f.nrows,
         });
     }
-    if factor < 0.0 || factor.is_nan() {
+    if !factor.is_finite() || factor < 0.0 {
         return Err(Error::InvalidParameter {
             name: "factor",
             reason: "must be a non-negative, finite amplification".into(),

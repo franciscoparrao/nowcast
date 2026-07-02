@@ -45,7 +45,10 @@ fn mesh(c0: usize, c1: usize) -> Mesh2D {
 fn solve(c0: usize, c1: usize, inflow: f64, bcs: Boundaries2D) -> (Vec<f64>, usize, f64) {
     let sources = vec![PointSource { row: 0, col: CENTER - c0, q_mass: inflow }];
     let t = Instant::now();
-    let field = Inundation::new(mesh(c0, c1), bcs, DURATION_S).run_point_sources(&sources);
+    let (field, stats) = Inundation::new(mesh(c0, c1), bcs, DURATION_S)
+        .expect("positive duration")
+        .run_point_sources(&sources);
+    assert!(!stats.truncated, "integration hit the step cap");
     let secs = t.elapsed().as_secs_f64();
     (field.depth().to_vec(), c1 - c0, secs)
 }

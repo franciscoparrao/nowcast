@@ -13,6 +13,7 @@
 
 /// Which factor limits the hazard (the smaller multiplicand is the bottleneck).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Driver {
     /// The dynamic trigger is the bottleneck — susceptible ground, not enough rain.
     TriggerLimited,
@@ -39,6 +40,7 @@ impl Driver {
 
 /// Exact decomposition of `hazard(cell, step)` into its drivers.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Explanation {
     pub cell: usize,
     pub step: usize,

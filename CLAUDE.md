@@ -143,7 +143,7 @@ motores se enchufan como proveedores nativos en v0.2.
 - **rainflow / snowmelt** → forzantes (caudal / rain+melt). Adapters LISTOS.
 - **hydroflux** → acople físico de **crecidas** (profundidad 2D). Adapter LISTO.
 - **swarm-abm** → **modelado del evento con agentes**: crate `nowcast-swarm`
-  envuelve el modelo `debris-flow` (lib `debris_flow` sobre `swarm-core`, agentes
+  envuelve el modelo `debris-flow` (lib `debris_flow` sobre `swarm-abm`, agentes
   lluvia+flujo sobre raster, calibrado a Atacama 2015). Es el **acople físico del
   path de deslizamientos/aluviones** (footprint/runout), análogo a hydroflux que
   es para crecidas. NO es evacuación aguas abajo. `run_runout` →

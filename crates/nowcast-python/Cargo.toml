@@ -13,6 +13,9 @@ crate-type = ["cdylib"]
 
 [dependencies]
 nowcast-core = { path = "../nowcast-core" }
+# Grids cross the boundary as numpy arrays (zero-ish copy), not element-wise
+# Python lists — a 30M-cell raster is unusable otherwise.
+numpy = "0.23"
 
 [dependencies.pyo3]
 version = "0.23"

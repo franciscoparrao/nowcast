@@ -39,6 +39,10 @@ thiserror = "2"
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 csv = "1"
+# One workspace-wide ndarray so `Array2` unifies across every adapter↔engine
+# boundary by construction (it must stay semver-compatible with the sibling
+# engines' own ndarray).
+ndarray = "0.16"
 
 [profile.release]
 lto = true
