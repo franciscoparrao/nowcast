@@ -304,9 +304,9 @@ snowmelt, 2-D shallow water \citep{audusse2004,toro1994}, the agent-based
 debris-flow model, the geospatial raster substrate (native GeoTIFF I/O, no GDAL
 dependency), PS-InSAR/SBAS deformation, and a wildfire-spread model with a
 post-fire susceptibility cascade; a command-line runner exposes the engine
-(run, backtest, explain) and PyO3 bindings expose it to Python. The codebase is covered by
+(run, backtest, explain, watch, calibrate) and PyO3 bindings expose it to Python. The codebase is covered by
 $\sim$58 unit and documentation tests, the linter runs clean under
-\texttt{-D warnings}, and twenty-four runnable examples reproduce every result below.
+\texttt{-D warnings}, and twenty-eight runnable examples reproduce every result below.
 Each provider is a dependency-isolated crate implementing the same \texttt{Forcing}
 trait, so the design is reusable and extensible by construction: adding a hazard
 forcing is a new crate, not an edit to the core. That separation, not any single
@@ -909,7 +909,7 @@ without touching the hazard logic.
 \section*{Code and data availability}
 
 The \texttt{nowcast} source (ten Rust crates, including a command-line runner and
-PyO3 Python bindings, plus twenty-four examples) and all data-extraction scripts
+PyO3 Python bindings, plus twenty-eight examples) and all data-extraction scripts
 are openly available at \url{https://github.com/franciscoparrao/nowcast} under the
 MIT or Apache-2.0 licence; a citable snapshot will be archived on Zenodo (DOI to be
 inserted on acceptance). \texttt{nowcast-core} builds and tests offline with no
