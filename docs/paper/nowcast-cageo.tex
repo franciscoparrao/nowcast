@@ -93,9 +93,9 @@ well-developed but disjoint bodies of work. On one side, \emph{susceptibility}
 mapping combines static predisposing factors (slope, lithology, land cover,
 terrain indices) through statistical, physically-based or, increasingly,
 machine-learning models, to estimate \emph{where} failures are possible
-\citep{reichenbach2018}. On the other, empirical \emph{rainfall thresholds}, most
+\citep{reichenbach2018,merghadi2020}. On the other, empirical \emph{rainfall thresholds}, most
 famously the intensity--duration (I--D) power law of \citet{caine1980} and its
-many regional successors \citep{guzzetti2007,segoni2018}, estimate \emph{when}
+many regional successors \citep{guzzetti2007,segoni2018,gariano2016}, estimate \emph{when}
 triggering rainfall has occurred. Operational early-warning, however, needs
 \emph{where} and \emph{when} together, as a hazard field that evolves through an
 event \citep{bogaard2018}. This coupling is already realised operationally: NASA's
@@ -300,9 +300,9 @@ crates. The core depends only on \texttt{std} and an error-handling crate, so it
 builds and tests offline with no system dependencies; native providers are
 separate crates that wrap sibling engines through path dependencies:
 rainfall--runoff (GR4J/HBV; \citealp{perrin2003,seibert2012}), distributed
-snowmelt, 2-D shallow water \citep{audusse2004,toro1994}, the agent-based
-debris-flow model, the geospatial raster substrate (native GeoTIFF I/O, no GDAL
-dependency), PS-InSAR/SBAS deformation, and a wildfire-spread model with a
+snowmelt, 2-D shallow water \citep{audusse2004,toro1994}, an agent-based
+debris-flow model in the cellular-automata tradition \citep{dambrosio2003}, the geospatial raster substrate (native GeoTIFF I/O, no GDAL
+dependency), PS-InSAR/SBAS deformation \citep{ferretti2001,berardino2002}, and a wildfire-spread model (Rothermel surface-fire spread \citep{andrews2018} with a minimum-travel-time perimeter algorithm \citep{finney1998}) with a
 post-fire susceptibility cascade; a command-line runner exposes the engine
 (run, backtest, explain, watch, calibrate) and PyO3 bindings expose it to Python. The codebase is covered by
 $\sim$58 unit and documentation tests, the linter runs clean under
@@ -387,11 +387,14 @@ susceptibility that still fails to discriminate at 5\,km daily resolution
 (Section~5.2) strengthens the resolution-ceiling conclusion rather than weakening
 it; we flag the single place the dependence could matter (the weak single-feature
 susceptibility signal in the baseline) where it arises. Daily
-precipitation is CR2MET v2.5 (0.05$^\circ$, $\sim$5\,km; \citealp{boisier2018}).
+precipitation is CR2MET v2.5 (0.05$^\circ$, $\sim$5\,km; \citealp{boisier2018cr2met}), produced over a basin
+region that has experienced a sustained decline in rainfall since 2010, the
+Central Chile Mega Drought \citep{garreaud2019,boisier2018}.
 Sub-daily precipitation is GPM IMERG Final v07 half-hourly ($\sim$0.1$^\circ$;
-\citealp{huffman2020}). Catchment forcing for the flood path uses CAMELS-CL
+\citealp{huffman2020,tan2019}). Catchment forcing for the flood path uses CAMELS-CL
 \citep{alvarez2018}. The dated event inventory is the SERNAGEOMIN
-landslide/flow catalogue; events are dated to year and month from the record
+landslide/flow catalogue, consistent with regional patterns of rainfall-triggered
+fatal landslides across Chile and Latin America \citep{sepulveda2015}; events are dated to year and month from the record
 identifier, and the month itself is only approximate: the Atacama event flows,
 for instance, are filed under March even though the extreme rainfall fell over
 24--26 March 2015.
@@ -447,15 +450,17 @@ a tolerance window. For \emph{spatial} verification, per-cell month matching
 against a spatially sparse, \emph{incomplete} inventory makes CSI/FAR
 meaningless, almost every ``false alarm'' is a susceptible, wet cell with no
 \emph{recorded} event. We therefore score discrimination, as the susceptibility
-and early-warning literatures do \citep{reichenbach2018}: ROC-AUC (does the hazard
+and early-warning literatures do \citep{reichenbach2018}: ROC-AUC \citep{hanley1982} (does the hazard
 rank event cell-months above quiet ones?) and POD at a fixed alerted-area
 fraction. Uncertainty on the AUC is estimated by a \emph{month-block} bootstrap
 (resampling calendar months with replacement, keeping each month's cells
 together) so that within-month spatial autocorrelation, the dominant structure
 when one storm wets many cells, is not mistaken for independent information. As a
 model-agnostic check, we also train supervised baselines (logistic regression and
-gradient boosting) on per-cell-month susceptibility and rainfall features,
-evaluated by year-blocked \texttt{GroupKFold} cross-validation.
+gradient boosting \citep{friedman2001}) on per-cell-month susceptibility and rainfall features,
+evaluated by year-blocked \texttt{GroupKFold} cross-validation, chosen over a
+plain random split to avoid leaking within-year spatial autocorrelation across
+folds \citep{roberts2016}.
 
 We distinguish two notions used throughout the results. \emph{Triggering} asks
 whether the forcing can cross the I--D curve at all; it is a property of the
@@ -763,7 +768,7 @@ R\'io Itata catchment (gauge 8123001, 1979--2016) and validate it against
 \emph{observed} daily streamflow. Unlike the month-dated landslide inventory,
 observed streamflow is daily, so this is a genuine day-resolution verification.
 GR4J is calibrated by random search on the training period (years before 2003,
-maximising Kling--Gupta efficiency) and evaluated out of sample on 2003--2016; it
+maximising Kling--Gupta efficiency \citep{gupta2009}) and evaluated out of sample on 2003--2016; it
 reproduces the observed hydrograph well (KGE 0.85 train, 0.74 test; NSE 0.70 / 0.60).
 Defining an observed flood as a day whose observed discharge exceeds its 98th
 training percentile (21.7\,mm\,day$^{-1}$), the engine's discharge-exceedance hazard,
@@ -787,7 +792,8 @@ routing integrates, and fails where triggering is sub-daily.
 Beyond the two validated paths above, the engine ships further adapters that
 exercise the \emph{interface} rather than make a hazard claim; we are explicit that
 none is a validated prediction. A snowmelt provider supplies rain-plus-melt runoff
-per cell (wrapping a distributed snowmelt model); an InSAR provider turns a
+per cell (wrapping a distributed snowmelt model, relevant as mountain snowmelt
+timing itself shifts under warming \citep{musselman2017}); an InSAR provider turns a
 line-of-sight velocity field into a duration-independent deformation trigger that
 fuses with rainfall by noisy-OR, so a slope already creeping
 ($|v|>v_{\mathrm{crit}}$) can cross the alert level under rain that alone would not
@@ -796,7 +802,7 @@ a runout footprint onto which the coarse probability is concentrated, the landsl
 analogue of the flood coupling of Section~2.5; and a wildfire-spread model couples
 the other way, as a one-way cascade in which a simulated burn scar amplifies the
 static susceptibility, so a subsequent rainfall nowcast sees the elevated post-fire
-debris-flow hazard the scar is known to carry. Each is a runnable example. Their
+debris-flow hazard the scar is known to carry \citep{cannon2008}. Each is a runnable example. Their
 purpose here is to show that a new forcing, a new trigger family and a new
 physical-refinement model each plug in through the same \texttt{Forcing} and
 \texttt{Trigger} interfaces \emph{without touching the hazard logic}; their
@@ -832,7 +838,10 @@ the triggering process}, not resolution in the abstract, a daily product that is
 useless for convective-burst landslides is sufficient for routed floods.
 
 \textbf{The inventory ceiling.} A second, independent ceiling is the validation
-target. The inventory is dated to $\sim$month and is incomplete. Month-level
+target. The inventory is dated to $\sim$month and is incomplete, echoing a
+broader finding that uncertain identification of the triggering rainfall episode
+itself distorts threshold assessment even where daily inventories exist
+\citep{peres2018}. Month-level
 dating alone accounts for a large fraction of apparent misses
 (Table~\ref{tab:lumped}), and incompleteness makes per-cell FAR uninformative.
 Credible discrimination and true lead-time skill require a day- or hour-resolution
@@ -860,8 +869,8 @@ benchmarked against.
 \label{sec:limits}
 
 We are explicit about what the engine does \emph{not} yet do. (i) The raw hazard
-is a bounded \emph{index}; the engine ships isotonic calibration that maps it to a
-probability with reliability diagnostics (Brier score and skill, Wilson intervals,
+is a bounded \emph{index}; the engine ships isotonic calibration \citep{niculescumizil2005} that maps it to a
+probability with reliability diagnostics (Brier score and skill \citep{brier1950}, Wilson intervals \citep{wilson1927},
 expected calibration error). Fitting it on the real distributed Maipo backtest
 (odd years $\to$ even) collapses the calibrated probability to climatology (Brier
 skill $-3.4$ for the raw index $\to -0.003$ calibrated; expected calibration error
@@ -870,7 +879,7 @@ calibrate, consistent with the Section~5.2 null. Validating the calibration wher
 skill is present (the flood path, sub-daily forcing) remains future work.
 (ii) Trigger parameters are calibrated
 minimally; a formal calibration with uncertainty, for which the sibling
-rainfall--runoff engine already provides a DDS optimiser pattern, is future work.
+rainfall--runoff engine already provides a DDS \citep{tolson2007} optimiser pattern, is future work.
 We benchmark discrimination against supervised baselines (Section~5.2) and against
 the full ensemble of 35 published I--D thresholds (Section~5.1), but a formal
 calibration with uncertainty against an \emph{operational} early-warning system
@@ -941,11 +950,22 @@ Alvarez-Garreton, C., et al., 2018. The CAMELS-CL dataset: catchment attributes
 and meteorology for large sample studies, Chile dataset. Hydrol.\ Earth Syst.\
 Sci.\ 22, 5817--5846. \url{https://doi.org/10.5194/hess-22-5817-2018}.
 
+\bibitem[Andrews(2018)]{andrews2018}
+Andrews, P.L., 2018. The Rothermel surface fire spread model and associated
+developments: A comprehensive explanation. USDA Forest Service, Rocky Mountain
+Research Station, RMRS-GTR-371. \url{https://doi.org/10.2737/rmrs-gtr-371}.
+
 \bibitem[Audusse et al.(2004)]{audusse2004}
 Audusse, E., Bouchut, F., Bristeau, M.-O., Klein, R., Perthame, B., 2004. A fast
 and stable well-balanced scheme with hydrostatic reconstruction for shallow water
 flows. SIAM J.\ Sci.\ Comput.\ 25 (6), 2050--2065.
 \url{https://doi.org/10.1137/S1064827503431090}.
+
+\bibitem[Berardino et al.(2002)]{berardino2002}
+Berardino, P., Fornaro, G., Lanari, R., Sansosti, E., 2002. A new algorithm for
+surface deformation monitoring based on small baseline differential SAR
+interferograms. IEEE Trans.\ Geosci.\ Remote Sens.\ 40 (11), 2375--2383.
+\url{https://doi.org/10.1109/tgrs.2002.803792}.
 
 \bibitem[Bogaard and Greco(2018)]{bogaard2018}
 Bogaard, T., Greco, R., 2018. Invited perspectives: Hydrological perspectives on
@@ -953,16 +973,69 @@ precipitation intensity--duration thresholds for landslide initiation: proposing
 hydro-meteorological thresholds. Nat.\ Hazards Earth Syst.\ Sci.\ 18, 31--39.
 \url{https://doi.org/10.5194/nhess-18-31-2018}.
 
-\bibitem[Boisier et al.(2018)]{boisier2018}
-Boisier, J.P., Alvarez-Garreton, C., Cordero, R.R., et al., 2018. Anthropogenic
+\bibitem[Boisier et al.(2018a)]{boisier2018}
+Boisier, J.P., Alvarez-Garreton, C., Cordero, R.R., et al., 2018a. Anthropogenic
 drying in central-southern Chile evidenced by long-term observations and climate
 model simulations. Elementa: Science of the Anthropocene 6.
 \url{https://doi.org/10.1525/elementa.328}.
+
+\bibitem[Boisier et al.(2018b)]{boisier2018cr2met}
+Boisier, J.P., Alvarez-Garret\'on, C., Cepeda, J., Osses, A., V\'asquez, N.,
+Rondanelli, R., 2018b. CR2MET: A high-resolution precipitation and temperature
+dataset for hydroclimatic research in Chile. EGU General Assembly 2018.
+
+\bibitem[Brier(1950)]{brier1950}
+Brier, G.W., 1950. Verification of forecasts expressed in terms of probability.
+Mon.\ Weather Rev.\ 78 (1), 1--3.
+\url{https://doi.org/10.1175/1520-0493(1950)078<0001:VOFEIT>2.0.CO;2}.
 
 \bibitem[Caine(1980)]{caine1980}
 Caine, N., 1980. The rainfall intensity--duration control of shallow landslides
 and debris flows. Geogr.\ Ann.\ A 62, 23--27.
 \url{https://doi.org/10.1080/04353676.1980.11879996}.
+
+\bibitem[Cannon and DeGraff(2008)]{cannon2008}
+Cannon, S.H., DeGraff, J., 2008. The increasing wildfire and post-fire
+debris-flow threat in western USA, and implications for consequences of climate
+change. In: Sassa, K., Canuti, P. (Eds.), Landslides -- Disaster Risk Reduction.
+Springer, pp.\ 177--190. \url{https://doi.org/10.1007/978-3-540-69970-5_9}.
+
+\bibitem[D'Ambrosio et al.(2003)]{dambrosio2003}
+D'Ambrosio, D., Di Gregorio, S., Iovine, G., 2003. Simulating debris flows
+through a hexagonal cellular automata model: SCIDDICA S3-hex. Nat.\ Hazards
+Earth Syst.\ Sci.\ 3, 545--559. \url{https://doi.org/10.5194/nhess-3-545-2003}.
+
+\bibitem[Ferretti et al.(2001)]{ferretti2001}
+Ferretti, A., Prati, C., Rocca, F., 2001. Permanent scatterers in SAR
+interferometry. IEEE Trans.\ Geosci.\ Remote Sens.\ 39 (1), 8--20.
+\url{https://doi.org/10.1109/36.898661}.
+
+\bibitem[Finney(1998)]{finney1998}
+Finney, M.A., 1998. FARSITE: Fire Area Simulator---model development and
+evaluation. USDA Forest Service, Rocky Mountain Research Station, RMRS-RP-4.
+\url{https://doi.org/10.2737/rmrs-rp-4}.
+
+\bibitem[Friedman(2001)]{friedman2001}
+Friedman, J.H., 2001. Greedy function approximation: A gradient boosting
+machine. Ann.\ Stat.\ 29 (5), 1189--1232.
+\url{https://doi.org/10.1214/aos/1013203451}.
+
+\bibitem[Gariano and Guzzetti(2016)]{gariano2016}
+Gariano, S.L., Guzzetti, F., 2016. Landslides in a changing climate.
+Earth-Sci.\ Rev.\ 162, 227--252.
+\url{https://doi.org/10.1016/j.earscirev.2016.08.011}.
+
+\bibitem[Garreaud et al.(2019)]{garreaud2019}
+Garreaud, R.D., Boisier, J.P., Rondanelli, R., Montecinos, A., Sep\'ulveda, H.H.,
+Veloso-Aguila, D., 2019. The Central Chile Mega Drought (2010--2018): a climate
+dynamics perspective. Int.\ J.\ Climatol.\ 40 (1), 421--439.
+\url{https://doi.org/10.1002/joc.6219}.
+
+\bibitem[Gupta et al.(2009)]{gupta2009}
+Gupta, H.V., Kling, H., Yilmaz, K.K., Martinez, G.F., 2009. Decomposition of the
+mean squared error and NSE performance criteria: implications for improving
+hydrological modelling. J.\ Hydrol.\ 377, 80--91.
+\url{https://doi.org/10.1016/j.jhydrol.2009.08.003}.
 
 \bibitem[Guzzetti et al.(2007)]{guzzetti2007}
 Guzzetti, F., Peruccacci, S., Rossi, M., Stark, C.P., 2007. Rainfall thresholds
@@ -974,6 +1047,11 @@ Guzzetti, F., Gariano, S.L., Peruccacci, S., Brunetti, M.T., Marchesini, I.,
 Rossi, M., Melillo, M., 2020. Geographical landslide early warning systems.
 Earth-Sci.\ Rev.\ 200, 102973.
 \url{https://doi.org/10.1016/j.earscirev.2019.102973}.
+
+\bibitem[Hanley and McNeil(1982)]{hanley1982}
+Hanley, J.A., McNeil, B.J., 1982. The meaning and use of the area under a
+receiver operating characteristic (ROC) curve. Radiology 143 (1), 29--36.
+\url{https://doi.org/10.1148/radiology.143.1.7063747}.
 
 \bibitem[Huffman et al.(2020)]{huffman2020}
 Huffman, G.J., et al., 2020. GPM IMERG Final Precipitation L3 Half Hourly, V07.
@@ -995,6 +1073,29 @@ Guzzetti, F., 2018. A tool for the automatic calculation of rainfall thresholds
 for landslide occurrence. Environ.\ Model.\ Softw.\ 105, 230--243.
 \url{https://doi.org/10.1016/j.envsoft.2018.03.024}.
 
+\bibitem[Merghadi et al.(2020)]{merghadi2020}
+Merghadi, A., Yunus, A.P., Dou, J., Whiteley, J., Pham, B.T., Bui, D.T., Avtar,
+R., Boumezbeur, A., 2020. Machine learning methods for landslide susceptibility
+studies: a comparative overview of algorithm performance. Earth-Sci.\ Rev.\ 207,
+103225. \url{https://doi.org/10.1016/j.earscirev.2020.103225}.
+
+\bibitem[Musselman et al.(2017)]{musselman2017}
+Musselman, K.N., Clark, M.P., Liu, C., Ikeda, K., Rasmussen, R., 2017. Slower
+snowmelt in a warmer world. Nat.\ Clim.\ Change 7, 214--219.
+\url{https://doi.org/10.1038/nclimate3225}.
+
+\bibitem[Niculescu-Mizil and Caruana(2005)]{niculescumizil2005}
+Niculescu-Mizil, A., Caruana, R., 2005. Predicting good probabilities with
+supervised learning. In: Proceedings of the 22nd International Conference on
+Machine Learning (ICML), pp.\ 625--632.
+\url{https://doi.org/10.1145/1102351.1102430}.
+
+\bibitem[Peres et al.(2018)]{peres2018}
+Peres, D.J., Cancelliere, A., Greco, R., Bogaard, T., 2018. Influence of
+uncertain identification of triggering rainfall on the assessment of landslide
+early warning thresholds. Nat.\ Hazards Earth Syst.\ Sci.\ 18 (2), 633--646.
+\url{https://doi.org/10.5194/nhess-18-633-2018}.
+
 \bibitem[Perrin et al.(2003)]{perrin2003}
 Perrin, C., Michel, C., Andr\'eassian, V., 2003. Improvement of a parsimonious
 model for streamflow simulation. J.\ Hydrol.\ 279, 275--289.
@@ -1004,6 +1105,13 @@ model for streamflow simulation. J.\ Hydrol.\ 279, 275--289.
 Reichenbach, P., Rossi, M., Malamud, B.D., Mihir, M., Guzzetti, F., 2018. A review
 of statistically-based landslide susceptibility models. Earth-Sci.\ Rev.\ 180,
 60--91. \url{https://doi.org/10.1016/j.earscirev.2018.03.001}.
+
+\bibitem[Roberts et al.(2016)]{roberts2016}
+Roberts, D.R., Bahn, V., Ciuti, S., Boyce, M.S., Elith, J., Guillera-Arroita, G.,
+Hauenstein, S., Lahoz-Monfort, J.J., Schr\"oder, B., Thuiller, W., Warton, D.I.,
+Wintle, B.A., Hartig, F., Dormann, C.F., 2016. Cross-validation strategies for
+data with temporal, spatial, hierarchical, or phylogenetic structure. Ecography
+40 (8), 913--929. \url{https://doi.org/10.1111/ecog.02881}.
 
 \bibitem[Segoni et al.(2018)]{segoni2018}
 Segoni, S., Piciullo, L., Gariano, S.L., 2018. A review of the recent literature
@@ -1015,15 +1123,35 @@ Seibert, J., Vis, M.J.P., 2012. Teaching hydrological modeling with a
 user-friendly catchment-runoff-model software package. Hydrol.\ Earth Syst.\ Sci.\
 16, 3315--3325. \url{https://doi.org/10.5194/hess-16-3315-2012}.
 
+\bibitem[Sep\'ulveda and Petley(2015)]{sepulveda2015}
+Sep\'ulveda, S.A., Petley, D.N., 2015. Regional trends and controlling factors of
+fatal landslides in Latin America and the Caribbean. Nat.\ Hazards Earth Syst.\
+Sci.\ 15, 1821--1833. \url{https://doi.org/10.5194/nhess-15-1821-2015}.
+
 \bibitem[Stanley et al.(2021)]{stanley2021}
 Stanley, T.A., Kirschbaum, D.B., Benz, G., et al., 2021. Data-driven landslide
 nowcasting at the global scale. Front.\ Earth Sci.\ 9, 640043.
 \url{https://doi.org/10.3389/feart.2021.640043}.
 
+\bibitem[Tan et al.(2019)]{tan2019}
+Tan, J., Huffman, G.J., Bolvin, D.T., Nelkin, E.J., 2019. IMERG V06: changes to
+the morphing algorithm. J.\ Atmos.\ Ocean.\ Technol.\ 36, 2471--2482.
+\url{https://doi.org/10.1175/jtech-d-19-0114.1}.
+
+\bibitem[Tolson and Shoemaker(2007)]{tolson2007}
+Tolson, B.A., Shoemaker, C.A., 2007. Dynamically dimensioned search algorithm
+for computationally efficient watershed model calibration. Water Resour.\ Res.\
+43, W01413. \url{https://doi.org/10.1029/2005wr004723}.
+
 \bibitem[Toro et al.(1994)]{toro1994}
 Toro, E.F., Spruce, M., Speares, W., 1994. Restoration of the contact surface in
 the HLL Riemann solver. Shock Waves 4, 25--34.
 \url{https://doi.org/10.1007/BF01414629}.
+
+\bibitem[Wilson(1927)]{wilson1927}
+Wilson, E.B., 1927. Probable inference, the law of succession, and statistical
+inference. J.\ Am.\ Stat.\ Assoc.\ 22 (158), 209--212.
+\url{https://doi.org/10.1080/01621459.1927.10502953}.
 
 \end{thebibliography}
 
