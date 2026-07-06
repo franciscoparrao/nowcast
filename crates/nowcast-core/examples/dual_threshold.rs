@@ -87,7 +87,7 @@ fn main() {
     println!("Umbral dual causa×gatillo — año sintético, {} eventos reales\n", events.len());
     println!("                        alertas  hits  miss  FA    FAR   lead medio");
     for (name, nc) in [("I-D solo", &id_only), ("antecedente × I-D", &dual)] {
-        let hazard: Vec<f64> = (0..n_days).map(|d| nc.hazard_at(d).max_probability()).collect();
+        let hazard: Vec<f64> = (0..n_days).map(|d| nc.hazard_at(d).unwrap().max_probability()).collect();
         let alerted: BTreeSet<(usize, DayKey)> = hazard
             .iter()
             .enumerate()

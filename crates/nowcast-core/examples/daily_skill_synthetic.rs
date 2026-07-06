@@ -100,8 +100,8 @@ fn main() {
     // --- Score. Contingency uses a ±1 cell, ±1 day matching window. ---
     let days: Vec<DayKey> = (0..n_days as DayKey).collect();
     let c = spatial_daily_contingency(dims, &days, &alerted, &events, 1, 1);
-    let auc = roc_auc(&scores, &labels).unwrap();
-    let pod10 = pod_at_area(&scores, &labels, 0.10).unwrap();
+    let auc = roc_auc(&scores, &labels).unwrap().unwrap();
+    let pod10 = pod_at_area(&scores, &labels, 0.10).unwrap().unwrap();
 
     println!("Day-resolution skill (synthetic COOLR × sub-daily forcing)");
     println!("  grid {ncols}×{nrows}, {n_days} days, hourly forcing, {} planted events", events.len());

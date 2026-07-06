@@ -90,7 +90,7 @@ fn main() {
     println!("Largest discharge events:");
     println!("{:>12} | {:>9} | {:>10} | {:>10}", "date", "Q mm/day", "Q/Q_c", "floodplain");
     for &i in idx.iter().take(5) {
-        let field = nowcast.hazard_at(i);
+        let field = nowcast.hazard_at(i).unwrap();
         println!(
             "{:>12} | {:>9.1} | {:>10.2} | {:>10.3}",
             dates[i],
@@ -103,8 +103,8 @@ fn main() {
     // Exact attribution of the largest event (floodplain cell 0).
     let top = idx[0];
     println!("\nTrazabilidad del mayor evento ({}):", dates[top]);
-    println!("  {}", nowcast.explain(0, top).summary());
-    match nowcast.discharge_to_alert(2, ALERT_LEVEL) {
+    println!("  {}", nowcast.explain(0, top).unwrap().summary());
+    match nowcast.discharge_to_alert(2, ALERT_LEVEL).unwrap() {
         Some(qc) => println!("  contrafactual: la terraza (exp. 0,5) alertaría con Q ≥ {qc:.1} mm/día"),
         None => println!("  contrafactual: la terraza no alcanza el nivel de alerta (cap de exposición)"),
     }

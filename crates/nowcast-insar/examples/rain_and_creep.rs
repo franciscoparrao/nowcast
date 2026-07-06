@@ -55,7 +55,7 @@ fn main() {
         "{:>4} | {:>10} | {:>9} | {:>9} | {:>9}",
         "celda", "v (mm/yr)", "f_lluvia", "f_deform", "peligro"
     );
-    let field = nowcast.hazard_at(0);
+    let field = nowcast.hazard_at(0).unwrap();
     for (c, &v) in vel_mm_yr.iter().enumerate() {
         let f = nowcast.trigger_factors(c, 0);
         let haz = field.probability()[c];

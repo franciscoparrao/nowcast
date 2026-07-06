@@ -52,7 +52,7 @@ fn main() {
         7,
     )
     .unwrap();
-    let field = nowcast.hazard_at(wettest);
+    let field = nowcast.hazard_at(wettest).unwrap();
 
     let mut out = String::from("row,col,lat,lon,susc,hazard\n");
     for (i, &(_, r, c, lat, lon, susc)) in rows.iter().enumerate() {

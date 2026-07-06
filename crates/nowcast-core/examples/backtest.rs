@@ -140,7 +140,7 @@ fn main() {
     let mut best = (f64::NAN, -1.0_f64, Contingency::default()); // (a, csi, table)
     for &a in &sweep {
         let alerts = alert_days(&depths, a);
-        let c = monthly_contingency(&day_month, &alerts, &events, TOL_MONTHS);
+        let c = monthly_contingency(&day_month, &alerts, &events, TOL_MONTHS).unwrap();
         let csi = c.csi().unwrap_or(0.0);
         if csi > best.1 {
             best = (a, csi, c);
@@ -180,7 +180,7 @@ fn main() {
             .zip(&odd)
             .filter_map(|(&al, &o)| o.then_some(al))
             .collect();
-        let c = monthly_contingency(&cal_days, &cal_alerts, &cal_events, TOL_MONTHS);
+        let c = monthly_contingency(&cal_days, &cal_alerts, &cal_events, TOL_MONTHS).unwrap();
         let csi = c.csi().unwrap_or(0.0);
         if csi > cal_best.1 {
             cal_best = (a, csi);
@@ -202,11 +202,11 @@ fn main() {
     println!("  calibrated a* = {a_star:.1} mm/h");
     print_row(
         "cal(odd)",
-        &monthly_contingency(&cal_days, &cal_alerts, &cal_events, TOL_MONTHS),
+        &monthly_contingency(&cal_days, &cal_alerts, &cal_events, TOL_MONTHS).unwrap(),
     );
     print_row(
         "val(even)",
-        &monthly_contingency(&val_days, &val_alerts, &val_events, TOL_MONTHS),
+        &monthly_contingency(&val_days, &val_alerts, &val_events, TOL_MONTHS).unwrap(),
     );
 
     // --- Sensitivity to inventory date uncertainty --------------------------
@@ -217,7 +217,7 @@ fn main() {
     for tol in [0u32, 1, 2, 3] {
         print_row(
             &format!("±{tol} mo"),
-            &monthly_contingency(&day_month, &best_alerts, &events, tol),
+            &monthly_contingency(&day_month, &best_alerts, &events, tol).unwrap(),
         );
     }
 
@@ -226,6 +226,6 @@ fn main() {
     let caine_alerts = alert_days(&depths, 14.82);
     print_row(
         "Caine",
-        &monthly_contingency(&day_month, &caine_alerts, &events, TOL_MONTHS),
+        &monthly_contingency(&day_month, &caine_alerts, &events, TOL_MONTHS).unwrap(),
     );
 }

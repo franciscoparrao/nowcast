@@ -279,23 +279,43 @@ impl<F: Forcing> Nowcast<F> {
     }
 
     /// Counterfactual: the mean rainfall intensity (mm/h) sustained over
-    /// `duration_h` that would lift `cell`'s hazard to `alert_level`. `None` if
-    /// the cell's susceptibility alone cannot reach the level (terrain-capped).
-    pub fn intensity_to_alert(&self, cell: usize, alert_level: f64, duration_h: f64) -> Option<f64> {
+    /// `duration_h` that would lift `cell`'s hazard to `alert_level`. `Ok(None)`
+    /// if the cell's susceptibility alone cannot reach the level (terrain-capped).
+    /// Errors if `cell` is out of range or `duration_h` is not finite and > 0.
+    pub fn intensity_to_alert(
+        &self,
+        cell: usize,
+        alert_level: f64,
+        duration_h: f64,
+    ) -> Result<Option<f64>> {
+        let n_cells = self.n_cells();
+        if cell >= n_cells {
+            return Err(Error::OutOfRange { name: "cell", index: cell, len: n_cells });
+        }
+        if !duration_h.is_finite() || duration_h <= 0.0 {
+            return Err(Error::InvalidParameter {
+                name: "duration_h",
+                reason: format!("must be finite and > 0, got {duration_h}"),
+            });
+        }
         let susc = self.susceptibility.get(cell);
         let factor_needed = alert_level / susc;
         if !(0.0..1.0).contains(&factor_needed) {
-            return None; // susc too low: even a saturated trigger can't reach it
+            return Ok(None); // susc too low: even a saturated trigger can't reach it
         }
         let e_needed = self.trigger.exceedance_for_factor(factor_needed);
-        Some(self.threshold.intensity_for_exceedance(e_needed, duration_h))
+        Ok(Some(self.threshold.intensity_for_exceedance(e_needed, duration_h)))
     }
 
     /// Compute the hazard field for a single time step. The prefix buffer is
     /// computed on first use and cached, so repeated calls (or a later `run`)
-    /// do not recompute it.
-    pub fn hazard_at(&self, step: usize) -> HazardField {
-        self.hazard_at_with(self.depth_prefix_sums(), step)
+    /// do not recompute it. Errors if `step` is out of range.
+    pub fn hazard_at(&self, step: usize) -> Result<HazardField> {
+        let n_steps = self.forcing.n_steps();
+        if step >= n_steps {
+            return Err(Error::OutOfRange { name: "step", index: step, len: n_steps });
+        }
+        Ok(self.hazard_at_with(self.depth_prefix_sums(), step))
     }
 
     fn hazard_at_with(&self, prefix: &[f64], step: usize) -> HazardField {
@@ -446,7 +466,7 @@ mod tests {
         // Exactly Caine's critical 1-hour intensity → E = 1 → factor 0.5.
         let crit_1h = IdThreshold::caine().critical_intensity(1.0);
         let nc = single_cell(vec![crit_1h], 0.6);
-        let p = nc.hazard_at(0).max_probability();
+        let p = nc.hazard_at(0).unwrap().max_probability();
         assert!((p - 0.3).abs() < 1e-6, "expected 0.5 * 0.6 = 0.3, got {p}");
     }
 
@@ -502,11 +522,16 @@ mod tests {
     fn counterfactual_intensity_to_alert() {
         let nc = single_cell(vec![0.0], 0.8);
         // Susceptible cell: an attainable rainfall reaches the 0.5 alert level.
-        let i = nc.intensity_to_alert(0, 0.5, 1.0).unwrap();
+        let i = nc.intensity_to_alert(0, 0.5, 1.0).unwrap().unwrap();
         assert!(i > 0.0 && i.is_finite());
         // A barely-susceptible cell can never reach 0.5 (terrain-capped at susc).
         let low = single_cell(vec![0.0], 0.3);
-        assert!(low.intensity_to_alert(0, 0.5, 1.0).is_none());
+        assert!(low.intensity_to_alert(0, 0.5, 1.0).unwrap().is_none());
+        // Out-of-range cell and a non-finite/non-positive duration are errors,
+        // not a panic or a silently nonsensical Some(NaN)/Some(inf).
+        assert!(nc.intensity_to_alert(999, 0.5, 1.0).is_err());
+        assert!(nc.intensity_to_alert(0, 0.5, 0.0).is_err());
+        assert!(nc.intensity_to_alert(0, 0.5, f64::NAN).is_err());
     }
 
     #[test]
@@ -535,6 +560,13 @@ mod tests {
         assert!(nc.explain(0, 1).is_ok());
         assert!(nc.explain(1, 0).is_err(), "cell 1 does not exist");
         assert!(nc.explain(0, 2).is_err(), "step 2 does not exist");
+    }
+
+    #[test]
+    fn hazard_at_rejects_out_of_range_step() {
+        let nc = single_cell(vec![10.0, 20.0], 0.5); // 1 cell, 2 steps
+        assert!(nc.hazard_at(1).is_ok());
+        assert!(nc.hazard_at(2).is_err(), "step 2 does not exist");
     }
 
     #[test]
@@ -577,7 +609,7 @@ mod tests {
             6,
         )
         .unwrap();
-        let field = nc.hazard_at(0);
+        let field = nc.hazard_at(0).unwrap();
         let p = field.probability();
         assert!(p[1] > p[0], "higher susceptibility must yield higher hazard");
         // Same trigger factor on both cells → ratio equals susceptibility ratio.

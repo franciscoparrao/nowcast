@@ -286,6 +286,8 @@ fn load_calibrator(path: Option<&Path>) -> Result<Option<Calibrator>> {
                 .with_context(|| format!("reading calibrator {}", p.display()))?;
             let cal: Calibrator = serde_json::from_str(&text)
                 .with_context(|| format!("parsing calibrator {}", p.display()))?;
+            cal.validate()
+                .with_context(|| format!("invalid calibrator {}", p.display()))?;
             Ok(Some(cal))
         }
     }
@@ -656,7 +658,7 @@ fn cmd_backtest(a: BacktestArgs) -> Result<bool> {
         }
         while v <= hi + 1e-9 {
             let alerts = alerts_for(v)?;
-            let c = monthly_contingency(&day_month, &alerts, &events, a.tol_months);
+            let c = monthly_contingency(&day_month, &alerts, &events, a.tol_months)?;
             let csi = c.csi().unwrap_or(0.0);
             match a.format {
                 Format::Table => println!(
@@ -692,7 +694,7 @@ fn cmd_backtest(a: BacktestArgs) -> Result<bool> {
         }
     } else {
         let alerts = alerts_for(a.engine.id_a)?;
-        let c = monthly_contingency(&day_month, &alerts, &events, a.tol_months);
+        let c = monthly_contingency(&day_month, &alerts, &events, a.tol_months)?;
         match a.format {
             Format::Table => println!(
                 "a = {:.2}:  POD {}  FAR {}  CSI {}  bias {}",

@@ -144,7 +144,7 @@ pub fn gridded_rain_from_rasters(rasters: &[Raster<f32>], dt_hours: f64) -> Resu
         }
         let nodata = r.nodata();
         depths.extend(r.data().iter().map(|&v| {
-            if v.is_nan() || nodata.is_some_and(|nd| v == nd) {
+            if !v.is_finite() || nodata.is_some_and(|nd| v == nd) {
                 0.0
             } else {
                 (v as f64).max(0.0)
@@ -242,6 +242,19 @@ mod tests {
             Err(Error::Georef(_))
         ));
         assert!(gridded_rain_from_rasters(&[r0, other_crs], 24.0).is_ok());
+    }
+
+    #[test]
+    fn gridded_rain_zeroes_non_finite_pixels() {
+        // A corrupted (+inf) pixel must be treated like nodata (zeroed), not
+        // propagated into the forcing where it would saturate an I-D window.
+        let r0 = raster_2x3([0.0, 1.0, 2.0, 3.0, 4.0, 5.0], None);
+        let r1 = raster_2x3([10.0, f32::INFINITY, 12.0, 13.0, f32::NEG_INFINITY, 15.0], None);
+        let rain = gridded_rain_from_rasters(&[r0, r1], 24.0).unwrap();
+        use nowcast_core::Forcing;
+        assert_eq!(rain.depth_mm(1, 1), 0.0);
+        assert_eq!(rain.depth_mm(4, 1), 0.0);
+        assert_eq!(rain.depth_mm(2, 1), 12.0);
     }
 
     #[test]

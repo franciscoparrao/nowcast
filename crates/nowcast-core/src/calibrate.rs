@@ -25,7 +25,8 @@ const Z95: f64 = 1.959_963_984_540_054; // 97.5th percentile of the standard nor
 ///
 /// With the `serde` feature the fitted map serializes — fit offline on backtest
 /// pairs, persist to JSON, and load it in an operational `watch`. Deserialized
-/// data is trusted to be engine-produced (block means ascending).
+/// data is **not** trusted: call [`validate`](Self::validate) after loading
+/// untrusted (e.g. hand-edited) JSON before using it.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Calibrator {
@@ -50,6 +51,12 @@ impl Calibrator {
             return Err(Error::InvalidParameter {
                 name: "scores",
                 reason: "need at least one (score, outcome) pair".into(),
+            });
+        }
+        if scores.iter().any(|s| !s.is_finite()) {
+            return Err(Error::InvalidParameter {
+                name: "scores",
+                reason: "must all be finite".into(),
             });
         }
         let mut order: Vec<usize> = (0..scores.len()).collect();
@@ -114,6 +121,57 @@ impl Calibrator {
     pub fn calibrate(&self, scores: &[f64]) -> Vec<f64> {
         scores.iter().map(|&s| self.probability(s)).collect()
     }
+
+    /// Checks the invariants [`fit_isotonic`](Self::fit_isotonic) guarantees but
+    /// that a deserialized `Calibrator` — e.g. a hand-edited or corrupted
+    /// `--calibrator` JSON file — is not guaranteed to satisfy: non-empty,
+    /// `xs`/`ys` the same length, both finite, `ys` within `[0, 1]`, and both
+    /// non-decreasing (so [`probability`](Self::probability)'s binary search and
+    /// interpolation stay in range instead of panicking or extrapolating
+    /// nonsense). Call this right after deserializing untrusted input.
+    pub fn validate(&self) -> Result<()> {
+        if self.xs.len() != self.ys.len() {
+            return Err(Error::InvalidParameter {
+                name: "calibrator",
+                reason: format!(
+                    "{} score blocks but {} probability blocks",
+                    self.xs.len(),
+                    self.ys.len()
+                ),
+            });
+        }
+        if self.xs.is_empty() {
+            return Err(Error::InvalidParameter {
+                name: "calibrator",
+                reason: "must have at least one calibration block".into(),
+            });
+        }
+        if self.xs.iter().any(|x| !x.is_finite()) || self.ys.iter().any(|y| !y.is_finite()) {
+            return Err(Error::InvalidParameter {
+                name: "calibrator",
+                reason: "scores and probabilities must be finite".into(),
+            });
+        }
+        if self.ys.iter().any(|y| !(0.0..=1.0).contains(y)) {
+            return Err(Error::InvalidParameter {
+                name: "calibrator",
+                reason: "probabilities must be within [0, 1]".into(),
+            });
+        }
+        if self.xs.windows(2).any(|w| w[0] > w[1]) {
+            return Err(Error::InvalidParameter {
+                name: "calibrator",
+                reason: "scores must be non-decreasing".into(),
+            });
+        }
+        if self.ys.windows(2).any(|w| w[0] > w[1]) {
+            return Err(Error::InvalidParameter {
+                name: "calibrator",
+                reason: "probabilities must be non-decreasing (isotonic)".into(),
+            });
+        }
+        Ok(())
+    }
 }
 
 /// One bin of a reliability diagram.
@@ -164,6 +222,12 @@ pub fn brier_score(preds: &[f64], outcomes: &[bool]) -> Result<f64> {
             reason: "need at least one (prediction, outcome) pair".into(),
         });
     }
+    if preds.iter().any(|p| !p.is_finite()) {
+        return Err(Error::InvalidParameter {
+            name: "preds",
+            reason: "must all be finite".into(),
+        });
+    }
     let s: f64 = preds
         .iter()
         .zip(outcomes)
@@ -208,6 +272,12 @@ pub fn reliability(preds: &[f64], outcomes: &[bool], n_bins: usize) -> Result<Re
         return Err(Error::InvalidParameter {
             name: "n_bins",
             reason: "must be >= 1".into(),
+        });
+    }
+    if preds.iter().any(|p| !p.is_finite()) {
+        return Err(Error::InvalidParameter {
+            name: "preds",
+            reason: "must all be finite".into(),
         });
     }
     let n = preds.len();
@@ -331,5 +401,31 @@ mod tests {
         assert!(brier_score(&[0.5, 0.5], &[true]).is_err());
         assert!(brier_score(&[], &[]).is_err());
         assert!((brier_score(&[1.0], &[true]).unwrap()).abs() < 1e-12);
+    }
+
+    #[test]
+    fn rejects_non_finite_input() {
+        assert!(Calibrator::fit_isotonic(&[0.1, f64::NAN], &[true, false]).is_err());
+        assert!(Calibrator::fit_isotonic(&[0.1, f64::INFINITY], &[true, false]).is_err());
+        assert!(brier_score(&[0.5, f64::NAN], &[true, false]).is_err());
+        assert!(reliability(&[0.5, f64::NAN], &[true, false], 5).is_err());
+    }
+
+    #[test]
+    fn validate_catches_a_corrupted_or_hand_edited_calibrator() {
+        // A legitimately fitted calibrator always validates.
+        let good = Calibrator { xs: vec![0.1, 0.5, 0.9], ys: vec![0.0, 0.5, 1.0] };
+        assert!(good.validate().is_ok());
+
+        // Empty: the underflow that used to panic in `probability` (xs.len() - 1).
+        assert!(Calibrator { xs: vec![], ys: vec![] }.validate().is_err());
+        // Length mismatch.
+        assert!(Calibrator { xs: vec![0.1, 0.5], ys: vec![0.0] }.validate().is_err());
+        // Probability out of [0, 1]: the panic in `calibrate_field`'s HazardField::new.
+        assert!(Calibrator { xs: vec![0.1, 0.9], ys: vec![1.5, 2.0] }.validate().is_err());
+        // Non-finite.
+        assert!(Calibrator { xs: vec![0.1, f64::NAN], ys: vec![0.0, 1.0] }.validate().is_err());
+        // Not monotone (not actually isotonic).
+        assert!(Calibrator { xs: vec![0.1, 0.9], ys: vec![0.8, 0.2] }.validate().is_err());
     }
 }

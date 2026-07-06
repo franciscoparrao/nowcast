@@ -40,18 +40,34 @@ pub struct DepthField {
 }
 
 impl DepthField {
-    fn from_states(states: &Array2<Conserved2D>) -> Self {
+    /// Builds the field and reports whether any cell went non-finite (`NaN`/`inf`,
+    /// a numerically unstable solver state). `f64::max` silently turns a `NaN`
+    /// depth into `0.0` (looks "dry"), so that laundering is detected here
+    /// rather than passed through: unstable cells are still reported as `0.0`
+    /// (a representable placeholder), but the caller learns not to trust the
+    /// field via [`IntegrationStats::unstable`].
+    fn from_states(states: &Array2<Conserved2D>) -> (Self, bool) {
         let (nr, nc) = states.dim();
         let mut depth = Vec::with_capacity(nr * nc);
+        let mut unstable = false;
         for i in 0..nr {
             for j in 0..nc {
-                depth.push(states[[i, j]].h.max(0.0));
+                let h = states[[i, j]].h;
+                if !h.is_finite() {
+                    unstable = true;
+                    depth.push(0.0);
+                } else {
+                    depth.push(h.max(0.0));
+                }
             }
         }
-        Self {
-            dims: GridDims::new(nc, nr),
-            depth,
-        }
+        (
+            Self {
+                dims: GridDims::new(nc, nr),
+                depth,
+            },
+            unstable,
+        )
     }
 
     pub fn dims(&self) -> GridDims {
@@ -106,6 +122,12 @@ pub struct IntegrationStats {
     /// `true` if the step cap was hit before reaching the requested duration —
     /// the returned depth field is then a **partial** inundation.
     pub truncated: bool,
+    /// `true` if the solver produced a non-finite (`NaN`/`inf`) depth in at
+    /// least one cell — a numerically unstable run (degenerate mesh, CFL edge
+    /// case). The returned depth field reports those cells as `0.0`, but that
+    /// value is a placeholder, not a physical result: do not use the field for
+    /// an alert when this is `true`.
+    pub unstable: bool,
 }
 
 /// A configured 2D inundation run over a DEM mesh.
@@ -199,12 +221,14 @@ impl Inundation {
             t += dt;
             steps += 1;
         }
+        let (field, unstable) = DepthField::from_states(&states);
         let stats = IntegrationStats {
             t_reached_s: t,
             steps,
             truncated: t < self.duration_s,
+            unstable,
         };
-        (DepthField::from_states(&states), stats)
+        (field, stats)
     }
 
     /// Run with a uniform rainfall rate (m/s) over the whole domain. The stats
@@ -295,6 +319,17 @@ mod tests {
         assert!(mk().with_max_steps(0).is_err());
         assert!(mk().with_dry_tol(-1.0).is_err());
         assert!(mk().with_cfl(0.9).and_then(|i| i.with_max_steps(10)).is_ok());
+    }
+
+    #[test]
+    fn nan_depth_is_reported_unstable_not_silently_dry() {
+        let mut states = Array2::from_elem((2, 2), Conserved2D::dry());
+        states[[0, 0]] = Conserved2D::new(f64::NAN, 0.0, 0.0);
+        states[[0, 1]] = Conserved2D::new(0.5, 0.0, 0.0);
+        let (field, unstable) = DepthField::from_states(&states);
+        assert!(unstable, "a NaN cell must flip the unstable flag");
+        assert_eq!(field.depth()[0], 0.0, "NaN is reported as 0.0, not left as NaN");
+        assert_eq!(field.depth()[1], 0.5, "a healthy cell is unaffected");
     }
 
     #[test]

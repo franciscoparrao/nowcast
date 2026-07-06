@@ -190,11 +190,17 @@ impl PyNowcast {
     /// Counterfactual: the mean rainfall intensity (mm/h) sustained over
     /// `duration_h` that would lift `cell`'s hazard to `alert_level`; `None`
     /// if the cell's susceptibility alone cannot reach it (terrain-capped).
-    /// The other half of the XAI story next to `explain`.
-    fn intensity_to_alert(&self, cell: usize, alert_level: f64, duration_h: f64) -> Option<f64> {
+    /// The other half of the XAI story next to `explain`. Raises `ValueError`
+    /// if `cell` is out of range or `duration_h` is not finite and > 0.
+    fn intensity_to_alert(
+        &self,
+        cell: usize,
+        alert_level: f64,
+        duration_h: f64,
+    ) -> PyResult<Option<f64>> {
         match &self.inner {
-            Engine::Uniform(n) => n.intensity_to_alert(cell, alert_level, duration_h),
-            Engine::Gridded(n) => n.intensity_to_alert(cell, alert_level, duration_h),
+            Engine::Uniform(n) => n.intensity_to_alert(cell, alert_level, duration_h).map_err(err),
+            Engine::Gridded(n) => n.intensity_to_alert(cell, alert_level, duration_h).map_err(err),
         }
     }
 }
@@ -333,14 +339,8 @@ fn monthly_contingency<'py>(
     event_months: Vec<(i32, u32)>,
     tol_months: u32,
 ) -> PyResult<Bound<'py, PyDict>> {
-    if day_month.len() != alert_days.len() {
-        return Err(err(format!(
-            "{} day keys but {} alert flags",
-            day_month.len(),
-            alert_days.len()
-        )));
-    }
-    let c = nowcast_core::monthly_contingency(&day_month, &alert_days, &event_months, tol_months);
+    let c = nowcast_core::monthly_contingency(&day_month, &alert_days, &event_months, tol_months)
+        .map_err(err)?;
     contingency_dict(py, &c)
 }
 
@@ -373,10 +373,7 @@ fn spatial_daily_contingency<'py>(
 #[pyfunction]
 fn roc_auc(scores: PyReadonlyArray1<f64>, labels: Vec<bool>) -> PyResult<Option<f64>> {
     let scores = scores.to_vec()?;
-    if scores.len() != labels.len() {
-        return Err(err(format!("{} scores but {} labels", scores.len(), labels.len())));
-    }
-    Ok(nowcast_core::roc_auc(&scores, &labels))
+    nowcast_core::roc_auc(&scores, &labels).map_err(err)
 }
 
 /// PR-AUC (average precision) of a ranked hazard score against binary labels —
@@ -385,10 +382,7 @@ fn roc_auc(scores: PyReadonlyArray1<f64>, labels: Vec<bool>) -> PyResult<Option<
 #[pyfunction]
 fn pr_auc(scores: PyReadonlyArray1<f64>, labels: Vec<bool>) -> PyResult<Option<f64>> {
     let scores = scores.to_vec()?;
-    if scores.len() != labels.len() {
-        return Err(err(format!("{} scores but {} labels", scores.len(), labels.len())));
-    }
-    Ok(nowcast_core::pr_auc(&scores, &labels))
+    nowcast_core::pr_auc(&scores, &labels).map_err(err)
 }
 
 /// POD when only the top `area_fraction` of the ranked field can be warned.
@@ -399,10 +393,7 @@ fn pod_at_area(
     area_fraction: f64,
 ) -> PyResult<Option<f64>> {
     let scores = scores.to_vec()?;
-    if scores.len() != labels.len() {
-        return Err(err(format!("{} scores but {} labels", scores.len(), labels.len())));
-    }
-    Ok(nowcast_core::pod_at_area(&scores, &labels, area_fraction))
+    nowcast_core::pod_at_area(&scores, &labels, area_fraction).map_err(err)
 }
 
 /// Best warning lead time per deduplicated in-period event, in days: positive =

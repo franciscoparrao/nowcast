@@ -339,3 +339,190 @@ Esfuerzo: S < ½ día, M ≈ 1-2 días, L ≈ semana.
 Los ítems 1-4 son pre-submission razonables (pequeños, suben la calidad percibida del
 artefacto que el reviewer va a clonar). Los ítems 5-9 son la v0.3. El ítem 10 es la
 agenda científica del segundo paper.
+
+---
+
+## Ronda 2 — auditoría independiente de verificación (2026-07-05)
+
+**Motivación**: no hubo commits de código en `crates/` entre `0a7554e` (el fix de
+la ronda 1) y hoy — esta no es una auditoría de código nuevo, sino una segunda
+pasada adversarial e independiente para (a) verificar que los 10 ítems marcados
+✅ arriba realmente sostienen bajo re-lectura escéptica del código actual, no solo
+de los nombres de los tests, y (b) encontrar lo que la primera pasada pudo haber
+dejado pasar. Ejecutada con 3 agentes en paralelo (core / 7 adapters / CLI+Python),
+cada uno re-derivando la matemática y re-probando los casos límite a mano, más
+verificación manual propia de una muestra de los hallazgos de mayor severidad.
+`cargo test --workspace --exclude nowcast-python` y
+`cargo clippy --workspace --exclude nowcast-python -- -D warnings`: 100% verde.
+
+### Resumen ejecutivo
+
+| Severidad | Hallazgos nuevos |
+|-----------|------------------|
+| CRITICAL  | **0** |
+| HIGH      | **4** |
+| MEDIUM    | **7** |
+| LOW       | **5** |
+
+**Veredicto sobre la ronda 1**: honesto y en su mayoría sólido. H3 (backtest
+escalable), H4 (truncamiento hydroflux), H5 (panic swarm, además correctamente
+*unificado* vía `HazardField::masked` compartido con hydroflux — cierra T3), H6
+(CLI raster+CSV) y la migración a numpy están **genuinamente arreglados**, no solo
+declarados. La matemática (parity live/batch, PAV isotónico, Wilson, ROC-AUC,
+ensemble, `Combine`) fue re-derivada a mano y es correcta.
+
+Pero aparece un patrón que se repite tres veces: **se blindó la función nombrada
+en el hallazgo y se dejó sin blindar a su hermana igual de alcanzable** — mismo
+espíritu que el "sibling drift" de `swarm-abm` que ya rompió el build una vez.
+
+### HIGH — nuevos
+
+**N-H1. `Nowcast::hazard_at` / `MultiNowcast::hazard_at` panican con `step` fuera
+de rango.** `crates/nowcast-core/src/nowcast.rs:297`, `multi.rs:375`. H1 blindó
+`explain` (mismo archivo, valida `cell`/`step` y devuelve `Result`) pero
+`hazard_at` — nombrada en el texto original de H1 — sigue indexando sin chequeo.
+Hoy no está expuesta ni por CLI ni por Python (verificado: `grep hazard_at` en
+ambos no da resultados), así que es una API pública sin blindar, no un panic
+explotable *hoy*. Fix: mismo patrón que `explain`, devolver `Result<HazardField>`.
+
+**N-H2. `Nowcast::intensity_to_alert` panica con `cell` fuera de rango — y sí es
+alcanzable desde Python hoy.** `nowcast.rs:284` indexa
+`self.susceptibility.get(cell)` sin validar; `nowcast-python/src/lib.rs:194-199`
+reenvía un `cell: usize` crudo desde Python sin chequeo propio. Verificado
+leyendo ambos archivos: `nowcast.intensity_to_alert(cell=999999999, ...)` desde
+Python es un `PanicException` no capturable — exactamente el modo de falla que H1
+existía para eliminar, reintroducido por una función (el contrafactual XAI)
+añadida después del fix. Adicionalmente, `duration_h` no positivo o `NaN` no se
+rechaza: produce silenciosamente `Some(NaN)`/`Some(inf)`. Fix: validar `cell <
+n_cells` y `duration_h > 0.0 && duration_h.is_finite()` al entrar, mapear a
+`ValueError` en el binding (mismo patrón ya usado en `explain`).
+
+**N-H3. `Calibrator` deserializado sin validar → dos panics reproducibles desde
+`--calibrator` malformado.** `crates/nowcast-core/src/calibrate.rs:30` (comentario
+propio: *"Deserialized data is trusted to be engine-produced"* — pero
+`serde_json::from_str` en `nowcast-cli/src/main.rs:287` acepta cualquier JSON con
+esa forma). Reproducido: (a) `{"xs":[0.1,0.9],"ys":[1.5,2.0]}` →
+`calibrate_field`'s `.expect("calibrated probabilities stay within [0,1]")`
+(`main.rs:299`) panica porque `HazardField::new` rechaza probabilidad fuera de
+rango; (b) `{"xs":[],"ys":[]}` → `xs.len() - 1` (`calibrate.rs:93`) resta con
+underflow sobre un vector vacío → panic de indexación. Exit code 101 (panic), no
+el 1/2 documentado. Fix: `Calibrator::validate()` tras deserializar — `ys`
+monótona no-decreciente en [0,1], `xs.len() == ys.len() >= 1`.
+
+**N-H4. `nowcast-rainflow`: `hazard_at`/`explain`/`discharge_to_alert` nunca
+recibieron el fix de H1, pese a ser su espejo declarado.** `crates/nowcast-rainflow/src/lib.rs:218,246,267`
+indexan `self.discharge_mm_day[step]` y `self.susceptibility.get(cell)` sin
+chequeo. Confirmado con `git diff 5142960 0a7554e -- crates/nowcast-rainflow/src/lib.rs`
+(vacío): el fix commit no tocó este archivo, aunque el propio doc-comment de
+`explain` dice *"el contrapartida de forma cerrada del `Nowcast::explain` de
+deslizamientos"* — se construyó explícitamente como espejo de la función que H1
+arregló, y quedó fuera. No conectado a CLI/Python hoy (riesgo latente, no
+explotable ahora). Fix: mismo patrón `Result<_, Error::OutOfRange>`.
+
+### MEDIUM — nuevos
+
+**N-M1. `UniformRain::new`/`GriddedRain::new` rechazan `NaN` pero no `+Infinity`.**
+`crates/nowcast-core/src/forcing.rs:80,167`: guarda `d < 0.0 || d.is_nan()`, sin
+`is_finite()`. Verificado: `UniformRain::new(dims, 24.0, vec![f64::INFINITY])`
+compila y corre. La CLI está protegida porque su único camino a estos
+constructores pasa por `csv_column` (que sí filtra no-finitos), pero
+`nowcast-python/src/lib.rs:91,130` llama a estos constructores directo con
+floats crudos de numpy, sin ese filtro — mismo problema de fondo que H2 cerró en
+`LiveNowcast::push`, un nivel más abajo de donde miró la ronda 1.
+
+**N-M2. El mismo hueco de `+Infinity` es alcanzable desde un GeoTIFF real vía
+`nowcast-surtgis::gridded_rain_from_rasters`.** `crates/nowcast-surtgis/src/lib.rs:146-152`:
+`v.is_nan() ... else { (v as f64).max(0.0) }` — no chequea `is_infinite()` antes
+de pasar a `GriddedRain::new` (que tampoco lo hace, ver N-M1). Un solo píxel
+corrupto (`+inf`) en un CR2MET/IMERG real satura la excedencia I-D de esa celda a
+`+inf` → alerta de "certeza máxima" silenciosa, no un crash. Fix: tratar
+no-finito igual que NaN/nodata en ambos sitios.
+
+**N-M3. `Calibrator::fit_isotonic` panica con `NaN` en los scores.**
+`calibrate.rs:56`: `scores[a].partial_cmp(&scores[b]).unwrap()`. Alcanzable desde
+Python con un `Vec<f64>` crudo (`lib.rs:275`). Fix: rechazar no-finitos o usar
+`total_cmp`.
+
+**N-M4. `brier_score`/`reliability` validan longitud pero no finitud** — un solo
+`NaN` (alcanzable vía Python) envenena silenciosamente el score completo, en el
+módulo cuyo propósito es *verificar* la calibración.
+
+**N-M5. `pr_auc` (nueva esta ronda) reintroduce el patrón `assert_eq!` que M8
+buscaba eliminar** — junto con `roc_auc`/`pod_at_area`/`monthly_contingency`, que
+M8 nunca cubrió (su alcance declarado era solo `brier_score`).
+
+**N-M6. `DepthField::from_states` (hydroflux) disfraza `NaN` de "seco".**
+`crates/nowcast-hydroflux/src/lib.rs:48`: `states[[i,j]].h.max(0.0)` — en Rust
+`NaN.max(0.0) == 0.0` (verificado empíricamente), así que una celda donde el
+solver shallow-water se vuelve inestable numéricamente se reporta como
+profundidad 0 en vez de error, en la ruta cuyo propósito es refinar alertas.
+`+Inf` no sufre este problema (`Inf.max(0.0) == Inf`). Fix: chequear
+`!s.h.is_finite()` tras integrar y exponerlo en `IntegrationStats`.
+
+**N-M7. Deriva de versión `surtgis-core` — el mismo tipo `GeoTransform` es dos
+tipos distintos para el compilador. CORRECCIÓN 2026-07-05: la atribución
+original (abajo) señalaba a `insar-core`; verificado con
+`cargo tree -i surtgis-core@0.16.3` / `@0.17.0`, el culprit real es
+`hydroflux-solver-2d`.** `insar-core` en realidad resuelve correctamente a la
+misma v0.17.0 local (su Cargo.toml raíz declara
+`surtgis-core = { version = "0.17", path = "../surtgis/crates/core", ... }`,
+apuntando al mismo checkout que usa `nowcast`) — no hay drift ahí. El drift real
+es que `/home/franciscoparrao/proyectos/postdoc/hydroflux/Cargo.toml:41` fija
+`surtgis-core` a un rev de git antiguo (v0.16.3) con un comentario del propio
+autor reconociendo el atajo ("si testeas contra un checkout local de surtgis,
+cambia temporalmente a path=..."). `hydroflux-solver-2d::io` (no expuesto hoy por
+`nowcast-hydroflux`, que solo re-exporta `Mesh2D`/`Boundary`/`Conserved2D`/
+`PointSource`/`H_DRY`) usa `surtgis_core::{Raster, GeoTransform}` de esa versión
+vieja para su propio bridge GeoTIFF. Hoy esto es enteramente latente — ningún
+código de `nowcast` toca ese módulo `io`, así que no hay error de compilación
+actual — pero es la misma familia de mina que el rename de `swarm-abm` que ya
+rompió la resolución del workspace una vez: el día que `nowcast-hydroflux` quiera
+cargar un DEM real vía el helper de `hydroflux_solver_2d::io` y combinarlo con un
+`Georef`/`Raster` de `nowcast-surtgis` (v0.17.0), sería exactamente el mismo error
+de tipos confuso ("`GeoTransform` esperado, `GeoTransform` encontrado"). Fix:
+actualizar el pin de `hydroflux`'s propio `Cargo.toml` (fuera del repo de
+`nowcast` — requiere tocar `~/proyectos/postdoc/hydroflux/`) a la v0.17 local o
+a un rev de git más reciente que coincida.
+
+### LOW — nuevos o aún abiertos
+
+- `--ncols 0`/`--nrows 0` aceptados en silencio (`GridDims::new` sin validar) —
+  ya estaba en la lista LOW de la ronda 1, sin cambios.
+- `spatial_monthly_contingency`/`spatial_daily_contingency`: el loop de falsas
+  alarmas no filtra `ac < n_cells`, así que un índice de celda fuera de grilla en
+  el set `alerted` infla el FAR silenciosamente (`backtest.rs:276,369`).
+- `chebyshev_window` (`backtest.rs:193`): sin cota superior en `cell_radius` —
+  `(2r+1)²` puede desbordar o pedir una asignación enorme.
+- Los `Trigger` (`IdTrigger`, `IdMapTrigger`, `AntecedentTrigger`,
+  `ThresholdTrigger`) no validan bounds en `factor()` — mismo contrato de panic
+  no documentado que M14 señaló para `Forcing`, pero en un trait añadido después
+  de la ronda 1.
+- `discharge_to_inflow_m3s` (hydroflux) no valida `area_km2` — negativo/cero/NaN
+  produce un inflow sin sentido pasado directo a un `PointSource`.
+
+### Qué se confirmó sólido (sin regresión)
+
+Conversiones de unidades de los 7 adapters (re-verificadas con números a mano);
+round-trip GeoTIFF de surtgis (bandas, y-flip, nodata, clamp); guards `+∞` de
+firespread; validación de `pixel_size` en `run_runout`; `post_fire_susceptibility`
+acotado correctamente; paridad bit-idéntica live/batch (re-derivada, no solo
+asertada); álgebra de `Combine` en los bordes; PAV isotónico y Wilson.
+
+### Plan de acción — ronda 2
+
+| # | Qué | Resuelve | Esfuerzo |
+|---|-----|----------|----------|
+| 1 | ✅ (2026-07-05) Blindar `hazard_at` (core + multi), `intensity_to_alert` (+ `duration_h`), y el trío de `nowcast-rainflow` (`hazard_at`/`explain`/`discharge_to_alert`) con el mismo patrón `Result<_, Error::OutOfRange>` que `explain` | N-H1, N-H2, N-H4 | S |
+| 2 | ✅ (2026-07-05) `Calibrator::validate()` post-deserialize (monotonía, rango [0,1], no vacío) + wire en CLI (Python no deserializa calibradores hoy, no hay path que blindar ahí) | N-H3 | S |
+| 3 | ✅ (2026-07-05) `is_finite()` en el guard de `UniformRain::new`/`GriddedRain::new` + no-finito tratado como nodata en `gridded_rain_from_rasters` | N-M1, N-M2 | S |
+| 4 | ✅ (2026-07-05) `fit_isotonic`/`brier_score`/`reliability`: validan finitud de scores/preds | N-M3, N-M4 | S |
+| 5 | ✅ (2026-07-05) `pr_auc`/`roc_auc`/`pod_at_area`/`monthly_contingency`: `Result` en vez de `assert_eq!` (completa lo que M8 dejó a medias); Python ya validaba longitud por su cuenta, ahora delega en el core y se simplifica | N-M5 | S |
+| 6 | ✅ (2026-07-05) `DepthField::from_states` detecta `NaN`/`inf` post-integración y lo expone en `IntegrationStats::unstable` en vez de disfrazarlo de "seco" | N-M6 | S |
+| 7 | **Documentado, no aplicado.** Corregida la atribución: el culprit real es `hydroflux-solver-2d` (no `insar-core`, que ya resuelve a v0.17 correctamente). El fix vive en `~/proyectos/postdoc/hydroflux/Cargo.toml` — un repo hermano fuera de `nowcast` cuyo pin a un rev de git antiguo parece deliberado (comentario del propio autor). Requiere confirmación del usuario antes de tocarlo — no se hizo en esta ronda. | N-M7 | S — repo externo |
+
+Esfuerzo: S < ½ día, M ≈ 1-2 días. Ítems 1-6 verificados: `cargo test --workspace
+--exclude nowcast-python` y `cargo clippy --workspace --exclude nowcast-python
+--all-targets -- -D warnings` 100% verde tras cada cambio; `nowcast-python` build
++ clippy también verificados aparte. Los dos panics de `--calibrator` malformado
+(N-H3) se reprodujeron contra el binario real antes y después del fix. Ningún
+ítem era CRITICAL ni bloqueaba el paper.

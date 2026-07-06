@@ -214,8 +214,29 @@ impl FloodNowcast {
         self.discharge_mm_day.len()
     }
 
-    /// Flood-hazard field for one step.
-    pub fn hazard_at(&self, step: usize) -> HazardField {
+    fn n_cells(&self) -> usize {
+        self.susceptibility.dims().len()
+    }
+
+    fn check_step(&self, step: usize) -> Result<()> {
+        let n_steps = self.n_steps();
+        if step >= n_steps {
+            return Err(nowcast_core::Error::OutOfRange { name: "step", index: step, len: n_steps }.into());
+        }
+        Ok(())
+    }
+
+    fn check_cell(&self, cell: usize) -> Result<()> {
+        let n_cells = self.n_cells();
+        if cell >= n_cells {
+            return Err(nowcast_core::Error::OutOfRange { name: "cell", index: cell, len: n_cells }.into());
+        }
+        Ok(())
+    }
+
+    /// Flood-hazard field for one step. Errors if `step` is out of range.
+    pub fn hazard_at(&self, step: usize) -> Result<HazardField> {
+        self.check_step(step)?;
         let factor = self.trigger.factor(self.threshold.exceedance(self.discharge_mm_day[step]));
         let dims = self.susceptibility.dims();
         let probability = self
@@ -225,30 +246,35 @@ impl FloodNowcast {
             .map(|s| s * factor)
             .collect();
         // Safe: susceptibility ∈ [0,1] and factor ∈ [0,1] ⇒ product ∈ [0,1].
-        HazardField::new(step, dims, probability).expect("hazard within [0,1]")
+        Ok(HazardField::new(step, dims, probability).expect("hazard within [0,1]"))
     }
 
     /// Flood-hazard field for every step.
     pub fn run(&self) -> Vec<HazardField> {
-        (0..self.n_steps()).map(|t| self.hazard_at(t)).collect()
+        (0..self.n_steps())
+            .map(|t| self.hazard_at(t).expect("t is in 0..n_steps"))
+            .collect()
     }
 
     /// An [`Alert`] for every step whose peak flood hazard reaches `level`.
     pub fn alerts(&self, level: f64) -> Vec<Alert> {
         (0..self.n_steps())
-            .filter_map(|t| self.hazard_at(t).alert(level))
+            .filter_map(|t| self.hazard_at(t).expect("t is in 0..n_steps").alert(level))
             .collect()
     }
 
     /// Exact attribution of the flood hazard at `cell` / `step` — the closed-form
     /// counterpart of the landslide `Nowcast::explain`. Floods carry no I–D
-    /// window: the trigger is discharge over threshold, `Q / Q_c`.
-    pub fn explain(&self, cell: usize, step: usize) -> FloodExplanation {
+    /// window: the trigger is discharge over threshold, `Q / Q_c`. Errors if
+    /// `cell` or `step` is out of range.
+    pub fn explain(&self, cell: usize, step: usize) -> Result<FloodExplanation> {
+        self.check_cell(cell)?;
+        self.check_step(step)?;
         let q = self.discharge_mm_day[step];
         let exceedance = self.threshold.exceedance(q);
         let trigger_factor = self.trigger.factor(exceedance);
         let susceptibility = self.susceptibility.get(cell);
-        FloodExplanation {
+        Ok(FloodExplanation {
             cell,
             step,
             hazard: susceptibility * trigger_factor,
@@ -258,18 +284,19 @@ impl FloodNowcast {
             q_crit: self.threshold.q_crit,
             exceedance,
             driver: Driver::classify(susceptibility, trigger_factor, 0.15),
-        }
+        })
     }
 
     /// Counterfactual: the discharge (mm/day) that would lift `cell`'s flood
-    /// hazard to `alert_level`. `None` if the cell's exposure alone cannot reach
-    /// it (exposure-capped).
-    pub fn discharge_to_alert(&self, cell: usize, alert_level: f64) -> Option<f64> {
+    /// hazard to `alert_level`. `Ok(None)` if the cell's exposure alone cannot
+    /// reach it (exposure-capped). Errors if `cell` is out of range.
+    pub fn discharge_to_alert(&self, cell: usize, alert_level: f64) -> Result<Option<f64>> {
+        self.check_cell(cell)?;
         let factor_needed = alert_level / self.susceptibility.get(cell);
         if !(0.0..1.0).contains(&factor_needed) {
-            return None;
+            return Ok(None);
         }
-        Some(self.trigger.exceedance_for_factor(factor_needed) * self.threshold.q_crit)
+        Ok(Some(self.trigger.exceedance_for_factor(factor_needed) * self.threshold.q_crit))
     }
 }
 
@@ -349,8 +376,8 @@ mod tests {
         let threshold = FloodThreshold::new(20.0).unwrap();
         let nc = FloodNowcast::new(susc, discharge, threshold, TriggerModel::default()).unwrap();
 
-        assert!(nc.hazard_at(0).max_probability() < 0.1, "base flow is quiet");
-        let peak = nc.hazard_at(2);
+        assert!(nc.hazard_at(0).unwrap().max_probability() < 0.1, "base flow is quiet");
+        let peak = nc.hazard_at(2).unwrap();
         assert!(
             peak.max_probability() > 0.8,
             "flood spike should approach susceptibility, got {}",
@@ -360,6 +387,9 @@ mod tests {
         let alerts = nc.alerts(0.5);
         assert_eq!(alerts.len(), 1);
         assert_eq!(alerts[0].step, 2);
+
+        // Out-of-range step is an error, not a panic.
+        assert!(nc.hazard_at(4).is_err());
     }
 
     #[test]
@@ -373,15 +403,18 @@ mod tests {
         )
         .unwrap();
         // Flood spike at step 1: discharge clears the threshold on both cells.
-        let ex = nc.explain(1, 1);
+        let ex = nc.explain(1, 1).unwrap();
         assert!((ex.exceedance - 3.0).abs() < 1e-9); // 60 / 20
         assert!(ex.trigger_factor > 0.9);
         assert!((ex.hazard - ex.susceptibility * ex.trigger_factor).abs() < 1e-12);
         assert_eq!(ex.driver, Driver::Balanced); // exposure 0.9 ≈ saturated trigger
         // Same flood, low-exposure cell → terrain (exposure) limited.
-        assert_eq!(nc.explain(0, 1).driver, Driver::TerrainLimited);
+        assert_eq!(nc.explain(0, 1).unwrap().driver, Driver::TerrainLimited);
         // Low-flow step → trigger-limited.
-        assert_eq!(nc.explain(1, 0).driver, Driver::TriggerLimited);
+        assert_eq!(nc.explain(1, 0).unwrap().driver, Driver::TriggerLimited);
+        // Out-of-range cell/step is an error, not a panic.
+        assert!(nc.explain(2, 0).is_err());
+        assert!(nc.explain(0, 2).is_err());
     }
 
     #[test]
@@ -394,9 +427,11 @@ mod tests {
         )
         .unwrap();
         // Exposed cell (0.9) can reach the 0.5 alert with enough discharge.
-        assert!(nc.discharge_to_alert(1, 0.5).unwrap() > 0.0);
+        assert!(nc.discharge_to_alert(1, 0.5).unwrap().unwrap() > 0.0);
         // Barely-exposed cell (0.3) is exposure-capped below 0.5.
-        assert!(nc.discharge_to_alert(0, 0.5).is_none());
+        assert!(nc.discharge_to_alert(0, 0.5).unwrap().is_none());
+        // Out-of-range cell is an error, not a panic.
+        assert!(nc.discharge_to_alert(2, 0.5).is_err());
     }
 
     #[test]
@@ -409,7 +444,7 @@ mod tests {
             TriggerModel::default(),
         )
         .unwrap();
-        let p = nc.hazard_at(0);
+        let p = nc.hazard_at(0).unwrap();
         let v = p.probability();
         assert!((v[1] / v[0] - 0.8 / 0.2).abs() < 1e-9);
     }

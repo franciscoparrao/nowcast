@@ -64,7 +64,7 @@ fn peak_hazard(f: SnowmeltForcing, storm_step: usize) -> (f64, Vec<f64>) {
         7,
     )
     .unwrap();
-    (nowcast.hazard_at(storm_step).max_probability(), storm_runoff)
+    (nowcast.hazard_at(storm_step).unwrap().max_probability(), storm_runoff)
 }
 
 fn main() {

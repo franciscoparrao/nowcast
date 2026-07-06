@@ -143,7 +143,7 @@ fn score(
     b: f64,
 ) -> Contingency {
     let alerts = alert_days(depths, a, b);
-    monthly_contingency(day_month, &alerts, events, TOL_MONTHS)
+    monthly_contingency(day_month, &alerts, events, TOL_MONTHS).unwrap()
 }
 
 fn main() {

@@ -53,7 +53,7 @@ fn main() {
 
     println!("\nContrafactual — intensidad de 1 h necesaria para alcanzar alerta {alert_level}:");
     for (cell, label) in labels.iter().enumerate() {
-        match nowcast.intensity_to_alert(cell, alert_level, 1.0) {
+        match nowcast.intensity_to_alert(cell, alert_level, 1.0).unwrap() {
             Some(i) => println!("  {label:<16} {i:.1} mm/h"),
             None => println!("  {label:<16} inalcanzable — susceptibilidad < {alert_level} (cap del terreno)"),
         }

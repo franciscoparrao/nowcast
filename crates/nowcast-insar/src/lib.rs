@@ -32,7 +32,8 @@
 //! let susc = SusceptibilityMap::uniform(dims, 0.8).unwrap();
 //! let nc = MultiNowcast::new(susc, vec![Box::new(rain), Box::new(deform)], Combine::NoisyOr).unwrap();
 //! // Cell 1 (fast creep) alerts even with no rain.
-//! assert!(nc.hazard_at(0).probability()[1] > nc.hazard_at(0).probability()[0]);
+//! let field = nc.hazard_at(0).unwrap();
+//! assert!(field.probability()[1] > field.probability()[0]);
 //! ```
 
 use ndarray::Array2;
@@ -161,7 +162,7 @@ mod tests {
             Combine::NoisyOr,
         )
         .unwrap();
-        let p = nc.hazard_at(0);
+        let p = nc.hazard_at(0).unwrap();
         assert!(p.probability()[0] < 0.1, "stable cell stays quiet");
         assert!(p.probability()[1] > 0.7, "creeping cell alerts on deformation alone");
     }

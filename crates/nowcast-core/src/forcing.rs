@@ -77,7 +77,7 @@ impl UniformRain {
                 reason: format!("must be > 0, got {dt_hours}"),
             });
         }
-        if depths_mm.iter().any(|d| *d < 0.0 || d.is_nan()) {
+        if depths_mm.iter().any(|d| !d.is_finite() || *d < 0.0) {
             return Err(Error::InvalidParameter {
                 name: "depths_mm",
                 reason: "rainfall depths must be finite and non-negative".to_string(),
@@ -164,7 +164,7 @@ impl GriddedRain {
                 nrows: dims.nrows,
             });
         }
-        if depths_mm.iter().any(|d| *d < 0.0 || d.is_nan()) {
+        if depths_mm.iter().any(|d| !d.is_finite() || *d < 0.0) {
             return Err(Error::InvalidParameter {
                 name: "depths_mm",
                 reason: "rainfall depths must be finite and non-negative".to_string(),
@@ -217,5 +217,17 @@ mod tests {
     fn gridded_rain_rejects_ragged_buffer() {
         let dims = GridDims::new(2, 1);
         assert!(GriddedRain::new(dims, 24.0, vec![1.0, 2.0, 3.0]).is_err());
+    }
+
+    #[test]
+    fn gridded_rain_rejects_infinite_depth() {
+        let dims = GridDims::new(2, 1);
+        assert!(GriddedRain::new(dims, 24.0, vec![1.0, f64::INFINITY]).is_err());
+    }
+
+    #[test]
+    fn uniform_rain_rejects_infinite_depth() {
+        let dims = GridDims::new(1, 1);
+        assert!(UniformRain::new(dims, 24.0, vec![1.0, f64::INFINITY]).is_err());
     }
 }

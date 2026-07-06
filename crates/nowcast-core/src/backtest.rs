@@ -13,6 +13,7 @@
 
 use std::collections::BTreeSet;
 
+use crate::error::{Error, Result};
 use crate::grid::GridDims;
 
 /// A 2×2 contingency table for binary event forecasting.
@@ -136,12 +137,17 @@ pub fn monthly_contingency(
     alert_days: &[bool],
     event_months: &[MonthKey],
     tol_months: u32,
-) -> Contingency {
-    assert_eq!(
-        day_month.len(),
-        alert_days.len(),
-        "day_month and alert_days must be the same length"
-    );
+) -> Result<Contingency> {
+    if day_month.len() != alert_days.len() {
+        return Err(Error::InvalidParameter {
+            name: "alert_days",
+            reason: format!(
+                "{} day_month entries but {} alert_days",
+                day_month.len(),
+                alert_days.len()
+            ),
+        });
+    }
     let tol = tol_months as i32;
 
     // Months with ≥1 alert, and the full set of months present in the record.
@@ -186,7 +192,7 @@ pub fn monthly_contingency(
             c.correct_negatives += 1;
         }
     }
-    c
+    Ok(c)
 }
 
 /// Row-major cells within Chebyshev `radius` of `center`, clipped to the grid.
@@ -395,16 +401,17 @@ pub fn spatial_daily_contingency(
 /// AUC is the discrimination metric of choice when the inventory is spatially
 /// sparse and incomplete, which makes threshold-dependent scores (FAR, CSI)
 /// uninformative but leaves ranking skill measurable.
-pub fn roc_auc(scores: &[f64], labels: &[bool]) -> Option<f64> {
-    assert_eq!(
-        scores.len(),
-        labels.len(),
-        "scores and labels must be the same length"
-    );
+pub fn roc_auc(scores: &[f64], labels: &[bool]) -> Result<Option<f64>> {
+    if scores.len() != labels.len() {
+        return Err(Error::InvalidParameter {
+            name: "labels",
+            reason: format!("{} scores but {} labels", scores.len(), labels.len()),
+        });
+    }
     let n_pos = labels.iter().filter(|&&l| l).count();
     let n_neg = labels.len() - n_pos;
     if n_pos == 0 || n_neg == 0 {
-        return None;
+        return Ok(None);
     }
 
     // Average (1-based) ranks over scores sorted ascending, ties shared.
@@ -437,7 +444,7 @@ pub fn roc_auc(scores: &[f64], labels: &[bool]) -> Option<f64> {
         .filter_map(|(&l, &r)| l.then_some(r))
         .sum();
     let u = sum_pos - (n_pos as f64) * (n_pos as f64 + 1.0) / 2.0;
-    Some(u / (n_pos as f64 * n_neg as f64))
+    Ok(Some(u / (n_pos as f64 * n_neg as f64)))
 }
 
 /// Area under the precision–recall curve (average precision) of a ranked
@@ -453,15 +460,16 @@ pub fn roc_auc(scores: &[f64], labels: &[bool]) -> Option<f64> {
 /// scores, processing tied scores as one block (precision evaluated at the
 /// block's end, so ties cannot fake resolution). Returns `None` if there are
 /// no positive labels.
-pub fn pr_auc(scores: &[f64], labels: &[bool]) -> Option<f64> {
-    assert_eq!(
-        scores.len(),
-        labels.len(),
-        "scores and labels must be the same length"
-    );
+pub fn pr_auc(scores: &[f64], labels: &[bool]) -> Result<Option<f64>> {
+    if scores.len() != labels.len() {
+        return Err(Error::InvalidParameter {
+            name: "labels",
+            reason: format!("{} scores but {} labels", scores.len(), labels.len()),
+        });
+    }
     let n_pos = labels.iter().filter(|&&l| l).count();
     if n_pos == 0 {
-        return None;
+        return Ok(None);
     }
     let mut idx: Vec<usize> = (0..scores.len()).collect();
     idx.sort_by(|&a, &b| {
@@ -495,7 +503,7 @@ pub fn pr_auc(scores: &[f64], labels: &[bool]) -> Option<f64> {
         }
         i = j;
     }
-    Some(ap)
+    Ok(Some(ap))
 }
 
 /// Best warning lead time per event, in days (or steps — whatever [`DayKey`]
@@ -552,18 +560,19 @@ pub fn lead_times(
 /// This is the operationally honest counterpart to [`roc_auc`] for a sparse
 /// inventory, fixing the warned area instead of a hazard threshold. Returns
 /// `None` if there are no positives or `area_fraction` is not in `(0, 1]`.
-pub fn pod_at_area(scores: &[f64], labels: &[bool], area_fraction: f64) -> Option<f64> {
-    assert_eq!(
-        scores.len(),
-        labels.len(),
-        "scores and labels must be the same length"
-    );
+pub fn pod_at_area(scores: &[f64], labels: &[bool], area_fraction: f64) -> Result<Option<f64>> {
+    if scores.len() != labels.len() {
+        return Err(Error::InvalidParameter {
+            name: "labels",
+            reason: format!("{} scores but {} labels", scores.len(), labels.len()),
+        });
+    }
     if !(area_fraction > 0.0 && area_fraction <= 1.0) {
-        return None;
+        return Ok(None);
     }
     let n_pos = labels.iter().filter(|&&l| l).count();
     if n_pos == 0 || scores.is_empty() {
-        return None;
+        return Ok(None);
     }
     let k = (((scores.len() as f64) * area_fraction).ceil() as usize).clamp(1, scores.len());
     let mut idx: Vec<usize> = (0..scores.len()).collect();
@@ -573,7 +582,7 @@ pub fn pod_at_area(scores: &[f64], labels: &[bool], area_fraction: f64) -> Optio
             .unwrap_or(std::cmp::Ordering::Equal)
     });
     let caught = idx[..k].iter().filter(|&&i| labels[i]).count();
-    Some(caught as f64 / n_pos as f64)
+    Ok(Some(caught as f64 / n_pos as f64))
 }
 
 #[cfg(test)]
@@ -638,7 +647,7 @@ mod tests {
         let days = vec![(2000, 1), (2000, 1), (2000, 2), (2000, 3)];
         let alerts = vec![false, false, true, false];
         let events = vec![(2000, 2)];
-        let c = monthly_contingency(&days, &alerts, &events, 0);
+        let c = monthly_contingency(&days, &alerts, &events, 0).unwrap();
         assert_eq!(
             c,
             Contingency {
@@ -683,12 +692,12 @@ mod tests {
         let alerts = vec![false, false, true, false];
         let events = vec![(2000, 2)];
 
-        let strict = monthly_contingency(&days, &alerts, &events, 0);
+        let strict = monthly_contingency(&days, &alerts, &events, 0).unwrap();
         assert_eq!(strict.hits, 0);
         assert_eq!(strict.misses, 1);
         assert_eq!(strict.false_alarms, 1);
 
-        let tol = monthly_contingency(&days, &alerts, &events, 1);
+        let tol = monthly_contingency(&days, &alerts, &events, 1).unwrap();
         assert_eq!(tol.hits, 1);
         assert_eq!(tol.misses, 0);
         assert_eq!(tol.false_alarms, 0);
@@ -866,39 +875,43 @@ mod tests {
         let scores = vec![0.1, 0.2, 0.8, 0.9];
         // Perfect separation → 1.0.
         let labels = vec![false, false, true, true];
-        assert_eq!(roc_auc(&scores, &labels), Some(1.0));
+        assert_eq!(roc_auc(&scores, &labels).unwrap(), Some(1.0));
         // Reversed labels → 0.0.
         let labels_rev = vec![true, true, false, false];
-        assert_eq!(roc_auc(&scores, &labels_rev), Some(0.0));
+        assert_eq!(roc_auc(&scores, &labels_rev).unwrap(), Some(0.0));
         // A single class → undefined.
-        assert!(roc_auc(&scores, &[true, true, true, true]).is_none());
+        assert!(roc_auc(&scores, &[true, true, true, true]).unwrap().is_none());
         // All scores tied → no discrimination → 0.5 via average ranks.
         let flat = vec![0.5, 0.5, 0.5, 0.5];
-        assert_eq!(roc_auc(&flat, &labels), Some(0.5));
+        assert_eq!(roc_auc(&flat, &labels).unwrap(), Some(0.5));
+        // Length mismatch is an error, not a panic.
+        assert!(roc_auc(&scores, &[true, false]).is_err());
     }
 
     #[test]
     fn pr_auc_behaves_at_the_extremes() {
         let scores = vec![0.1, 0.2, 0.8, 0.9];
         // Perfect separation → 1.0.
-        assert_eq!(pr_auc(&scores, &[false, false, true, true]), Some(1.0));
+        assert_eq!(pr_auc(&scores, &[false, false, true, true]).unwrap(), Some(1.0));
         // No positives → undefined.
-        assert!(pr_auc(&scores, &[false; 4]).is_none());
+        assert!(pr_auc(&scores, &[false; 4]).unwrap().is_none());
         // All scores tied → precision equals the base rate everywhere.
         let flat = vec![0.5; 4];
-        let ap = pr_auc(&flat, &[true, false, false, false]).unwrap();
+        let ap = pr_auc(&flat, &[true, false, false, false]).unwrap().unwrap();
         assert!((ap - 0.25).abs() < 1e-12, "tied scores → base rate, got {ap}");
         // Reversed ranking is far below the base rate 0.5 baseline of perfect.
-        let ap_rev = pr_auc(&scores, &[true, true, false, false]).unwrap();
+        let ap_rev = pr_auc(&scores, &[true, true, false, false]).unwrap().unwrap();
         assert!(ap_rev < 0.6, "reversed ranking should score poorly, got {ap_rev}");
         // Unlike ROC-AUC, PR-AUC penalises rarity: same ranking quality, rarer
         // positives → lower AP (this is the property that matters at 4% base rate).
         let many_neg: Vec<f64> = (0..100).map(|i| i as f64).collect();
         let mut labels = vec![false; 100];
         labels[98] = true; // second-best score is the only positive
-        let ap_rare = pr_auc(&many_neg, &labels).unwrap();
+        let ap_rare = pr_auc(&many_neg, &labels).unwrap().unwrap();
         assert!((ap_rare - 0.5).abs() < 1e-12);
-        assert!(roc_auc(&many_neg, &labels).unwrap() > 0.98, "ROC barely notices");
+        assert!(roc_auc(&many_neg, &labels).unwrap().unwrap() > 0.98, "ROC barely notices");
+        // Length mismatch is an error, not a panic.
+        assert!(pr_auc(&scores, &[true, false]).is_err());
     }
 
     #[test]
@@ -933,11 +946,13 @@ mod tests {
         labels[0] = true; // score 0.9, rank 1
         labels[3] = true; // score 0.8, rank 2
         // Top 20 % = top 2 units → both events caught.
-        assert_eq!(pod_at_area(&scores, &labels, 0.2), Some(1.0));
+        assert_eq!(pod_at_area(&scores, &labels, 0.2).unwrap(), Some(1.0));
         // Top 10 % = top 1 unit → only the 0.9 event caught.
-        assert_eq!(pod_at_area(&scores, &labels, 0.1), Some(0.5));
+        assert_eq!(pod_at_area(&scores, &labels, 0.1).unwrap(), Some(0.5));
         // Degenerate fractions → None.
-        assert!(pod_at_area(&scores, &labels, 0.0).is_none());
-        assert!(pod_at_area(&scores, &[false; 10], 0.5).is_none());
+        assert!(pod_at_area(&scores, &labels, 0.0).unwrap().is_none());
+        assert!(pod_at_area(&scores, &[false; 10], 0.5).unwrap().is_none());
+        // Length mismatch is an error, not a panic.
+        assert!(pod_at_area(&scores, &[true, false], 0.5).is_err());
     }
 }

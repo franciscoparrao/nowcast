@@ -371,8 +371,11 @@ impl MultiNowcast {
     /// The [`Trigger`] contract says factors lie in `[0, 1]`, but that cannot be
     /// enforced on third-party implementations — so a misbehaving trigger
     /// (factor outside the interval, or `NaN`) is clamped to `[0, 1]` (`NaN` →
-    /// `0`) rather than panicking the library.
-    pub fn hazard_at(&self, step: usize) -> HazardField {
+    /// `0`) rather than panicking the library. Errors if `step` is out of range.
+    pub fn hazard_at(&self, step: usize) -> Result<HazardField> {
+        if step >= self.n_steps {
+            return Err(Error::OutOfRange { name: "step", index: step, len: self.n_steps });
+        }
         let dims = self.susceptibility.dims();
         let mut probability = vec![0.0; dims.len()];
         let mut fs = Vec::with_capacity(self.triggers.len());
@@ -383,17 +386,17 @@ impl MultiNowcast {
             let combined = if combined.is_nan() { 0.0 } else { combined.clamp(0.0, 1.0) };
             *p = self.susceptibility.get(cell) * combined;
         }
-        HazardField::new(step, dims, probability)
-            .expect("susceptibility and clamped factor are both within [0,1]")
+        Ok(HazardField::new(step, dims, probability)
+            .expect("susceptibility and clamped factor are both within [0,1]"))
     }
 
     pub fn run(&self) -> Vec<HazardField> {
-        (0..self.n_steps).map(|t| self.hazard_at(t)).collect()
+        (0..self.n_steps).map(|t| self.hazard_at(t).expect("t is in 0..n_steps")).collect()
     }
 
     pub fn alerts(&self, level: f64) -> Vec<Alert> {
         (0..self.n_steps)
-            .filter_map(|t| self.hazard_at(t).alert(level))
+            .filter_map(|t| self.hazard_at(t).expect("t is in 0..n_steps").alert(level))
             .collect()
     }
 }
@@ -444,7 +447,7 @@ mod tests {
             Combine::NoisyOr,
         )
         .unwrap();
-        let field = nc.hazard_at(0);
+        let field = nc.hazard_at(0).unwrap();
         assert!(field.max_probability() > 0.8, "deformation alone should fire");
         let factors = nc.trigger_factors(0, 0);
         assert!(factors[0] < 0.1, "rain trigger quiet");
@@ -511,7 +514,7 @@ mod tests {
         }
         let susc = SusceptibilityMap::uniform(GridDims::new(1, 3), 1.0).unwrap();
         let nc = MultiNowcast::new(susc, vec![Box::new(Rogue)], Combine::Max).unwrap();
-        let field = nc.hazard_at(0);
+        let field = nc.hazard_at(0).unwrap();
         assert_eq!(field.probability(), &[1.0, 0.0, 0.0]);
     }
 
@@ -602,8 +605,8 @@ mod tests {
         let susc = SusceptibilityMap::uniform(dims, 1.0).unwrap();
         let nc = MultiNowcast::new(susc, vec![Box::new(id), Box::new(wet)], Combine::Product).unwrap();
 
-        let dry_burst = nc.hazard_at(2).max_probability();
-        let wet_burst = nc.hazard_at(7).max_probability();
+        let dry_burst = nc.hazard_at(2).unwrap().max_probability();
+        let wet_burst = nc.hazard_at(7).unwrap().max_probability();
         assert!(
             dry_burst < 0.15,
             "dry-antecedent burst must be suppressed, got {dry_burst}"

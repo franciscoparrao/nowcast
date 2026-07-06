@@ -73,7 +73,7 @@ fn part2_synthetic_pipeline() {
         crs: None,
     };
 
-    let peak = nowcast.hazard_at(3); // the 30 mm/h hour
+    let peak = nowcast.hazard_at(3).unwrap(); // the 30 mm/h hour
     let out = std::env::temp_dir().join("nowcast_maipo_hazard.tif");
     write_hazard_geotiff(&peak, &georef, &out).unwrap();
     println!("  peligro peak: máx {:.2} en grilla {ncols}×{nrows}", peak.max_probability());
