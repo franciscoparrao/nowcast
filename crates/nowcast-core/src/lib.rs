@@ -66,7 +66,7 @@ pub use backtest::{
     Contingency, DayKey, MonthKey, csv_events, csv_month_keys, lead_times, monthly_contingency,
     pod_at_area, pr_auc, roc_auc, spatial_daily_contingency, spatial_monthly_contingency,
 };
-pub use calibrate::{Calibrator, Reliability, ReliabilityBin, brier_score, reliability};
+pub use calibrate::{Calibrator, Reliability, ReliabilityBin, brier_score, csv_pairs, reliability};
 pub use ensemble::{EnsembleField, ensemble_hazard};
 pub use error::{Error, Result};
 pub use explain::{Driver, Explanation};

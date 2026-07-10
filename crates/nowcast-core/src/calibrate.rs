@@ -60,7 +60,24 @@ impl Calibrator {
             });
         }
         let mut order: Vec<usize> = (0..scores.len()).collect();
-        order.sort_by(|&a, &b| scores[a].partial_cmp(&scores[b]).unwrap());
+        order.sort_by(|&a, &b| scores[a].total_cmp(&scores[b]));
+
+        // Secondary pooling first: samples with the *same* score collapse into
+        // one initial block. Isotonic regression is a function of x — equal
+        // scores must receive equal fitted values — and without this step the
+        // fit depended on the input ORDER of tied samples (a real hazard index
+        // is massively tied: every dry cell-step shares susc·factor(0)).
+        let mut groups: Vec<(f64, f64, usize)> = Vec::new(); // (x, sum_y, n)
+        for &i in &order {
+            let y = if outcomes[i] { 1.0 } else { 0.0 };
+            match groups.last_mut() {
+                Some((x, sum_y, n)) if *x == scores[i] => {
+                    *sum_y += y;
+                    *n += 1;
+                }
+                _ => groups.push((scores[i], y, 1)),
+            }
+        }
 
         // Pool-adjacent-violators: merge while the previous block's mean exceeds
         // the current one's, restoring a non-decreasing sequence of block means.
@@ -70,12 +87,8 @@ impl Calibrator {
             n: usize,
         }
         let mut blocks: Vec<Block> = Vec::new();
-        for &i in &order {
-            let mut b = Block {
-                sum_x: scores[i],
-                sum_y: if outcomes[i] { 1.0 } else { 0.0 },
-                n: 1,
-            };
+        for (x, sum_y, n) in groups {
+            let mut b = Block { sum_x: x * n as f64, sum_y, n };
             while let Some(prev) = blocks.last() {
                 if prev.sum_y / prev.n as f64 > b.sum_y / b.n as f64 {
                     let p = blocks.pop().unwrap();
@@ -94,8 +107,22 @@ impl Calibrator {
     }
 
     /// Calibrated probability for a raw `score` (monotone linear interpolation
-    /// between block means; clamped to the fitted range outside it).
-    pub fn probability(&self, score: f64) -> f64 {
+    /// between block means; clamped to the fitted range outside it). Errors on
+    /// a non-finite score — a `NaN` here used to panic the binary search, the
+    /// same unguarded sibling boundary that [`fit_isotonic`](Self::fit_isotonic)
+    /// already closes on the fitting side.
+    pub fn probability(&self, score: f64) -> Result<f64> {
+        if !score.is_finite() {
+            return Err(Error::InvalidParameter {
+                name: "score",
+                reason: format!("must be finite, got {score}"),
+            });
+        }
+        Ok(self.probability_finite(score))
+    }
+
+    /// Interpolation core; `score` must be finite (callers validate).
+    fn probability_finite(&self, score: f64) -> f64 {
         let (xs, ys) = (&self.xs, &self.ys);
         let last = xs.len() - 1;
         if score <= xs[0] {
@@ -104,7 +131,7 @@ impl Calibrator {
         if score >= xs[last] {
             return ys[last];
         }
-        match xs.binary_search_by(|v| v.partial_cmp(&score).unwrap()) {
+        match xs.binary_search_by(|v| v.total_cmp(&score)) {
             Ok(k) => ys[k],
             Err(k) => {
                 let (x0, x1, y0, y1) = (xs[k - 1], xs[k], ys[k - 1], ys[k]);
@@ -117,9 +144,16 @@ impl Calibrator {
         }
     }
 
-    /// Calibrate a slice of raw scores into probabilities.
-    pub fn calibrate(&self, scores: &[f64]) -> Vec<f64> {
-        scores.iter().map(|&s| self.probability(s)).collect()
+    /// Calibrate a slice of raw scores into probabilities. Errors if any score
+    /// is non-finite (validated once up front, then interpolated).
+    pub fn calibrate(&self, scores: &[f64]) -> Result<Vec<f64>> {
+        if let Some(s) = scores.iter().find(|s| !s.is_finite()) {
+            return Err(Error::InvalidParameter {
+                name: "scores",
+                reason: format!("must all be finite, got {s}"),
+            });
+        }
+        Ok(scores.iter().map(|&s| self.probability_finite(s)).collect())
     }
 
     /// Checks the invariants [`fit_isotonic`](Self::fit_isotonic) guarantees but
@@ -319,6 +353,43 @@ pub fn reliability(preds: &[f64], outcomes: &[bool], n_bins: usize) -> Result<Re
     Ok(Reliability { brier, brier_skill, ece, base_rate, bins })
 }
 
+/// Aligned `(score, outcome)` pairs from two 0-based CSV columns of the same
+/// text — the parser behind `nowcast calibrate`.
+///
+/// Unlike two independent [`csv_column`](crate::csv_column) passes (which skip
+/// unparseable lines *per column* and can silently pair values from different
+/// rows when parse failures cross), this walks the file **row by row**: a line
+/// where both fields are missing/unparseable/non-finite is skipped (tolerates a
+/// header), but a line where exactly one of the two parses is a hard error —
+/// that is the misalignment that would poison the fitted calibrator.
+pub fn csv_pairs(text: &str, col_a: usize, col_b: usize) -> Result<Vec<(f64, f64)>> {
+    let parse = |line: &str, col: usize| -> Option<f64> {
+        line.split(',')
+            .nth(col)
+            .and_then(|f| f.trim().parse::<f64>().ok())
+            .filter(|v| v.is_finite())
+    };
+    let mut pairs = Vec::new();
+    for (i, line) in text.lines().enumerate() {
+        match (parse(line, col_a), parse(line, col_b)) {
+            (Some(a), Some(b)) => pairs.push((a, b)),
+            (None, None) => {} // header / blank / fully unparseable line
+            (a, _) => {
+                let (good, bad) = if a.is_some() { (col_a, col_b) } else { (col_b, col_a) };
+                return Err(Error::InvalidParameter {
+                    name: "pairs",
+                    reason: format!(
+                        "line {}: column {good} parses but column {bad} does not — refusing \
+                         to pair values across rows (fix or drop the line)",
+                        i + 1,
+                    ),
+                });
+            }
+        }
+    }
+    Ok(pairs)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -345,12 +416,12 @@ mod tests {
         let cal = Calibrator::fit_isotonic(&scores, &outcomes).unwrap();
         // Monotone non-decreasing.
         let grid: Vec<f64> = (0..=20).map(|i| i as f64 / 20.0).collect();
-        let probs: Vec<f64> = grid.iter().map(|&s| cal.probability(s)).collect();
+        let probs = cal.calibrate(&grid).unwrap();
         for w in probs.windows(2) {
             assert!(w[1] >= w[0] - 1e-9, "calibrator must be monotone");
         }
-        assert!(cal.probability(0.2) < 0.1, "low scores → low prob");
-        assert!(cal.probability(0.8) > 0.9, "high scores → high prob");
+        assert!(cal.probability(0.2).unwrap() < 0.1, "low scores → low prob");
+        assert!(cal.probability(0.8).unwrap() > 0.9, "high scores → high prob");
     }
 
     #[test]
@@ -366,7 +437,7 @@ mod tests {
         }
         let before = brier_score(&raw, &outcomes).unwrap();
         let cal = Calibrator::fit_isotonic(&raw, &outcomes).unwrap();
-        let after = brier_score(&cal.calibrate(&raw), &outcomes).unwrap();
+        let after = brier_score(&cal.calibrate(&raw).unwrap(), &outcomes).unwrap();
         assert!(after <= before + 1e-12, "calibration should not worsen Brier");
         assert!(after < before, "calibration should improve a miscalibrated model");
     }
@@ -409,6 +480,60 @@ mod tests {
         assert!(Calibrator::fit_isotonic(&[0.1, f64::INFINITY], &[true, false]).is_err());
         assert!(brier_score(&[0.5, f64::NAN], &[true, false]).is_err());
         assert!(reliability(&[0.5, f64::NAN], &[true, false], 5).is_err());
+    }
+
+    #[test]
+    fn tied_scores_get_one_pooled_value_invariant_to_input_order() {
+        // Isotonic regression is a function of x: equal scores must receive
+        // equal fitted values, whatever the arrival order of their outcomes.
+        // Without secondary pooling, [F,T] gave p(0.5)=0.0 and [T,F] p(0.5)=0.5.
+        let a = Calibrator::fit_isotonic(&[0.5, 0.5], &[false, true]).unwrap();
+        let b = Calibrator::fit_isotonic(&[0.5, 0.5], &[true, false]).unwrap();
+        assert_eq!(a.probability(0.5).unwrap(), 0.5);
+        assert_eq!(b.probability(0.5).unwrap(), 0.5);
+
+        // Interior tie block: the pooled value is the tie group's mean (0.5),
+        // not the 1.0 the unpooled PAV used to report (factor-2 error).
+        let scores = [0.1, 0.5, 0.5, 0.5, 0.5, 0.9];
+        let outcomes = [false, false, false, true, true, true];
+        let cal = Calibrator::fit_isotonic(&scores, &outcomes).unwrap();
+        assert_eq!(cal.probability(0.5).unwrap(), 0.5);
+        // And a shuffled copy of the same multiset fits identically.
+        let scores_sh = [0.5, 0.9, 0.5, 0.1, 0.5, 0.5];
+        let outcomes_sh = [true, true, false, false, true, false];
+        let cal_sh = Calibrator::fit_isotonic(&scores_sh, &outcomes_sh).unwrap();
+        for s in [0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0] {
+            assert_eq!(cal.probability(s).unwrap(), cal_sh.probability(s).unwrap());
+        }
+    }
+
+    #[test]
+    fn probability_rejects_non_finite_scores_instead_of_panicking() {
+        // A NaN here used to hit `partial_cmp().unwrap()` inside the binary
+        // search — a panic reachable straight from the Python binding.
+        let cal = Calibrator::fit_isotonic(&[0.1, 0.5, 0.9], &[false, true, true]).unwrap();
+        assert!(cal.probability(f64::NAN).is_err());
+        assert!(cal.probability(f64::INFINITY).is_err());
+        assert!(cal.calibrate(&[0.5, f64::NAN]).is_err());
+        // Finite scores keep working, including outside the fitted range.
+        assert!(cal.probability(0.5).is_ok());
+        assert_eq!(cal.probability(-10.0).unwrap(), cal.probability(0.0).unwrap());
+    }
+
+    #[test]
+    fn csv_pairs_refuses_crossed_parse_failures() {
+        // Header tolerated; clean rows pair up.
+        let clean = "score,outcome\n0.9,1\n0.1,0\n";
+        assert_eq!(csv_pairs(clean, 0, 1).unwrap(), vec![(0.9, 1.0), (0.1, 0.0)]);
+        // Crossed failures with equal per-column counts used to pair values
+        // from different rows silently; now they are a hard error.
+        let crossed = "score,outcome\n0.90,abc\nxyz,1\n0.10,0\n";
+        let e = csv_pairs(crossed, 0, 1).unwrap_err().to_string();
+        assert!(e.contains("line 2"), "should point at the first bad line: {e}");
+        // Non-finite fields count as unparseable (same policy as csv_column).
+        assert!(csv_pairs("NaN,1\n", 0, 1).is_err());
+        // A missing trailing field is an error too, not a shifted pair.
+        assert!(csv_pairs("0.5\n", 0, 1).is_err());
     }
 
     #[test]

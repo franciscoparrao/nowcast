@@ -177,7 +177,7 @@ fn main() {
     );
 
     let cal = Calibrator::fit_isotonic(&tr_s, &tr_o).unwrap();
-    let cal_test = cal.calibrate(&te_s);
+    let cal_test = cal.calibrate(&te_s).unwrap();
 
     let raw_rel = reliability(&te_s, &te_o, 6).unwrap();
     let cal_rel = reliability(&cal_test, &te_o, 6).unwrap();

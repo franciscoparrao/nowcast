@@ -96,7 +96,7 @@ fn main() {
     let split = p_fc.len() / 2;
     let cal = Calibrator::fit_isotonic(&p_fc[..split], &outcome[..split]).unwrap();
     let (p_raw, out_te) = (&p_fc[split..], &outcome[split..]);
-    let p_cal = cal.calibrate(p_raw);
+    let p_cal = cal.calibrate(p_raw).unwrap();
 
     let raw_rel = reliability(p_raw, out_te, 8).unwrap();
     let cal_rel = reliability(&p_cal, out_te, 8).unwrap();

@@ -31,7 +31,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use nowcast_core::{
     Calibrator, Forcing, GridDims, HazardField, IdThreshold, LiveNowcast, Nowcast,
     SusceptibilityMap, TriggerModel, UniformRain, csv_column, csv_events, csv_month_keys,
-    monthly_contingency, reliability,
+    csv_pairs, monthly_contingency, reliability,
 };
 use nowcast_surtgis::{Georef, Raster, gridded_rain_from_rasters, read_susceptibility, write_hazard_geotiff};
 use surtgis_core::io::read_geotiff;
@@ -189,9 +189,11 @@ struct WatchArgs {
     /// Step length in hours.
     #[arg(long, default_value_t = 24.0)]
     dt_hours: f64,
-    /// Grid columns/rows for uniform susceptibility (square if rows omitted).
+    /// Grid columns for --uniform-susc (a --susc raster fixes the grid by
+    /// itself; explicit values must agree with it; square if rows omitted).
     #[arg(long)]
     ncols: Option<usize>,
+    /// Grid rows for --uniform-susc.
     #[arg(long)]
     nrows: Option<usize>,
     #[command(flatten)]
@@ -295,10 +297,25 @@ fn load_calibrator(path: Option<&Path>) -> Result<Option<Calibrator>> {
 
 /// Map a hazard field through a fitted calibrator (index → probability).
 fn calibrate_field(field: HazardField, cal: &Calibrator) -> HazardField {
-    let probability = cal.calibrate(field.probability());
-    // Isotonic output is clamped to [0, 1] by construction.
+    // Hazard probabilities are finite in [0, 1] by construction, so neither
+    // the calibration (rejects non-finite scores) nor the rebuild (isotonic
+    // output stays in [0, 1]) can fail here.
+    let probability = cal
+        .calibrate(field.probability())
+        .expect("hazard probabilities are finite");
     HazardField::new(field.step, field.dims(), probability)
         .expect("calibrated probabilities stay within [0,1]")
+}
+
+/// `--alert-level` is compared against hazard probabilities in `[0, 1]`. A NaN
+/// makes every `p >= level` comparison false — the alerting tool would report
+/// "ran quiet" (exit 0) forever, indistinguishable from real calm — and a
+/// level above 1 can never fire either. Reject both up front.
+fn validate_alert_level(level: f64) -> Result<()> {
+    if !level.is_finite() || !(0.0..=1.0).contains(&level) {
+        bail!("--alert-level must be a probability in [0, 1], got {level}");
+    }
+    Ok(())
 }
 
 /// Resolve susceptibility and forcing **together**.
@@ -406,6 +423,7 @@ fn make_nowcast<F: Forcing>(
 }
 
 fn cmd_run(a: RunArgs) -> Result<bool> {
+    validate_alert_level(a.alert_level)?;
     let (susc, georef, forcing) = resolve_inputs(&a.susc, &a.rain)?;
     let mut fields = match forcing {
         ForcingKind::Uniform(f) => make_nowcast(susc, f, &a.engine)?.run(),
@@ -519,27 +537,23 @@ fn cmd_explain(a: ExplainArgs) -> Result<bool> {
 }
 
 fn cmd_watch(a: WatchArgs) -> Result<bool> {
-    let text = std::fs::read_to_string(&a.rain_csv)
-        .with_context(|| format!("reading rain CSV {}", a.rain_csv.display()))?;
-    let depths = csv_column(&text, a.rain_col);
-    if depths.is_empty() {
-        bail!("no numeric values in column {} of {}", a.rain_col, a.rain_csv.display());
-    }
-    // Single-gauge susceptibility, broadcast over the grid.
-    let susc = match (a.susc.susc.as_ref(), a.susc.uniform_susc) {
-        (Some(_), Some(_)) => bail!("use either --susc or --uniform-susc, not both"),
-        (Some(path), None) => {
-            read_susceptibility(path)
-                .with_context(|| format!("reading susceptibility {}", path.display()))?
-                .0
-        }
-        (None, Some(v)) => {
-            let ncols = a.ncols.unwrap_or(1);
-            let nrows = a.nrows.unwrap_or(ncols);
-            SusceptibilityMap::uniform(GridDims::new(ncols, nrows), v)?
-        }
-        (None, None) => bail!("provide susceptibility with --susc or --uniform-susc"),
+    validate_alert_level(a.alert_level)?;
+    // Resolve susceptibility and gauge through the same path as `run`, so both
+    // verbs validate identically (`watch` used to ignore --ncols/--nrows that
+    // contradicted a --susc raster, where `run` rejects them).
+    let rain = RainArgs {
+        rain_csv: Some(a.rain_csv.clone()),
+        rain_col: a.rain_col,
+        rain_rasters: Vec::new(),
+        dt_hours: a.dt_hours,
+        ncols: a.ncols,
+        nrows: a.nrows,
     };
+    let (susc, _georef, forcing) = resolve_inputs(&a.susc, &rain)?;
+    let ForcingKind::Uniform(gauge) = forcing else {
+        unreachable!("watch has no --rain-rasters flag");
+    };
+    let depths: Vec<f64> = (0..gauge.n_steps()).map(|t| gauge.depth_mm(0, t)).collect();
     let calibrator = load_calibrator(a.calibrator.as_deref())?;
     let dims = susc.dims();
     let n = dims.len();
@@ -603,6 +617,7 @@ fn cmd_watch(a: WatchArgs) -> Result<bool> {
 }
 
 fn cmd_backtest(a: BacktestArgs) -> Result<bool> {
+    validate_alert_level(a.alert_level)?;
     let text = std::fs::read_to_string(&a.rain_csv)
         .with_context(|| format!("reading rain CSV {}", a.rain_csv.display()))?;
     // A single representative gauge: 1×1 grid, susceptibility held at 1.0 so the
@@ -723,25 +738,25 @@ fn cmd_backtest(a: BacktestArgs) -> Result<bool> {
 fn cmd_calibrate(a: CalibrateArgs) -> Result<bool> {
     let text = std::fs::read_to_string(&a.pairs_csv)
         .with_context(|| format!("reading pairs CSV {}", a.pairs_csv.display()))?;
-    let scores = csv_column(&text, a.score_col);
-    let outcome_vals = csv_column(&text, a.outcome_col);
-    if scores.is_empty() {
-        bail!("no numeric values in column {} of {}", a.score_col, a.pairs_csv.display());
-    }
-    if scores.len() != outcome_vals.len() {
+    // Row-wise pair parser: two independent column passes used to pair values
+    // from *different rows* silently when parse failures crossed with equal
+    // counts — poisoning the fitted calibrator without any warning.
+    let pairs = csv_pairs(&text, a.score_col, a.outcome_col)
+        .with_context(|| format!("parsing pairs CSV {}", a.pairs_csv.display()))?;
+    if pairs.is_empty() {
         bail!(
-            "score column {} has {} values but outcome column {} has {} — the pairs must align row by row",
+            "no (score, outcome) pairs in columns {} and {} of {}",
             a.score_col,
-            scores.len(),
             a.outcome_col,
-            outcome_vals.len()
+            a.pairs_csv.display()
         );
     }
-    let outcomes: Vec<bool> = outcome_vals.iter().map(|&v| v != 0.0).collect();
+    let (scores, outcomes): (Vec<f64>, Vec<bool>) =
+        pairs.into_iter().map(|(s, o)| (s, o != 0.0)).unzip();
 
     let cal = Calibrator::fit_isotonic(&scores, &outcomes)?;
     let before = reliability(&scores, &outcomes, a.bins)?;
-    let after = reliability(&cal.calibrate(&scores), &outcomes, a.bins)?;
+    let after = reliability(&cal.calibrate(&scores)?, &outcomes, a.bins)?;
 
     match a.format {
         Format::Table => {
@@ -785,8 +800,20 @@ fn parse_sweep(spec: &str) -> Result<(f64, f64, f64)> {
     let lo: f64 = p[0].parse().context("sweep MIN")?;
     let hi: f64 = p[1].parse().context("sweep MAX")?;
     let step: f64 = p[2].parse().context("sweep STEP")?;
+    if !lo.is_finite() || !hi.is_finite() || !step.is_finite() {
+        bail!("--sweep values must be finite numbers");
+    }
+    // The sweep varies the I–D intercept a, which must be positive — starting
+    // at 0 used to abort the whole sweep on its first value.
+    if lo <= 0.0 {
+        bail!("--sweep MIN must be > 0 (it sweeps the I–D intercept a)");
+    }
     if step <= 0.0 || hi < lo {
         bail!("--sweep needs STEP > 0 and MAX ≥ MIN");
+    }
+    let runs = ((hi - lo) / step).floor() + 1.0;
+    if runs > 100_000.0 {
+        bail!("--sweep spans {runs:.0} backtest runs; use a coarser STEP");
     }
     Ok((lo, hi, step))
 }

@@ -93,11 +93,12 @@ pub fn csv_month_keys(text: &str) -> Vec<MonthKey> {
 }
 
 /// Event inventory `(year, month)` keys from a CSV with columns
-/// `id, year, month` (header row skipped, rows that fail to parse ignored) —
-/// the SERNAGEOMIN-style inventory layout used by the backtests.
+/// `id, year, month` (rows that fail to parse are ignored, so a header row is
+/// skipped naturally) — the SERNAGEOMIN-style inventory layout used by the
+/// backtests. An unconditional `skip(1)` here used to drop the first event of
+/// a *headerless* inventory silently.
 pub fn csv_events(text: &str) -> Vec<MonthKey> {
     text.lines()
-        .skip(1)
         .filter_map(|line| {
             let mut f = line.split(',');
             let _id = f.next()?;
@@ -631,6 +632,10 @@ mod tests {
     fn csv_events_parses_the_inventory_layout() {
         let text = "id,year,month\n42,1993,5\nbad,row\n43,2015,3\n44,2015,0\n";
         assert_eq!(csv_events(text), vec![(1993, 5), (2015, 3)]);
+        // A headerless inventory keeps its first event (an unconditional
+        // skip(1) used to drop it silently).
+        let headerless = "42,1993,5\n43,2015,3\n";
+        assert_eq!(csv_events(headerless), vec![(1993, 5), (2015, 3)]);
     }
 
     #[test]

@@ -12,10 +12,12 @@ name = "nowcast"
 crate-type = ["cdylib"]
 
 [dependencies]
-nowcast-core = { path = "../nowcast-core" }
+# serde: Calibrator round-trips as JSON (same artifact `nowcast calibrate` writes).
+nowcast-core = { path = "../nowcast-core", features = ["serde"] }
 # Grids cross the boundary as numpy arrays (zero-ish copy), not element-wise
 # Python lists — a 30M-cell raster is unusable otherwise.
 numpy = "0.23"
+serde_json = "1"
 
 [dependencies.pyo3]
 version = "0.23"

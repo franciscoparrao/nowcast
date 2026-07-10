@@ -637,6 +637,7 @@ dependencies = [
  "nowcast-core",
  "numpy",
  "pyo3",
+ "serde_json",
 ]
 
 [[package]]
@@ -1113,6 +1114,7 @@ name = "surtgis-core"
 version = "0.17.0"
 dependencies = [
  "anyhow",
+ "flate2",
  "geo",
  "geo-types",
  "ndarray",

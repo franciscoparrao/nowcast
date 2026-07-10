@@ -526,3 +526,304 @@ Esfuerzo: S < ½ día, M ≈ 1-2 días. Ítems 1-6 verificados: `cargo test --wo
 + clippy también verificados aparte. Los dos panics de `--calibrator` malformado
 (N-H3) se reprodujeron contra el binario real antes y después del fix. Ningún
 ítem era CRITICAL ni bloqueaba el paper.
+
+---
+
+## Ronda 3 — auditoría independiente (2026-07-09)
+
+**Motivación**: tercera pasada adversarial tras los fixes de la ronda 2
+(`d4669d8`). Mismo protocolo: 3 agentes en paralelo (core / 7 adapters /
+CLI+Python), cada uno leyendo este documento y los commits de fixes antes de
+auditar para no re-reportar ítems resueltos. Todos los hallazgos fueron
+**reproducidos en ejecución** (tests mínimos en scratchpad, binario CLI real
+con inputs hostiles, wheel Python construido con maturin y ejercitado con
+numpy real), no solo señalados por lectura. Verificación cruzada contra el
+código fuente de los 6 motores hermanos (solo lectura). Línea base: tests de
+las 10 crates + Python 100% verdes; clippy `--all-targets -- -D warnings`
+verde; `scripts/check_siblings.sh` pasa.
+
+### Resumen ejecutivo
+
+| Severidad | Hallazgos únicos |
+|-----------|------------------|
+| CRITICAL  | **0** |
+| HIGH      | **3** |
+| MEDIUM    | **11** |
+| LOW       | **11** |
+
+(27 reportados por los agentes; 2 duplicados entre reportes — el panic de
+`Calibrator::probability(NaN)` y el `alert_level` NaN — se cuentan una vez.)
+
+**Veredicto sobre la ronda 2**: los 6 fixes sostienen bajo re-lectura y
+re-ejecución (trío rainflow con tests OOB, calibrador malformado → exit 1
+limpio, ±inf rechazado en `gridded_rain_from_rasters`, `from_states` expone
+NaN, validación de métricas delegada al core). La paridad triple sigue
+bit-idéntica: `run` ↔ `watch`, CLI ↔ Python, y `Nowcast.run()` ↔
+`LiveNowcast.push()` (verificado con `np.array_equal` sobre el wheel real).
+
+**El patrón "hermana sin blindar" reincide por tercera ronda consecutiva**
+(R3-H2: se blindó `fit_isotonic`, quedó `probability` del mismo struct;
+R3-M3: se blindó `hazard_at`, quedó `trigger_factors` del mismo struct;
+R3-M8: se blindó `gridded_rain_from_rasters`, quedó
+`susceptibility_from_raster` del mismo archivo; R3-M10: se blindó
+`run_runout`, quedó `from_footprint`). La lección transversal: **cada fix de
+frontera debe auditarse a nivel de struct/módulo completo, no de función
+nombrada** — ver "Plan de acción" ítem 8.
+
+**Lo nuevo de esta ronda**: por primera vez hay un hallazgo de corrección
+*matemática* en la feature insignia (R3-H1, PAV con empates) — las rondas 1-2
+habían re-derivado el PAV como correcto sobre scores continuos, pero el caso
+degenerado (scores empatados, que es el caso *típico* de los índices de
+peligro reales: todas las celdas-paso secas comparten `susc·factor(0)`) no
+se había probado.
+
+### HIGH — nuevos
+
+**R3-H1. PAV isotónico incorrecto con scores empatados: el fit depende del
+ORDEN de las muestras.** `crates/nowcast-core/src/calibrate.rs:62-93`. El PAV
+procesa las muestras ordenadas con sort estable pero nunca agrupa los scores
+empatados en un bloque antes de poolear: valores de x iguales pueden recibir
+valores ajustados distintos (la regresión isotónica es función de x — scikit-
+learn hace el pooling secundario; aquí falta). Reproducido:
+`fit_isotonic([0.5,0.5],[false,true])` → `p(0.5)=0.0` pero con outcomes en
+orden inverso → `p(0.5)=0.5` — mismo multiconjunto, resultado distinto según
+orden de llegada. Caso interior: scores `[0.1,.5,.5,.5,.5,.9]`, outcomes
+`[F,F,F,T,T,T]` → `p(0.5)=1.0` cuando el valor pooled correcto es 0.5 (error
+factor 2). El calibrador resultante tiene `xs` duplicados con `ys` distintos
+y **pasa `validate()`**. No es caso patológico: los índices de peligro reales
+están masivamente empatados, así que golpea al verbo `calibrate` del CLI y a
+`Calibrator.fit` en Python. Los tests no lo pillan porque usan scores
+continuos aleatorios. Fix: pre-agrupar por score único (promediar outcomes
+por x empatado) antes del loop PAV + test de invarianza al orden.
+
+**R3-H2. `Calibrator::probability(NaN)` / `calibrate([NaN])` panican —
+alcanzable desde Python hoy.** `calibrate.rs:107` +
+`nowcast-python/src/lib.rs:288-295`. Con score NaN los guards de borde son
+falsos y `binary_search_by(|v| v.partial_cmp(&score).unwrap())` hace unwrap
+de `None`. El binding reenvía el f64 crudo → `PanicException` no capturable
+(reproducido desde Python con el wheel real). Tercera reincidencia textual
+del patrón sibling: la ronda 2 blindó `fit_isotonic` contra NaN y dejó el
+lado de *aplicación* del mismo struct. El CLI está a salvo (`calibrate_field`
+solo pasa hazard del motor, finito). Fix: rechazar no-finitos en
+`probability`/`calibrate` (o `total_cmp`), mapear a `ValueError` en el
+binding — mismo patrón que `explain`.
+
+**R3-H3. `Inundation::run_point_sources` panica con un `PointSource` fuera de
+la malla (hydroflux).** `crates/nowcast-hydroflux/src/lib.rs:245`.
+`PointSource { row, col }` es público y re-exportado; ni el adapter ni el
+solver validan bounds — `apply_point_sources` indexa directo
+(`hydroflux/solver-2d/src/source.rs:62`). El caso de uso real (colocar la
+celda de entrada del caudal desde una grilla gruesa desalineada) con un
+off-by-one produce panic de librería — la clase exacta que H1/H5/N-H1
+eliminaron en el resto del stack. Reproducido: `PointSource{row:99,col:0}`
+sobre malla 4×4 → panic ndarray OOB. Fix: validar `row < nr && col < nc` (y
+`q_mass` finito) en `run_point_sources` devolviendo `Result`, patrón
+`Error::OutOfRange` — frontera del adapter, sin tocar el repo hermano.
+
+### MEDIUM — nuevos
+
+#### Core
+
+**R3-M1. `ensemble_hazard` no valida que los miembros compartan `dt_hours`.**
+`ensemble.rs:73-117`. Valida grilla y `n_steps` pero no el eje temporal.
+Reproducido: un miembro horario (20 mm en 1 h → gatilla) y uno diario (20 mm
+en 24 h → no gatilla) con el mismo `n_steps` se agregan sin error →
+`p_exceed = 0.5` sobre un "paso" que significa 1 h para uno y 24 h para el
+otro. Rompe la simetría con `run_live`, que sí rechaza el mismo desacuerdo
+(`live.rs:220`). Fix: exigir `dt_hours` uniforme, mismo patrón de error que
+`run_live`. (Nota: `MultiNowcast` tiene el mismo hueco pero no es validable
+hoy — el trait `Trigger` no expone dt; cerrar requeriría `dt_hours()` en el
+trait.)
+
+**R3-M2. `alert_level` NaN desactiva TODAS las alertas en silencio — y es
+alcanzable desde la CLI real.** `nowcast.rs:115-123` + CLI + Python. `p >=
+NaN` es siempre falso; clap parsea `"NaN"` como f64 válido. Reproducido
+contra el binario: `nowcast run ... --alert-level NaN` imprime "0 with an
+alert at level NaN" y sale con **exit 0** — un typo (o variable de entorno
+vacía interpolada en un script operacional) apaga el sistema de alertas
+entero, indistinguible de la calma real, rompiendo el contrato de exit-code 2.
+Igual desde Python (`alerts(nan)` → `[]`) y en `ensemble_hazard`
+(`p_exceed = 0`). Fix: validar `level` finito y en [0,1] en
+`HazardField::alert()`/`alerts()`/`ensemble_hazard` — protege CLI y Python de
+una vez.
+
+**R3-M3. `MultiNowcast::trigger_factors` y `AntecedentTrigger::api` panican
+con cell/step fuera de rango.** `multi.rs:365-367` y `multi.rs:239-242`. La
+ronda 2 blindó `MultiNowcast::hazard_at`; `trigger_factors` — método público
+del MISMO struct, y precisamente la API de trazabilidad que se llama con
+celdas arbitrarias — sigue indexando sin chequeo (reproducido: panic OOB).
+Fix: `Result` validando contra `dims`/`n_steps`, como `hazard_at`.
+
+#### CLI / Python
+
+**R3-M4. `cmd_calibrate`: desalineación silenciosa de pares score/outcome con
+fallas de parseo cruzadas.** `nowcast-cli/src/main.rs:726-740`. Las dos
+columnas se parsean con llamadas independientes a `csv_column`, que salta
+líneas no parseables *por columna*: si la fila A tiene score válido/outcome
+inválido y la B lo contrario, los conteos coinciden, el guard pasa, y el
+calibrador se ajusta sobre pares tomados de **filas distintas** — sin
+advertencia, en el verbo que produce el artefacto que `run`/`watch
+--calibrator` usan. Reproducido: CSV con fallas cruzadas reporta "2 pairs" y
+produce el mismo calibrador que el archivo limpio con pares recombinados.
+Es el único hallazgo de la ronda que puede producir resultado científico
+silenciosamente incorrecto por vía CLI. Fix: parsear fila a fila exigiendo
+ambas columnas en la misma línea. Mismo riesgo latente en `backtest`
+(`csv_month_keys` vs `csv_column`).
+
+**R3-M5. `watch` ignora `--ncols/--nrows` contradictorios con `--susc`,
+mientras `run` los rechaza.** `main.rs:529-542`. `cmd_watch` re-implementa la
+resolución de susceptibilidad a mano y descarta las dims explícitas en
+silencio cuando hay raster; `resolve_inputs` (run/explain) las valida.
+Reproducido: mismos argumentos contradictorios → `run` exit 1, `watch` corre.
+Fix: compartir `resolve_inputs` con `cmd_watch`.
+
+**R3-M6. Python: dtype float32/int64 rechazado con mensaje críptico que no
+menciona float64.** `nowcast-python/src/lib.rs:79-83,108-112`.
+`PyReadonlyArray1<f64>` exige dtype exacto y el TypeError de pyo3/numpy no
+dice qué se espera ni sugiere `.astype()`. Golpea al pipeline declarado: los
+rasters de susceptibilidad RF reales (physics-guided-ml) son típicamente
+float32 — el input más natural del usuario objetivo falla con el peor mensaje
+del módulo. Fix: `PyArrayLike1<f64, AllowTypeChange>` (convierte con copia) o
+re-emitir el error con instrucción explícita.
+
+#### Adapters
+
+**R3-M7. `q_mass = NaN` se lava a "seco" con `unstable = false` — el fix
+N-M6 es correcto pero un caso lo rodea río arriba.** hydroflux, vía solver
+`source.rs:63`: `cell.h = (cell.h + dh).max(0.0)` y `(h + NaN).max(0.0) ==
+0.0` en Rust, así que el NaN se laundera *en cada paso*, antes de que el
+detector post-integración de la ronda 2 pueda verlo. Reproducido: fuente NaN
+60 s → `max_depth = 0, unstable = false`: inundación "completamente seca"
+presentada como corrida sana. (`run_rain` NO sufre esto: `apply_rain` usa
+`if new_h <= 0.0`, que deja sobrevivir el NaN hasta el flag.) Fix: rechazar
+`q_mass` no finito en `run_point_sources` (frontera del adapter) — se
+resuelve junto con R3-H3.
+
+**R3-M8. `susceptibility_from_raster` deja pasar ±inf al clamp: un píxel
+corrupto se vuelve susceptibilidad 1.0 permanente y silenciosa.**
+`nowcast-surtgis/src/lib.rs:80-87`. El guard es solo `is_nan() || nodata`; el
+fix N-M2 se aplicó a `gridded_rain_from_rasters` pero no a su hermana en el
+mismo archivo. Reproducido: `+inf` → 1.0, `−inf` → 0.0. Fix: `!v.is_finite()`
+como nodata, idéntico al de gridded_rain.
+
+**R3-M9. `RainflowForcing::gr4j` acepta `dt_days` arbitrario, pero GR4J es
+estrictamente diario.** `nowcast-rainflow/src/lib.rs:87-99`. `Gr4j::run` no
+tiene parámetro de paso y sus unidades internas (x2 mm/día, x4 en días) son
+diarias; con `dt_days = 1/24` el motor igual trata cada paso como un día y el
+adapter re-etiqueta (`depth_mm = q·dt_days`, `dt_hours = 24·dt_days`) →
+hidrograma e intensidades silenciosamente mal escalados. Fix: exigir
+`dt_days == 1.0` en `gr4j()`; `RainflowForcing::new` genérico puede seguir
+aceptando cualquier dt para series externas.
+
+**R3-M10. `Runout::from_footprint` es un bypass público del guard de
+`pixel_size` que la ronda 1 puso en `run_runout`.** `nowcast-swarm/src/lib.rs:49`.
+Reproducido: `pixel_size = NaN` → `affected_km2 = NaN`; `pixel_size = −30` →
+área positiva con apariencia sana (el signo se cancela al cuadrado). Fix:
+`from_footprint → Result` con el mismo guard; `run_runout` delega.
+
+**R3-M11. Reproducibilidad: el raster RandomForest del Maipo desapareció de
+la máquina.** `geotiff_roundtrip.rs:22` apunta a
+`~/proyectos/postdoc/papers/paper1_susceptibilidad/.../susceptibility_RandomForest.tif`,
+directorio que ya no existe (`find $HOME` sin resultado). El example degrada
+con gracia a lo sintético, pero la cifra citada en CLAUDE.md ("5149×5855,
+[0.001,0.965]") ya no es reproducible, y `scripts/extract_maipo_cr2met.py` /
+`extract_maipo_distributed.py` apuntan al mismo path muerto (inventario +
+raster) — la cadena de datos del backtest del paper. **Importa antes del DOI
+Zenodo.** Fix: restaurar/re-hospedar el dataset o actualizar paths y
+documentar su origen.
+
+### LOW — nuevos
+
+- **R3-L1.** `brier_score`/`reliability` aceptan "probabilidades" finitas
+  fuera de [0,1] con semántica inconsistente: `reliability` binnea con el
+  valor clampeado pero calcula Brier con el crudo (`calibrate.rs:212-319`).
+- **R3-L2.** `Combine::apply(&[])` devuelve 1.0 para `Product` (identidad del
+  producto = "peligro máximo con cero triggers") y 0.0 para `Max`/`NoisyOr`
+  (`multi.rs:305-311`). Inalcanzable vía `MultiNowcast`; documentar o
+  uniformar a 0.0.
+- **R3-L3.** `pod_at_area` corta bloques de scores empatados en el borde del
+  área por orden de input — determinista pero arbitrario, y con los empates
+  masivos del índice puede mover el número (`backtest.rs:563-586`).
+- **R3-L4.** Python: contigüidad inconsistente — arrays 1-D con stride se
+  rechazan (`to_vec()`), el rain 2-D acepta cualquier layout
+  (`lib.rs:90` vs `lib.rs:129`).
+- **R3-L5.** `csv_events` hace `skip(1)` incondicional: un inventario sin
+  header pierde su primer evento en silencio y cambia POD/FAR
+  (`backtest.rs:98-111`); los otros dos parsers CSV toleran el header
+  intentando parsear.
+- **R3-L6.** `--sweep 0:16:0.5` aborta el barrido completo en la primera
+  iteración (a=0 inválido) en vez de saltar/reportar; sin cota de
+  iteraciones (`--sweep 0.5:1e8:0.001` cuelga) (`main.rs:651-682`).
+- **R3-L7.** `Calibrator` de Python no puede cargar ni persistir el JSON del
+  CLI (sin `to_json`/`from_json`/`validate`): el pipeline Python — donde se
+  ajustaría sobre backtests reales (limitación i del paper) — no puede
+  producir el artefacto que `watch --calibrator` consume.
+- **R3-L8.** `Boundaries2D`/`Side` no están en el re-export de
+  nowcast-hydroflux pese a que `Inundation::new` los exige — hasta los
+  propios examples importan `hydroflux_solver_2d` directo (`lib.rs:27`).
+- **R3-L9.** `gridded_rain_from_rasters` descarta el `Georef` del stack (el
+  caller no puede verificar alineación lluvia↔susceptibilidad sin releer
+  archivos) y el check de CRS es vacuo si el raster 0 no declara CRS
+  (`nowcast-surtgis/src/lib.rs:122-155`).
+- **R3-L10.** `SnowmeltForcing::runoff_at(step)` panica OOB sin doc
+  `# Panics` — quedó fuera del contrato que M14 documentó para
+  `Forcing::depth_mm` (`nowcast-snowmelt/src/lib.rs:111`).
+- **R3-L11.** `run_fire` no valida `horizon_min`: con NaN o negativo el
+  Dijkstra no propaga y el fuego es silenciosamente nulo (ni la ignición "se
+  quema") → cascada post-fuego no-op (`nowcast-firespread/src/lib.rs:111-123`).
+
+### Qué se confirmó sólido (re-derivado sobre el código actual)
+
+- Paridad **bit-idéntica** en las tres superficies: `run` ↔ `watch` (16
+  decimales sobre GeoTIFF real), CLI ↔ Python, `Nowcast.run()` ↔
+  `LiveNowcast.push()` desde Python. Defaults Caine coherentes
+  (14.82/0.39/4.0/7) en las tres.
+- Kernel I-D sin off-by-one (batch, live, IdTrigger, IdMapTrigger); `push`
+  valida antes de mutar (atomicidad correcta).
+- ROC-AUC (Mann-Whitney con rangos promedio) y PR-AUC (bloques de empates):
+  matemática correcta. Wilson, ECE, Brier skill correctos.
+- Conversiones de unidades de los 7 adapters re-derivadas contra el código
+  hermano (86.4 mm/día·km² = 1 m³/s; m/yr→mm/yr ×1000; runoff snowmelt en mm
+  por paso; `depth = q·dt` rainflow). Row-major coherente en los 7, sin
+  y-flip.
+- Los 6 fixes de la ronda 2 sostienen (re-ejecutados, no solo releídos).
+- Exit codes del CLI correctos en todos los casos probados; CSV hostiles
+  (CRLF, BOM, vacío, semicolon, columnas fuera de rango) → error limpio;
+  JSON válido y determinista en los 5 verbos; `allow_threads` presente en
+  los cómputos largos de Python.
+- Examples de los 7 adapters compilan y sus cifras de CLAUDE.md se
+  reprodujeron (+46% rain-on-snow, 24/264 celdas, 0→317 post-fuego,
+  123.2 km²) — salvo la parte real de `geotiff_roundtrip` (R3-M11).
+- LOWs abiertos de rondas anteriores confirmados sin cambios (FAR con celdas
+  fuera de grilla, `chebyshev_window` sin cota, `GridDims::new(0,·)`, dt
+  comparado con `!=` exacto, NaN como empate en AUC, N-M7 pin de
+  hydroflux-solver-2d).
+
+### Plan de acción — ronda 3
+
+| # | Qué | Resuelve | Esfuerzo |
+|---|-----|----------|----------|
+| 1 | ✅ (2026-07-10) PAV con pooling secundario de scores empatados (los empates colapsan a un bloque inicial antes del loop PAV; el fit vuelve a ser función de x) + tests: invarianza al orden en el borde y en bloque interior (el caso factor-2 del hallazgo), multiset barajado fitea idéntico | R3-H1 | S |
+| 2 | ✅ parcial (2026-07-10) `Calibrator::probability`/`calibrate` → `Result` (rechazan no-finito; interpolación interna `probability_finite` con `total_cmp`; binding mapea a `ValueError`; CLI con `expect` justificado — hazard finito por construcción). `alert_level` validado finito ∈ [0,1] en las fronteras: run/watch/backtest del CLI y `alerts`/`push` de Python. **Pendiente**: la variante core-side (`HazardField::alert`/`ensemble_hazard`) — `ensemble_hazard` no está expuesto por CLI/Python hoy | R3-H2, R3-M2 | S |
+| 3 | `run_point_sources`: validar bounds del `PointSource` y `q_mass` finito → `Result` | R3-H3, R3-M7 | S |
+| 4 | Cerrar las hermanas restantes: `trigger_factors`/`api` → `Result`; `susceptibility_from_raster` no-finito = nodata; `from_footprint` → `Result` | R3-M3, R3-M8, R3-M10 | S |
+| 5 | `ensemble_hazard` exige `dt_hours` uniforme; `gr4j()` exige `dt_days == 1.0` | R3-M1, R3-M9 | S |
+| 6 | ✅ (2026-07-10) `csv_pairs` en el core (parser fila-a-fila: header tolerado, falla cruzada = error duro con número de línea) consumido por `cmd_calibrate`; `cmd_watch` resuelve inputs vía `resolve_inputs` (misma validación, mismo default 1×1, mismo parser que `run`) | R3-M4, R3-M5 | S-M |
+| 7 | ✅ (2026-07-10) Binding migrado a `PyArrayLike1/2<f64, AllowTypeChange>` en los 7 puntos de entrada (acepta float32/int/bool, listas Python, vistas con stride y transpuestas; verificado bit-idéntico al path float64 — cierra también R3-L4) + `to_json`/`from_json` en `PyCalibrator` (con `validate()` post-deserialización; round-trip verificado en ambos sentidos con `run --calibrator`) | R3-M6, R3-L7, R3-L4 | S |
+| 8 | **Proceso**: al aplicar cada fix de frontera, barrer el struct/módulo completo buscando hermanas con el mismo contrato (el patrón reincide 4 veces en esta ronda) — checklist en el PR/commit | (preventivo) | — |
+| 9 | Resolver R3-M11 (dataset Maipo desaparecido) **antes del DOI Zenodo**: restaurar o re-hospedar + actualizar paths de scripts | R3-M11 | M — decisión del usuario |
+| 10 | LOWs R3-L1..L11: batch oportunista al tocar cada archivo. ✅ (2026-07-10) L4 (con ítem 7), L5 (`csv_events` sin `skip(1)`: header se salta porque no parsea + test headerless), L6 (`parse_sweep` exige finitos — cierra también el LOW de ronda 1 —, MIN > 0 y cota de 100 000 corridas), L7 (con ítem 7). Abiertos: L1, L2, L3, L8, L9, L10, L11 | LOWs | S c/u |
+
+**Ejecución 2026-07-10 (superficies CLI + Python, ítems 1, 2*, 6, 7, L4-L7)**:
+verificado con `cargo test --workspace --exclude nowcast-python` (61 tests en
+core, 4 nuevos) y `cargo clippy --workspace --all-targets -- -D warnings` (con
+y sin `nowcast-python`) 100% verde; wheel reconstruido con maturin y batería
+Python re-ejecutada (NaN → `ValueError`, float32/int64/listas/strided aceptados
+bit-idénticos, `alerts(nan)`/`push(alert_level=nan)` → `ValueError`, JSON
+round-trip Python↔CLI en ambos sentidos); **todos los repros de la auditoría
+re-corridos contra el binario nuevo** (calibrate cruzado → error con línea
+exacta; `watch --ncols 99` rechaza; `--alert-level NaN` exit 1 en los tres
+verbos; inventario headerless conserva sus 2 eventos; sweep con 0/nan/10¹¹
+corridas falla rápido en vez de colgar). Regresión de equivalencia: `run` y
+`watch` sobre el GeoTIFF real producen JSON **bit-idéntico al pre-fix**, y la
+paridad triple run↔watch↔Python sigue exacta.

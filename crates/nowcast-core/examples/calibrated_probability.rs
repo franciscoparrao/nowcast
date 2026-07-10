@@ -53,7 +53,7 @@ fn main() {
 
     let raw_test = &index[split..];
     let out_test = &outcomes[split..];
-    let cal_test = cal.calibrate(raw_test);
+    let cal_test = cal.calibrate(raw_test).unwrap();
 
     // --- 4) Reliability on the held-out split --------------------------------
     let base = out_test.iter().filter(|&&o| o).count() as f64 / out_test.len() as f64;

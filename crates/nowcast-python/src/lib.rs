@@ -9,15 +9,15 @@
 //!
 //! Grids cross the boundary as **numpy arrays** in row-major cell order
 //! (`cell = row * ncols + col`): susceptibility and per-step rain are 1-D
-//! `float64` arrays, gridded rain is a 2-D `(steps, cells)` array, and `run`
-//! returns a 2-D `(steps, cells)` hazard array. The heavy computations release
-//! the GIL, so a long `run()` does not freeze the host process.
+//! arrays, gridded rain is a 2-D `(steps, cells)` array, and `run` returns a
+//! 2-D `(steps, cells)` float64 hazard array. Inputs are accepted in any real
+//! dtype (float32, int, …) and any memory layout (strided views, transposes)
+//! and converted to float64 on the way in — the susceptibility pipeline's
+//! rasters are typically float32. The heavy computations release the GIL, so
+//! a long `run()` does not freeze the host process.
 
 use numpy::ndarray::Array2;
-use numpy::{
-    IntoPyArray, PyArray1, PyArray2, PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2,
-    PyUntypedArrayMethods,
-};
+use numpy::{AllowTypeChange, IntoPyArray, PyArray1, PyArray2, PyArrayLike1, PyArrayLike2};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -32,6 +32,17 @@ use nowcast_core::IdThreshold;
 
 fn err(e: impl std::fmt::Display) -> PyErr {
     PyValueError::new_err(e.to_string())
+}
+
+/// Alert levels are compared against hazard probabilities in `[0, 1]`; a NaN
+/// makes every `p >= level` false, silently disabling alerting — reject it.
+fn validate_alert_level(level: f64) -> PyResult<()> {
+    if !level.is_finite() || !(0.0..=1.0).contains(&level) {
+        return Err(err(format!(
+            "alert level must be a probability in [0, 1], got {level}"
+        )));
+    }
+    Ok(())
 }
 
 /// `(step, n_cells, fraction, max_probability)` — an alert crossing.
@@ -71,24 +82,24 @@ enum Engine {
 
 #[pymethods]
 impl PyNowcast {
-    /// Build with a single-gauge rainfall series (1-D float64 array, one value
-    /// per step) broadcast over the whole grid.
+    /// Build with a single-gauge rainfall series (1-D array, one value per
+    /// step) broadcast over the whole grid.
     #[staticmethod]
     #[pyo3(signature = (susceptibility, ncols, nrows, rain, dt_hours, id_a=14.82, id_b=0.39, k=4.0, max_window=7))]
     #[allow(clippy::too_many_arguments)]
     fn uniform(
-        susceptibility: PyReadonlyArray1<f64>,
+        susceptibility: PyArrayLike1<'_, f64, AllowTypeChange>,
         ncols: usize,
         nrows: usize,
-        rain: PyReadonlyArray1<f64>,
+        rain: PyArrayLike1<'_, f64, AllowTypeChange>,
         dt_hours: f64,
         id_a: f64,
         id_b: f64,
         k: f64,
         max_window: usize,
     ) -> PyResult<Self> {
-        let (susc, dims) = build_susc(susceptibility.to_vec()?, ncols, nrows)?;
-        let forcing = UniformRain::new(dims, dt_hours, rain.to_vec()?).map_err(err)?;
+        let (susc, dims) = build_susc(susceptibility.as_array().to_vec(), ncols, nrows)?;
+        let forcing = UniformRain::new(dims, dt_hours, rain.as_array().to_vec()).map_err(err)?;
         let nc = CoreNowcast::new(
             susc,
             forcing,
@@ -100,24 +111,25 @@ impl PyNowcast {
         Ok(Self { inner: Engine::Uniform(nc) })
     }
 
-    /// Build with distributed rainfall: a 2-D float64 array of shape
-    /// `(steps, cells)` in row-major cell order (mm per step).
+    /// Build with distributed rainfall: a 2-D array of shape `(steps, cells)`
+    /// in row-major cell order (mm per step).
     #[staticmethod]
     #[pyo3(signature = (susceptibility, ncols, nrows, rain, dt_hours, id_a=14.82, id_b=0.39, k=4.0, max_window=7))]
     #[allow(clippy::too_many_arguments)]
     fn gridded(
-        susceptibility: PyReadonlyArray1<f64>,
+        susceptibility: PyArrayLike1<'_, f64, AllowTypeChange>,
         ncols: usize,
         nrows: usize,
-        rain: PyReadonlyArray2<f64>,
+        rain: PyArrayLike2<'_, f64, AllowTypeChange>,
         dt_hours: f64,
         id_a: f64,
         id_b: f64,
         k: f64,
         max_window: usize,
     ) -> PyResult<Self> {
-        let (susc, dims) = build_susc(susceptibility.to_vec()?, ncols, nrows)?;
+        let (susc, dims) = build_susc(susceptibility.as_array().to_vec(), ncols, nrows)?;
         let n = dims.len();
+        let rain = rain.as_array();
         let shape = rain.shape();
         if shape[1] != n {
             return Err(err(format!(
@@ -125,8 +137,9 @@ impl PyNowcast {
                 shape[1]
             )));
         }
-        // (steps, cells) row-major flattens to exactly GriddedRain's step-major layout.
-        let flat: Vec<f64> = rain.as_array().iter().copied().collect();
+        // (steps, cells) in logical row-major order flattens to exactly
+        // GriddedRain's step-major layout, whatever the input's memory layout.
+        let flat: Vec<f64> = rain.iter().copied().collect();
         let forcing = GriddedRain::new(dims, dt_hours, flat).map_err(err)?;
         let nc = CoreNowcast::new(
             susc,
@@ -157,13 +170,16 @@ impl PyNowcast {
     }
 
     /// Steps whose peak hazard reaches `level`, as
-    /// `(step, n_cells, fraction, max_probability)` tuples.
-    fn alerts(&self, py: Python<'_>, level: f64) -> Vec<(usize, usize, f64, f64)> {
+    /// `(step, n_cells, fraction, max_probability)` tuples. Raises
+    /// `ValueError` if `level` is not a probability in `[0, 1]` (a NaN would
+    /// silently disable every alert).
+    fn alerts(&self, py: Python<'_>, level: f64) -> PyResult<Vec<(usize, usize, f64, f64)>> {
+        validate_alert_level(level)?;
         let alerts = py.allow_threads(|| match &self.inner {
             Engine::Uniform(n) => n.alerts(level),
             Engine::Gridded(n) => n.alerts(level),
         });
-        alerts.iter().map(|a| (a.step, a.n_cells, a.fraction, a.max_probability)).collect()
+        Ok(alerts.iter().map(|a| (a.step, a.n_cells, a.fraction, a.max_probability)).collect())
     }
 
     /// Exact attribution of the hazard at `(cell, step)` as a dict.
@@ -217,7 +233,7 @@ impl PyLive {
     #[pyo3(signature = (susceptibility, ncols, nrows, dt_hours, id_a=14.82, id_b=0.39, k=4.0, max_window=7))]
     #[allow(clippy::too_many_arguments)]
     fn new(
-        susceptibility: PyReadonlyArray1<f64>,
+        susceptibility: PyArrayLike1<'_, f64, AllowTypeChange>,
         ncols: usize,
         nrows: usize,
         dt_hours: f64,
@@ -226,7 +242,7 @@ impl PyLive {
         k: f64,
         max_window: usize,
     ) -> PyResult<Self> {
-        let (susc, _) = build_susc(susceptibility.to_vec()?, ncols, nrows)?;
+        let (susc, _) = build_susc(susceptibility.as_array().to_vec(), ncols, nrows)?;
         let inner = CoreLive::new(
             susc,
             IdThreshold::new(id_a, id_b).map_err(err)?,
@@ -238,21 +254,25 @@ impl PyLive {
         Ok(Self { inner })
     }
 
-    /// Ingest one step's per-cell depth (mm, 1-D float64 array). Returns
+    /// Ingest one step's per-cell depth (mm, 1-D array). Returns
     /// `(hazard, alert)`: the per-cell hazard as a float64 array, and — when
     /// `alert_level` is given — an `(step, n_cells, fraction, max_probability)`
-    /// tuple if the step crossed the level, else `None`. Releases the GIL
+    /// tuple if the step crossed the level, else `None`. Raises `ValueError`
+    /// if `alert_level` is not a probability in `[0, 1]`. Releases the GIL
     /// while the engine computes.
     #[pyo3(signature = (depths, alert_level=None))]
     fn push<'py>(
         &mut self,
         py: Python<'py>,
-        depths: PyReadonlyArray1<f64>,
+        depths: PyArrayLike1<'_, f64, AllowTypeChange>,
         alert_level: Option<f64>,
     ) -> PushResult<'py> {
+        if let Some(level) = alert_level {
+            validate_alert_level(level)?;
+        }
         // Copy the step out first: the compute must not touch Python memory
         // once the GIL is released.
-        let depths = depths.to_vec()?;
+        let depths = depths.as_array().to_vec();
         let inner = &mut self.inner;
         let field = py.allow_threads(move || inner.push(&depths)).map_err(err)?;
         let alert = alert_level
@@ -284,14 +304,33 @@ impl PyCalibrator {
         })
     }
 
-    /// Calibrated probability for a single raw score.
-    fn probability(&self, score: f64) -> f64 {
-        self.inner.probability(score)
+    /// Calibrated probability for a single raw score. Raises `ValueError` on
+    /// a non-finite score (a NaN used to panic instead of raising).
+    fn probability(&self, score: f64) -> PyResult<f64> {
+        self.inner.probability(score).map_err(err)
     }
 
-    /// Calibrate a list of raw scores into probabilities.
-    fn calibrate(&self, scores: Vec<f64>) -> Vec<f64> {
-        self.inner.calibrate(&scores)
+    /// Calibrate a list of raw scores into probabilities. Raises `ValueError`
+    /// if any score is non-finite.
+    fn calibrate(&self, scores: Vec<f64>) -> PyResult<Vec<f64>> {
+        self.inner.calibrate(&scores).map_err(err)
+    }
+
+    /// Serialize the fitted map as JSON — the same format `nowcast calibrate
+    /// --out` writes, so a calibrator fitted here feeds `run/watch
+    /// --calibrator` directly.
+    fn to_json(&self) -> PyResult<String> {
+        serde_json::to_string_pretty(&self.inner).map_err(err)
+    }
+
+    /// Load a calibrator from `nowcast calibrate` JSON. The map is validated
+    /// (non-empty, finite, monotone, probabilities in [0, 1]); raises
+    /// `ValueError` on hand-edited or corrupted input.
+    #[staticmethod]
+    fn from_json(text: &str) -> PyResult<Self> {
+        let inner: CoreCalibrator = serde_json::from_str(text).map_err(err)?;
+        inner.validate().map_err(err)?;
+        Ok(Self { inner })
     }
 }
 
@@ -371,8 +410,8 @@ fn spatial_daily_contingency<'py>(
 /// ROC-AUC of a ranked hazard score against binary labels (Mann–Whitney,
 /// tie-aware). `None` if either class is empty.
 #[pyfunction]
-fn roc_auc(scores: PyReadonlyArray1<f64>, labels: Vec<bool>) -> PyResult<Option<f64>> {
-    let scores = scores.to_vec()?;
+fn roc_auc(scores: PyArrayLike1<'_, f64, AllowTypeChange>, labels: Vec<bool>) -> PyResult<Option<f64>> {
+    let scores = scores.as_array().to_vec();
     nowcast_core::roc_auc(&scores, &labels).map_err(err)
 }
 
@@ -380,19 +419,19 @@ fn roc_auc(scores: PyReadonlyArray1<f64>, labels: Vec<bool>) -> PyResult<Option<
 /// the honest discrimination metric at a rare event base rate. `None` if there
 /// are no positives.
 #[pyfunction]
-fn pr_auc(scores: PyReadonlyArray1<f64>, labels: Vec<bool>) -> PyResult<Option<f64>> {
-    let scores = scores.to_vec()?;
+fn pr_auc(scores: PyArrayLike1<'_, f64, AllowTypeChange>, labels: Vec<bool>) -> PyResult<Option<f64>> {
+    let scores = scores.as_array().to_vec();
     nowcast_core::pr_auc(&scores, &labels).map_err(err)
 }
 
 /// POD when only the top `area_fraction` of the ranked field can be warned.
 #[pyfunction]
 fn pod_at_area(
-    scores: PyReadonlyArray1<f64>,
+    scores: PyArrayLike1<'_, f64, AllowTypeChange>,
     labels: Vec<bool>,
     area_fraction: f64,
 ) -> PyResult<Option<f64>> {
-    let scores = scores.to_vec()?;
+    let scores = scores.as_array().to_vec();
     nowcast_core::pod_at_area(&scores, &labels, area_fraction).map_err(err)
 }
 
