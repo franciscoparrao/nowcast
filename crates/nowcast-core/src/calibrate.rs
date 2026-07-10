@@ -256,10 +256,10 @@ pub fn brier_score(preds: &[f64], outcomes: &[bool]) -> Result<f64> {
             reason: "need at least one (prediction, outcome) pair".into(),
         });
     }
-    if preds.iter().any(|p| !p.is_finite()) {
+    if let Some(p) = preds.iter().find(|p| !(0.0..=1.0).contains(*p)) {
         return Err(Error::InvalidParameter {
             name: "preds",
-            reason: "must all be finite".into(),
+            reason: format!("must all be probabilities in [0, 1], got {p}"),
         });
     }
     let s: f64 = preds
@@ -288,7 +288,9 @@ fn wilson(k: usize, n: usize, z: f64) -> (f64, f64) {
 
 /// Build a reliability diagram with `n_bins` equal-width bins over `[0, 1]`,
 /// plus Brier score, Brier skill score and ECE. Errors on length mismatch,
-/// empty input or `n_bins == 0`.
+/// empty input, `n_bins == 0`, or predictions outside `[0, 1]` — the diagram
+/// used to bin a clamped copy while the Brier score used the raw value, so an
+/// out-of-range "probability" produced two silently inconsistent readings.
 pub fn reliability(preds: &[f64], outcomes: &[bool], n_bins: usize) -> Result<Reliability> {
     if preds.len() != outcomes.len() {
         return Err(Error::InvalidParameter {
@@ -308,10 +310,10 @@ pub fn reliability(preds: &[f64], outcomes: &[bool], n_bins: usize) -> Result<Re
             reason: "must be >= 1".into(),
         });
     }
-    if preds.iter().any(|p| !p.is_finite()) {
+    if let Some(p) = preds.iter().find(|p| !(0.0..=1.0).contains(*p)) {
         return Err(Error::InvalidParameter {
             name: "preds",
-            reason: "must all be finite".into(),
+            reason: format!("must all be probabilities in [0, 1], got {p}"),
         });
     }
     let n = preds.len();
@@ -321,12 +323,11 @@ pub fn reliability(preds: &[f64], outcomes: &[bool], n_bins: usize) -> Result<Re
     let mut hits = vec![0usize; n_bins];
     let mut count = vec![0usize; n_bins];
     for (&p, &o) in preds.iter().zip(outcomes) {
-        let pc = p.clamp(0.0, 1.0);
-        let mut b = (pc * n_bins as f64) as usize;
+        let mut b = (p * n_bins as f64) as usize;
         if b >= n_bins {
             b = n_bins - 1; // p == 1.0 lands in the last bin
         }
-        sum_pred[b] += pc;
+        sum_pred[b] += p;
         count[b] += 1;
         if o {
             hits[b] += 1;
@@ -480,6 +481,18 @@ mod tests {
         assert!(Calibrator::fit_isotonic(&[0.1, f64::INFINITY], &[true, false]).is_err());
         assert!(brier_score(&[0.5, f64::NAN], &[true, false]).is_err());
         assert!(reliability(&[0.5, f64::NAN], &[true, false], 5).is_err());
+    }
+
+    #[test]
+    fn probability_metrics_reject_out_of_range_predictions() {
+        // A "probability" of 1.5 used to be binned clamped but Brier-scored
+        // raw — two inconsistent readings from one input. Now both reject.
+        assert!(brier_score(&[0.5, 1.5], &[true, false]).is_err());
+        assert!(brier_score(&[-0.1], &[true]).is_err());
+        assert!(reliability(&[0.5, 1.5], &[true, false], 5).is_err());
+        // The boundaries themselves are valid probabilities.
+        assert!(brier_score(&[0.0, 1.0], &[false, true]).is_ok());
+        assert!(reliability(&[0.0, 1.0], &[false, true], 5).is_ok());
     }
 
     #[test]

@@ -235,8 +235,24 @@ impl<F: Forcing> AntecedentTrigger<F> {
         })
     }
 
-    /// The antecedent precipitation index (mm) at a cell/step.
-    pub fn api(&self, cell: usize, step: usize) -> f64 {
+    /// The antecedent precipitation index (mm) at a cell/step. Errors if
+    /// `cell` or `step` is out of range (this is the inspection boundary; the
+    /// [`Trigger`] impl uses the unchecked internal accessor under the trait's
+    /// documented in-range contract).
+    pub fn api(&self, cell: usize, step: usize) -> Result<f64> {
+        let n_cells = self.forcing.dims().len();
+        let n_steps = self.forcing.n_steps();
+        if cell >= n_cells {
+            return Err(Error::OutOfRange { name: "cell", index: cell, len: n_cells });
+        }
+        if step >= n_steps {
+            return Err(Error::OutOfRange { name: "step", index: step, len: n_steps });
+        }
+        Ok(self.api_at(cell, step))
+    }
+
+    /// Unchecked accessor for in-range indices (the `Trigger` contract).
+    fn api_at(&self, cell: usize, step: usize) -> f64 {
         self.api[cell * self.forcing.n_steps() + step]
     }
 }
@@ -249,7 +265,7 @@ impl<F: Forcing> Trigger for AntecedentTrigger<F> {
         self.forcing.n_steps()
     }
     fn factor(&self, cell: usize, step: usize) -> f64 {
-        self.model.factor(self.api(cell, step) / self.crit_mm)
+        self.model.factor(self.api_at(cell, step) / self.crit_mm)
     }
 }
 
@@ -302,7 +318,15 @@ pub enum Combine {
 }
 
 impl Combine {
+    /// Combine trigger factors into one. An **empty** slice yields `0.0` in
+    /// every mode — "no triggers" must mean "no hazard", not the algebraic
+    /// identity (`Product` over nothing is 1.0, which would read as maximum
+    /// hazard on zero evidence). Unreachable via [`MultiNowcast`], which
+    /// requires at least one trigger, but enforced here for direct callers.
     pub fn apply(&self, factors: &[f64]) -> f64 {
+        if factors.is_empty() {
+            return 0.0;
+        }
         match self {
             Combine::Max => factors.iter().copied().fold(0.0, f64::max),
             Combine::NoisyOr => 1.0 - factors.iter().map(|f| 1.0 - f).product::<f64>(),
@@ -362,8 +386,18 @@ impl MultiNowcast {
     }
 
     /// Per-trigger factors at a cell/step (for traceability), in trigger order.
-    pub fn trigger_factors(&self, cell: usize, step: usize) -> Vec<f64> {
-        self.triggers.iter().map(|t| t.factor(cell, step)).collect()
+    /// Errors if `cell` or `step` is out of range — this is the API a human
+    /// calls with arbitrary cells while inspecting an alert, the same boundary
+    /// [`hazard_at`](Self::hazard_at) already guards.
+    pub fn trigger_factors(&self, cell: usize, step: usize) -> Result<Vec<f64>> {
+        let n_cells = self.susceptibility.dims().len();
+        if cell >= n_cells {
+            return Err(Error::OutOfRange { name: "cell", index: cell, len: n_cells });
+        }
+        if step >= self.n_steps {
+            return Err(Error::OutOfRange { name: "step", index: step, len: self.n_steps });
+        }
+        Ok(self.triggers.iter().map(|t| t.factor(cell, step)).collect())
     }
 
     /// Combined hazard field at a step.
@@ -394,10 +428,18 @@ impl MultiNowcast {
         (0..self.n_steps).map(|t| self.hazard_at(t).expect("t is in 0..n_steps")).collect()
     }
 
-    pub fn alerts(&self, level: f64) -> Vec<Alert> {
-        (0..self.n_steps)
-            .filter_map(|t| self.hazard_at(t).expect("t is in 0..n_steps").alert(level))
-            .collect()
+    /// An [`Alert`] for every step whose peak hazard reaches `level`. Errors if
+    /// `level` is not a probability in `[0, 1]` (validated before running).
+    pub fn alerts(&self, level: f64) -> Result<Vec<Alert>> {
+        crate::nowcast::validate_alert_level(level)?;
+        Ok((0..self.n_steps)
+            .filter_map(|t| {
+                self.hazard_at(t)
+                    .expect("t is in 0..n_steps")
+                    .alert(level)
+                    .expect("level validated above")
+            })
+            .collect())
     }
 }
 
@@ -412,6 +454,11 @@ mod tests {
         assert!((Combine::Product.apply(&[0.5, 0.5]) - 0.25).abs() < 1e-12);
         // noisy-OR of 0.5,0.5 = 1 - 0.25 = 0.75
         assert!((Combine::NoisyOr.apply(&[0.5, 0.5]) - 0.75).abs() < 1e-12);
+        // No triggers = no hazard, in every mode — Product's algebraic
+        // identity (1.0) must not read as "maximum hazard on zero evidence".
+        assert_eq!(Combine::Max.apply(&[]), 0.0);
+        assert_eq!(Combine::NoisyOr.apply(&[]), 0.0);
+        assert_eq!(Combine::Product.apply(&[]), 0.0);
     }
 
     #[test]
@@ -449,9 +496,16 @@ mod tests {
         .unwrap();
         let field = nc.hazard_at(0).unwrap();
         assert!(field.max_probability() > 0.8, "deformation alone should fire");
-        let factors = nc.trigger_factors(0, 0);
+        let factors = nc.trigger_factors(0, 0).unwrap();
         assert!(factors[0] < 0.1, "rain trigger quiet");
         assert!(factors[1] > 0.9, "deformation trigger hot");
+        // The inspection APIs reject out-of-range indices instead of panicking.
+        assert!(nc.trigger_factors(99, 0).is_err());
+        assert!(nc.trigger_factors(0, 99).is_err());
+        // And a NaN alert level is an error, not silently zero alerts.
+        assert!(nc.alerts(f64::NAN).is_err());
+        assert!(nc.alerts(1.5).is_err());
+        assert!(!nc.alerts(0.5).unwrap().is_empty());
     }
 
     /// A single IdTrigger under Max must reproduce the batch engine bit-for-bit:
@@ -573,13 +627,16 @@ mod tests {
         let f = UniformRain::new(dims, 24.0, vec![10.0, 10.0, 10.0, 0.0, 0.0]).unwrap();
         let t = AntecedentTrigger::new(f, 0.5, 10.0, TriggerModel::default()).unwrap();
         // Step 0 has no antecedent — regardless of its own rain.
-        assert_eq!(t.api(0, 0), 0.0);
+        assert_eq!(t.api(0, 0).unwrap(), 0.0);
         // api(1) = 10; api(2) = 0.5·10 + 10 = 15; api(3) = 0.5·15 + 10 = 17.5;
         // api(4) = 0.5·17.5 + 0 = 8.75 (decays once the rain stops).
-        assert!((t.api(0, 1) - 10.0).abs() < 1e-12);
-        assert!((t.api(0, 2) - 15.0).abs() < 1e-12);
-        assert!((t.api(0, 3) - 17.5).abs() < 1e-12);
-        assert!((t.api(0, 4) - 8.75).abs() < 1e-12);
+        assert!((t.api(0, 1).unwrap() - 10.0).abs() < 1e-12);
+        assert!((t.api(0, 2).unwrap() - 15.0).abs() < 1e-12);
+        assert!((t.api(0, 3).unwrap() - 17.5).abs() < 1e-12);
+        assert!((t.api(0, 4).unwrap() - 8.75).abs() < 1e-12);
+        // Out-of-range inspection is an error, not a panic.
+        assert!(t.api(9, 0).is_err());
+        assert!(t.api(0, 9).is_err());
         // Factor rises with wetness and passes 0.5 exactly at crit (10 mm).
         assert!(t.factor(0, 0) < 0.05);
         assert!((t.factor(0, 1) - 0.5).abs() < 1e-12);

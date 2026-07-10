@@ -67,9 +67,13 @@ impl EnsembleField {
 /// ordinary [`Forcing`] interface) sharing one susceptibility, threshold and
 /// trigger, and aggregate into a per-step probabilistic hazard.
 ///
-/// `alert_level` defines exceedance (hazard `>=` level). All members must share
-/// the susceptibility grid and step count. Errors on an empty ensemble or a
-/// member whose grid or length disagrees.
+/// `alert_level` defines exceedance (hazard `>=` level) and must be a
+/// probability in `[0, 1]` — a `NaN` would silently zero every exceedance.
+/// All members must share the susceptibility grid, step count **and step
+/// length**: two members with the same `n_steps` but different `dt_hours`
+/// (say, one hourly and one daily) would otherwise aggregate "steps" that mean
+/// different lengths of time, silently. Errors on an empty ensemble or any
+/// disagreement.
 pub fn ensemble_hazard<F: Forcing>(
     susceptibility: &SusceptibilityMap,
     members: Vec<F>,
@@ -78,6 +82,7 @@ pub fn ensemble_hazard<F: Forcing>(
     max_window_steps: usize,
     alert_level: f64,
 ) -> Result<Vec<EnsembleField>> {
+    crate::nowcast::validate_alert_level(alert_level)?;
     let m = members.len();
     if m == 0 {
         return Err(Error::InvalidParameter {
@@ -88,6 +93,7 @@ pub fn ensemble_hazard<F: Forcing>(
     let dims = susceptibility.dims();
     let n_cells = dims.len();
     let n_steps = members[0].n_steps();
+    let dt_hours = members[0].dt_hours();
 
     // Run each member; accumulate per (step, cell) the count over the level, the
     // sum and the sum of squares (for mean and population spread).
@@ -100,6 +106,16 @@ pub fn ensemble_hazard<F: Forcing>(
             return Err(Error::InvalidParameter {
                 name: "members",
                 reason: format!("member has {} steps, expected {n_steps}", member.n_steps()),
+            });
+        }
+        // Same exact-equality contract as `run_live` for the shared time axis.
+        if member.dt_hours() != dt_hours {
+            return Err(Error::InvalidParameter {
+                name: "members",
+                reason: format!(
+                    "member has dt_hours = {}, expected {dt_hours} — ensemble members must share the time axis",
+                    member.dt_hours()
+                ),
             });
         }
         // `Nowcast::new` validates the grid match against the susceptibility.
@@ -196,6 +212,37 @@ mod tests {
         let b = UniformRain::new(dims, 24.0, vec![1.0]).unwrap(); // different length
         assert!(
             ensemble_hazard(&susc(dims), vec![a, b], IdThreshold::caine(), TriggerModel::default(), 7, 0.5)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn rejects_mixed_time_axes_and_bad_levels() {
+        let dims = GridDims::new(1, 1);
+        // Same n_steps, different dt: 20 mm in 1 h is a downpour, in 24 h a
+        // drizzle — aggregating them as "the same step" is meaningless.
+        let hourly = UniformRain::new(dims, 1.0, vec![20.0]).unwrap();
+        let daily = UniformRain::new(dims, 24.0, vec![20.0]).unwrap();
+        assert!(
+            ensemble_hazard(
+                &susc(dims),
+                vec![hourly, daily],
+                IdThreshold::caine(),
+                TriggerModel::default(),
+                7,
+                0.5
+            )
+            .is_err()
+        );
+        // A NaN (or out-of-[0,1]) alert level is an error, not p_exceed = 0.
+        let m = UniformRain::new(dims, 24.0, vec![20.0]).unwrap();
+        let mk = || vec![m.clone()];
+        assert!(
+            ensemble_hazard(&susc(dims), mk(), IdThreshold::caine(), TriggerModel::default(), 7, f64::NAN)
+                .is_err()
+        );
+        assert!(
+            ensemble_hazard(&susc(dims), mk(), IdThreshold::caine(), TriggerModel::default(), 7, 1.5)
                 .is_err()
         );
     }

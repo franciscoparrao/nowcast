@@ -114,6 +114,15 @@ pub fn run_fire(
     ignitions: &[(usize, usize)],
     horizon_min: f64,
 ) -> Result<FireField> {
+    // A NaN or non-positive horizon lets the travel-time solver propagate
+    // nothing (not even the ignition cells "burn"), so the whole post-fire
+    // cascade silently no-ops. Reject it as the parameter error it is.
+    if !horizon_min.is_finite() || horizon_min <= 0.0 {
+        return Err(Error::InvalidParameter {
+            name: "horizon_min",
+            reason: format!("must be finite and > 0 minutes, got {horizon_min}"),
+        });
+    }
     let result = simulate(land, weather, ignitions, horizon_min).map_err(map_err)?;
     Ok(FireField {
         dims: GridDims::new(land.cols(), land.rows()),
@@ -217,5 +226,20 @@ mod tests {
         let fire = burning_field();
         let wrong = SusceptibilityMap::uniform(GridDims::new(4, 4), 0.5).unwrap();
         assert!(post_fire_susceptibility(&wrong, &fire, 1.5).is_err());
+    }
+
+    #[test]
+    fn run_fire_rejects_a_degenerate_horizon() {
+        // A NaN or non-positive horizon would make the travel-time solver
+        // propagate nothing and the post-fire cascade silently no-op.
+        let land = Landscape::uniform(8, 8, 30.0, 4);
+        let weather = Weather {
+            wind_speed_kmh: 30.0,
+            wind_from_deg: 270.0,
+            moisture: Moisture::DRY_SUMMER,
+        };
+        assert!(run_fire(&land, &weather, &[(4, 4)], f64::NAN).is_err());
+        assert!(run_fire(&land, &weather, &[(4, 4)], 0.0).is_err());
+        assert!(run_fire(&land, &weather, &[(4, 4)], -60.0).is_err());
     }
 }

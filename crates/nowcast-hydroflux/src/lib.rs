@@ -18,13 +18,17 @@
 
 use hydroflux_solver_2d::{
     apply_point_sources, apply_rain, cfl_time_step_with_bcs, manning_friction_step, ssprk2_step,
-    Boundaries2D, Conserved2D, GRAVITY,
+    Conserved2D, GRAVITY,
 };
 use ndarray::Array2;
 use nowcast_core::{Error, GridDims, HazardField, Result};
 
-// Re-export the building blocks so callers need only this crate.
-pub use hydroflux_solver_2d::{Boundary, Conserved2D as State, Mesh2D, PointSource, H_DRY};
+// Re-export the building blocks so callers need only this crate —
+// `Inundation::new` takes a `Boundaries2D` (built from `Boundary` per `Side`),
+// so those must be constructible without importing the solver directly.
+pub use hydroflux_solver_2d::{
+    Boundaries2D, Boundary, Conserved2D as State, Mesh2D, PointSource, Side, H_DRY,
+};
 
 /// Convert a routed discharge (mm/day spread over `area_km2`) into a volumetric
 /// inflow (m³/s) for a Hydroflux point source.
@@ -242,9 +246,37 @@ impl Inundation {
     /// entering the basin at its inlet cell(s). The stats say how far the
     /// integration actually got — check [`IntegrationStats::truncated`] before
     /// trusting the field in an alert.
-    pub fn run_point_sources(&self, sources: &[PointSource]) -> (DepthField, IntegrationStats) {
+    ///
+    /// Errors if a source sits outside the mesh (`row`/`col` out of bounds —
+    /// the realistic off-by-one when placing the inlet cell from a misaligned
+    /// coarse grid used to panic deep inside the solver) or carries a
+    /// non-finite `q_mass` (a `NaN` inflow would be laundered to "dry" by the
+    /// solver's `max(0.0)` on every step, yielding a completely dry
+    /// "inundation" with `unstable = false`).
+    pub fn run_point_sources(
+        &self,
+        sources: &[PointSource],
+    ) -> Result<(DepthField, IntegrationStats)> {
+        let (nr, nc) = self.mesh.bed.dim();
+        for (i, s) in sources.iter().enumerate() {
+            if s.row >= nr || s.col >= nc {
+                return Err(Error::InvalidParameter {
+                    name: "sources",
+                    reason: format!(
+                        "source {i} at (row {}, col {}) lies outside the {nr}x{nc} mesh",
+                        s.row, s.col
+                    ),
+                });
+            }
+            if !s.q_mass.is_finite() {
+                return Err(Error::InvalidParameter {
+                    name: "sources",
+                    reason: format!("source {i} has a non-finite inflow q_mass = {}", s.q_mass),
+                });
+            }
+        }
         let (dx, dy) = (self.mesh.dx, self.mesh.dy);
-        self.integrate(|s, dt| apply_point_sources(s, sources, dt, dx, dy))
+        Ok(self.integrate(|s, dt| apply_point_sources(s, sources, dt, dx, dy)))
     }
 }
 
@@ -280,10 +312,30 @@ mod tests {
     fn point_source_floods_the_domain() {
         let inund = Inundation::new(flat_mesh(9, 9), Boundaries2D::WALLS, 120.0).unwrap();
         let src = vec![PointSource { row: 4, col: 4, q_mass: 5.0 }]; // 5 m³/s inflow
-        let (field, stats) = inund.run_point_sources(&src);
+        let (field, stats) = inund.run_point_sources(&src).unwrap();
         assert!(!stats.truncated);
         assert!(field.max_depth() > 0.0, "no water from the inflow");
         assert!(field.inundated_fraction(H_DRY) > 0.0);
+    }
+
+    #[test]
+    fn point_sources_outside_the_mesh_or_non_finite_are_rejected() {
+        let inund = Inundation::new(flat_mesh(4, 4), Boundaries2D::WALLS, 10.0).unwrap();
+        // Off-by-one outside the mesh used to panic inside the solver.
+        assert!(inund
+            .run_point_sources(&[PointSource { row: 99, col: 0, q_mass: 1.0 }])
+            .is_err());
+        assert!(inund
+            .run_point_sources(&[PointSource { row: 0, col: 4, q_mass: 1.0 }])
+            .is_err());
+        // A NaN inflow used to be laundered to "dry" with unstable = false.
+        assert!(inund
+            .run_point_sources(&[PointSource { row: 1, col: 1, q_mass: f64::NAN }])
+            .is_err());
+        // A valid source still runs.
+        assert!(inund
+            .run_point_sources(&[PointSource { row: 1, col: 1, q_mass: 1.0 }])
+            .is_ok());
     }
 
     #[test]

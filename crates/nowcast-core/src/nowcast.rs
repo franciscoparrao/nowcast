@@ -112,15 +112,32 @@ impl HazardField {
     }
 
     /// An [`Alert`] for this step if any cell reaches `level`, else `None`.
-    pub fn alert(&self, level: f64) -> Option<Alert> {
+    /// Errors if `level` is not a probability in `[0, 1]` — with a `NaN` every
+    /// `p >= level` comparison is false, so alerting would be silently disabled
+    /// (the failure mode an alerting engine must never have).
+    pub fn alert(&self, level: f64) -> Result<Option<Alert>> {
+        validate_alert_level(level)?;
         let n_cells = self.probability.iter().filter(|&&p| p >= level).count();
-        (n_cells > 0).then(|| Alert {
+        Ok((n_cells > 0).then(|| Alert {
             step: self.step,
             n_cells,
             fraction: n_cells as f64 / self.dims.len() as f64,
             max_probability: self.max_probability(),
-        })
+        }))
     }
+}
+
+/// Alert levels are compared against hazard probabilities in `[0, 1]`; reject
+/// anything else up front (shared by [`HazardField::alert`], the multi-trigger
+/// and flood engines, and [`ensemble_hazard`](crate::ensemble_hazard)).
+pub(crate) fn validate_alert_level(level: f64) -> Result<()> {
+    if !level.is_finite() || !(0.0..=1.0).contains(&level) {
+        return Err(Error::InvalidParameter {
+            name: "alert_level",
+            reason: format!("must be a probability in [0, 1], got {level}"),
+        });
+    }
+    Ok(())
 }
 
 /// A step whose hazard field reached or exceeded the alert level somewhere.
@@ -362,12 +379,15 @@ impl<F: Forcing> Nowcast<F> {
     }
 
     /// Run the nowcast and emit an [`Alert`] for every step whose peak hazard
-    /// reaches `level` (in `[0, 1]`).
-    pub fn alerts(&self, level: f64) -> Vec<Alert> {
-        self.run()
+    /// reaches `level`. Errors if `level` is not a probability in `[0, 1]`
+    /// (validated before the run, so a bad level costs nothing).
+    pub fn alerts(&self, level: f64) -> Result<Vec<Alert>> {
+        validate_alert_level(level)?;
+        Ok(self
+            .run()
             .into_iter()
-            .filter_map(|field| field.alert(level))
-            .collect()
+            .filter_map(|field| field.alert(level).expect("level validated above"))
+            .collect())
     }
 }
 
@@ -473,7 +493,11 @@ mod tests {
     #[test]
     fn zero_susceptibility_never_alerts() {
         let nc = single_cell(vec![100.0, 100.0], 0.0);
-        assert!(nc.alerts(0.1).is_empty());
+        assert!(nc.alerts(0.1).unwrap().is_empty());
+        // A NaN or out-of-[0,1] level is an error, not silently zero alerts.
+        assert!(nc.alerts(f64::NAN).is_err());
+        assert!(nc.alerts(1.5).is_err());
+        assert!(nc.alerts(-0.1).is_err());
     }
 
     #[test]
@@ -483,7 +507,7 @@ mod tests {
         // depth above the I-D curve (antecedent rainfall) — the intended,
         // physically meaningful behaviour of the multi-window scheme.
         let nc = single_cell(vec![0.0, 50.0, 0.0, 0.0], 0.9);
-        let alerts = nc.alerts(0.5);
+        let alerts = nc.alerts(0.5).unwrap();
         let steps: Vec<usize> = alerts.iter().map(|a| a.step).collect();
 
         assert!(!steps.contains(&0), "no rain has fallen yet at step 0");

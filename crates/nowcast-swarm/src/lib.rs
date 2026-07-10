@@ -46,7 +46,12 @@ pub struct Runout {
 
 impl Runout {
     /// Build from the model's `Grid2D<bool>` footprint (row-major flatten).
-    pub fn from_footprint(footprint: &Grid2D<bool>, pixel_size: f64) -> Self {
+    /// Errors on a non-positive/non-finite `pixel_size` — this public
+    /// constructor used to bypass the guard [`run_runout`] enforces, and a
+    /// `NaN` (or a negative value, whose sign cancels when squared) silently
+    /// corrupts every area statistic downstream.
+    pub fn from_footprint(footprint: &Grid2D<bool>, pixel_size: f64) -> Result<Self> {
+        validate_pixel_size(pixel_size)?;
         let (w, h) = (footprint.width(), footprint.height());
         let mut flat = Vec::with_capacity(w * h);
         for y in 0..h {
@@ -54,11 +59,11 @@ impl Runout {
                 flat.push(footprint[Pos { x, y }]);
             }
         }
-        Self {
+        Ok(Self {
             dims: GridDims::new(w, h),
             footprint: flat,
             pixel_size,
-        }
+        })
     }
 
     pub fn dims(&self) -> GridDims {
@@ -103,16 +108,24 @@ pub fn run_runout(
     seed: u64,
     steps: u64,
 ) -> Result<Runout> {
+    // Fail fast, before the (expensive) simulation; `from_footprint` re-checks
+    // for its own direct callers.
+    validate_pixel_size(pixel_size)?;
+    let model = DebrisFlowModel::new(layers, params, pixel_size, seed);
+    let mut sim = Simulation::new(model, seed).with_schedule(Schedule::new(Activation::Ordered));
+    sim.run(steps);
+    Runout::from_footprint(&sim.model.footprint, pixel_size)
+}
+
+/// Shared guard: a pixel size must be a positive, finite number of metres.
+fn validate_pixel_size(pixel_size: f64) -> Result<()> {
     if !pixel_size.is_finite() || pixel_size <= 0.0 {
         return Err(nowcast_core::Error::InvalidParameter {
             name: "pixel_size",
             reason: format!("must be finite and > 0 metres, got {pixel_size}"),
         });
     }
-    let model = DebrisFlowModel::new(layers, params, pixel_size, seed);
-    let mut sim = Simulation::new(model, seed).with_schedule(Schedule::new(Activation::Ordered));
-    sim.run(steps);
-    Ok(Runout::from_footprint(&sim.model.footprint, pixel_size))
+    Ok(())
 }
 
 #[cfg(test)]
@@ -136,7 +149,12 @@ mod tests {
         let mut fp = Grid2D::from_fn(2, 2, |_p: Pos| false);
         fp[Pos { x: 0, y: 0 }] = true;
         fp[Pos { x: 1, y: 1 }] = true;
-        let runout = Runout::from_footprint(&fp, 30.0);
+        let runout = Runout::from_footprint(&fp, 30.0).unwrap();
+        // The public constructor enforces the same pixel-size guard as
+        // run_runout: NaN and negative sizes are errors, not corrupt areas.
+        assert!(Runout::from_footprint(&fp, f64::NAN).is_err());
+        assert!(Runout::from_footprint(&fp, -30.0).is_err());
+        assert!(Runout::from_footprint(&fp, 0.0).is_err());
 
         assert_eq!(runout.affected_cells(), 2);
         assert!((runout.affected_km2() - 2.0 * 900.0 / 1.0e6).abs() < 1e-12);

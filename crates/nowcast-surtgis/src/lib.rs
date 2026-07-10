@@ -70,16 +70,18 @@ fn dims_of<T: surtgis_core::RasterCell>(raster: &Raster<T>) -> GridDims {
 
 /// Convert a susceptibility `Raster<f32>` to a [`SusceptibilityMap`].
 ///
-/// Values are clamped to `[0, 1]` and `NaN`/nodata cells become `0.0` (no
-/// background hazard outside the mapped area), so any real susceptibility raster
-/// is admissible.
+/// Values are clamped to `[0, 1]` and non-finite (`NaN`/`±inf`)/nodata cells
+/// become `0.0` (no background hazard outside the mapped area), so any real
+/// susceptibility raster is admissible. `±inf` counts as nodata like in
+/// [`gridded_rain_from_rasters`] — a corrupted `+inf` pixel used to clamp to a
+/// silent, permanent susceptibility of 1.0.
 pub fn susceptibility_from_raster(raster: &Raster<f32>) -> Result<SusceptibilityMap> {
     let nodata = raster.nodata();
     let values: Vec<f64> = raster
         .data()
         .iter()
         .map(|&v| {
-            if v.is_nan() || nodata.is_some_and(|nd| v == nd) {
+            if !v.is_finite() || nodata.is_some_and(|nd| v == nd) {
                 0.0
             } else {
                 (v as f64).clamp(0.0, 1.0)
@@ -111,15 +113,21 @@ fn same_transform(a: &GeoTransform, b: &GeoTransform) -> bool {
         && close(a.col_rotation, b.col_rotation)
 }
 
-/// Stack per-step precipitation rasters (mm) into a [`GriddedRain`] forcing. All
-/// rasters must share the same shape **and georeference**; `dt_hours` is the
-/// step length.
+/// Stack per-step precipitation rasters (mm) into a [`GriddedRain`] forcing,
+/// returning the stack's [`Georef`] alongside it. All rasters must share the
+/// same shape **and georeference**; `dt_hours` is the step length.
 ///
 /// The georeference check (origin, resolution, rotation, and CRS when both
 /// declare one) is what catches the realistic failure: a tile from a different
 /// grid with the same shape — same-sized CR2MET and IMERG cutouts, say — which
 /// would otherwise stack silently and misalign rain against susceptibility.
-pub fn gridded_rain_from_rasters(rasters: &[Raster<f32>], dt_hours: f64) -> Result<GriddedRain> {
+/// The returned `Georef` (raster 0's) lets the caller compare the stack's grid
+/// placement against the susceptibility's without re-reading files, and
+/// georeference outputs when the rain defines the grid.
+pub fn gridded_rain_from_rasters(
+    rasters: &[Raster<f32>],
+    dt_hours: f64,
+) -> Result<(GriddedRain, Georef)> {
     let first = rasters
         .first()
         .ok_or_else(|| Error::Shape("no rasters provided".into()))?;
@@ -151,7 +159,7 @@ pub fn gridded_rain_from_rasters(rasters: &[Raster<f32>], dt_hours: f64) -> Resu
             }
         }));
     }
-    Ok(GriddedRain::new(dims, dt_hours, depths)?)
+    Ok((GriddedRain::new(dims, dt_hours, depths)?, Georef::of(first)))
 }
 
 /// Wrap a [`HazardField`] into a georeferenced `Raster<f32>`.
@@ -190,8 +198,9 @@ mod tests {
 
     #[test]
     fn susceptibility_clamps_and_zeroes_nodata() {
-        // last cell is nodata (-1), one value out of range (1.4) is clamped.
-        let r = raster_2x3([0.1, 0.5, 1.4, 0.0, 0.9, -1.0], Some(-1.0));
+        // last cell is nodata (-1), one value out of range (1.4) is clamped,
+        // and a corrupted +inf pixel counts as nodata (0.0), not a silent 1.0.
+        let r = raster_2x3([0.1, 0.5, 1.4, f32::INFINITY, 0.9, -1.0], Some(-1.0));
         let susc = susceptibility_from_raster(&r).unwrap();
         assert_eq!(susc.dims(), GridDims::new(3, 2));
         let expected = [0.1f32, 0.5, 1.0, 0.0, 0.9, 0.0];
@@ -204,8 +213,9 @@ mod tests {
     fn gridded_rain_stacks_steps() {
         let r0 = raster_2x3([0.0, 1.0, 2.0, 3.0, 4.0, 5.0], None);
         let r1 = raster_2x3([10.0, 11.0, 12.0, 13.0, 14.0, 15.0], None);
-        let rain = gridded_rain_from_rasters(&[r0, r1], 24.0).unwrap();
+        let (rain, georef) = gridded_rain_from_rasters(&[r0, r1], 24.0).unwrap();
         use nowcast_core::Forcing;
+        assert!((georef.transform.origin_x - 350_000.0).abs() < 1e-9);
         assert_eq!(rain.n_steps(), 2);
         assert_eq!(rain.depth_mm(0, 0), 0.0);
         assert_eq!(rain.depth_mm(5, 0), 5.0);
@@ -250,7 +260,7 @@ mod tests {
         // propagated into the forcing where it would saturate an I-D window.
         let r0 = raster_2x3([0.0, 1.0, 2.0, 3.0, 4.0, 5.0], None);
         let r1 = raster_2x3([10.0, f32::INFINITY, 12.0, 13.0, f32::NEG_INFINITY, 15.0], None);
-        let rain = gridded_rain_from_rasters(&[r0, r1], 24.0).unwrap();
+        let (rain, _) = gridded_rain_from_rasters(&[r0, r1], 24.0).unwrap();
         use nowcast_core::Forcing;
         assert_eq!(rain.depth_mm(1, 1), 0.0);
         assert_eq!(rain.depth_mm(4, 1), 0.0);

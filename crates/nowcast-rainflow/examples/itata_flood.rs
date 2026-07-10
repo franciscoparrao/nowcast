@@ -72,7 +72,7 @@ fn main() {
     )
     .unwrap();
 
-    let alerts = nowcast.alerts(ALERT_LEVEL);
+    let alerts = nowcast.alerts(ALERT_LEVEL).expect("valid alert level");
     println!("Itata (8123001) flood nowcast — {} days {}–{}", q.len(), &dates[0][..4], &dates[dates.len() - 1][..4]);
     println!(
         "Simulated discharge: mean {q_mean:.2} mm/day, max {q_max:.1} mm/day; flood threshold Q_c(p={QUANTILE}) = {:.1} mm/day",

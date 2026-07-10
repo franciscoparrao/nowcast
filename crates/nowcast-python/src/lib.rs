@@ -172,13 +172,14 @@ impl PyNowcast {
     /// Steps whose peak hazard reaches `level`, as
     /// `(step, n_cells, fraction, max_probability)` tuples. Raises
     /// `ValueError` if `level` is not a probability in `[0, 1]` (a NaN would
-    /// silently disable every alert).
+    /// silently disable every alert) — validated by the core before running.
     fn alerts(&self, py: Python<'_>, level: f64) -> PyResult<Vec<(usize, usize, f64, f64)>> {
-        validate_alert_level(level)?;
-        let alerts = py.allow_threads(|| match &self.inner {
-            Engine::Uniform(n) => n.alerts(level),
-            Engine::Gridded(n) => n.alerts(level),
-        });
+        let alerts = py
+            .allow_threads(|| match &self.inner {
+                Engine::Uniform(n) => n.alerts(level),
+                Engine::Gridded(n) => n.alerts(level),
+            })
+            .map_err(err)?;
         Ok(alerts.iter().map(|a| (a.step, a.n_cells, a.fraction, a.max_probability)).collect())
     }
 
@@ -275,9 +276,14 @@ impl PyLive {
         let depths = depths.as_array().to_vec();
         let inner = &mut self.inner;
         let field = py.allow_threads(move || inner.push(&depths)).map_err(err)?;
-        let alert = alert_level
-            .and_then(|level| field.alert(level))
-            .map(|a| (a.step, a.n_cells, a.fraction, a.max_probability));
+        let alert = match alert_level {
+            // Level pre-validated above; the core check is a cheap backstop.
+            Some(level) => field
+                .alert(level)
+                .map_err(err)?
+                .map(|a| (a.step, a.n_cells, a.fraction, a.max_probability)),
+            None => None,
+        };
         Ok((field.probability().to_vec().into_pyarray(py), alert))
     }
 

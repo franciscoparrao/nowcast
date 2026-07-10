@@ -84,6 +84,14 @@ impl RainflowForcing {
 
     /// Run rainflow's GR4J model on a precip/PET series to produce the discharge
     /// hydrograph, then expose it as a forcing.
+    ///
+    /// GR4J is **strictly a daily model**: its stores and unit hydrographs are
+    /// parameterized in days (x2 in mm/day, x4 in days) and `Gr4j::run` has no
+    /// time-step parameter — with any other `dt_days` the engine would still
+    /// treat each step as one day and this adapter would silently re-label the
+    /// mis-scaled hydrograph. `dt_days` must therefore be exactly `1.0`
+    /// (resample the inputs to daily, or wrap an externally routed series with
+    /// [`RainflowForcing::new`], which accepts any step).
     pub fn gr4j(
         dims: GridDims,
         dt_days: f64,
@@ -91,6 +99,15 @@ impl RainflowForcing {
         precip: &[f64],
         pet: &[f64],
     ) -> Result<Self> {
+        if dt_days != 1.0 {
+            return Err(Error::Invalid {
+                name: "dt_days",
+                reason: format!(
+                    "GR4J is strictly daily (stores and unit hydrographs are parameterized in days); \
+                     got dt_days = {dt_days}. Resample to daily or use RainflowForcing::new."
+                ),
+            });
+        }
         let model = Gr4j::new(params).map_err(|e| Error::Rainflow(e.to_string()))?;
         let q = model
             .run(precip, pet)
@@ -257,9 +274,20 @@ impl FloodNowcast {
     }
 
     /// An [`Alert`] for every step whose peak flood hazard reaches `level`.
-    pub fn alerts(&self, level: f64) -> Vec<Alert> {
+    /// Errors if `level` is not a probability in `[0, 1]` (a `NaN` would
+    /// silently disable every alert).
+    pub fn alerts(&self, level: f64) -> Result<Vec<Alert>> {
         (0..self.n_steps())
-            .filter_map(|t| self.hazard_at(t).expect("t is in 0..n_steps").alert(level))
+            .map(|t| {
+                self.hazard_at(t)
+                    .expect("t is in 0..n_steps")
+                    .alert(level)
+                    .map_err(|e| Error::Invalid {
+                        name: "level",
+                        reason: e.to_string(),
+                    })
+            })
+            .filter_map(|r| r.transpose())
             .collect()
     }
 
@@ -384,12 +412,19 @@ mod tests {
             peak.max_probability()
         );
 
-        let alerts = nc.alerts(0.5);
+        let alerts = nc.alerts(0.5).unwrap();
         assert_eq!(alerts.len(), 1);
         assert_eq!(alerts[0].step, 2);
 
-        // Out-of-range step is an error, not a panic.
+        // Out-of-range step is an error, not a panic; so is a NaN level.
         assert!(nc.hazard_at(4).is_err());
+        assert!(nc.alerts(f64::NAN).is_err());
+
+        // GR4J is strictly daily: any other dt_days is rejected up front.
+        let daily_only = Gr4jParams { x1: 100.0, x2: 0.0, x3: 50.0, x4: 1.5 };
+        assert!(
+            RainflowForcing::gr4j(GridDims::new(1, 1), 0.5, daily_only, &[1.0], &[0.5]).is_err()
+        );
     }
 
     #[test]

@@ -108,6 +108,11 @@ impl SnowmeltForcing {
 
     /// Per-cell runoff field (mm) at a step, as a row-major slice — handy for
     /// inspection or writing a raster.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `step >= n_steps` — the same documented in-range contract as
+    /// [`Forcing::depth_mm`](nowcast_core::Forcing::depth_mm).
     pub fn runoff_at(&self, step: usize) -> &[f64] {
         let n = self.dims.len();
         &self.runoff[step * n..(step + 1) * n]

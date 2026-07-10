@@ -378,10 +378,13 @@ fn resolve_inputs(
                     .with_context(|| format!("reading rain raster {}", p.display()))?;
                 rasters.push(r);
             }
-            let forcing = gridded_rain_from_rasters(&rasters, rain.dt_hours)?;
+            let (forcing, rain_georef) = gridded_rain_from_rasters(&rasters, rain.dt_hours)?;
             let dims = forcing.dims();
             let (map, georef) = build_susceptibility(susc, dims)?;
-            Ok((map, georef, ForcingKind::Gridded(forcing)))
+            // The susceptibility raster's georef wins when present; otherwise
+            // the rain stack's georeferences the outputs (so --uniform-susc
+            // over real rain rasters can still write GeoTIFFs).
+            Ok((map, georef.or(Some(rain_georef)), ForcingKind::Gridded(forcing)))
         }
         (None, true) => bail!("provide rainfall with --rain-csv or --rain-rasters"),
     }
@@ -456,7 +459,7 @@ fn report_run(
     let mut n_alert = 0usize;
     let mut steps_json = Vec::new();
     for f in fields {
-        let alert = f.alert(alert_level);
+        let alert = f.alert(alert_level)?; // level pre-validated; cheap backstop
         let fired = alert.is_some();
         if fired {
             n_alert += 1;
@@ -582,7 +585,7 @@ fn cmd_watch(a: WatchArgs) -> Result<bool> {
         if let Some(cal) = &calibrator {
             field = calibrate_field(field, cal);
         }
-        let alert = field.alert(a.alert_level);
+        let alert = field.alert(a.alert_level)?; // level pre-validated
         if alert.is_some() {
             n_alert += 1;
         }
@@ -755,7 +758,15 @@ fn cmd_calibrate(a: CalibrateArgs) -> Result<bool> {
         pairs.into_iter().map(|(s, o)| (s, o != 0.0)).unzip();
 
     let cal = Calibrator::fit_isotonic(&scores, &outcomes)?;
-    let before = reliability(&scores, &outcomes, a.bins)?;
+    // The "before" reliability treats the raw score as a probability, which
+    // only makes sense when it already lives in [0, 1] (the engine's hazard
+    // index does). Arbitrary external scores still calibrate fine — only the
+    // before-diagram is skipped.
+    let before = if scores.iter().all(|s| (0.0..=1.0).contains(s)) {
+        Some(reliability(&scores, &outcomes, a.bins)?)
+    } else {
+        None
+    };
     let after = reliability(&cal.calibrate(&scores)?, &outcomes, a.bins)?;
 
     match a.format {
@@ -763,18 +774,23 @@ fn cmd_calibrate(a: CalibrateArgs) -> Result<bool> {
             println!(
                 "Isotonic calibration on {} pairs (base rate {:.3}):\n",
                 scores.len(),
-                before.base_rate
+                after.base_rate
             );
             println!("               Brier     skill      ECE");
-            println!("  raw index  {:.4}   {:>+.3}   {:.4}", before.brier, before.brier_skill, before.ece);
+            match &before {
+                Some(b) => println!("  raw index  {:.4}   {:>+.3}   {:.4}", b.brier, b.brier_skill, b.ece),
+                None => println!("  raw index    (scores outside [0, 1]: not a probability, before-diagram skipped)"),
+            }
             println!("  calibrated {:.4}   {:>+.3}   {:.4}", after.brier, after.brier_skill, after.ece);
         }
         Format::Json => println!(
             "{}",
             serde_json::json!({
                 "n_pairs": scores.len(),
-                "base_rate": before.base_rate,
-                "before": {"brier": before.brier, "brier_skill": before.brier_skill, "ece": before.ece},
+                "base_rate": after.base_rate,
+                "before": before.as_ref().map(|b| serde_json::json!({
+                    "brier": b.brier, "brier_skill": b.brier_skill, "ece": b.ece
+                })),
                 "after": {"brier": after.brier, "brier_skill": after.brier_skill, "ece": after.ece},
                 "out": a.out.as_ref().map(|p| p.display().to_string()),
             })

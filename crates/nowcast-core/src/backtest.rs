@@ -561,6 +561,13 @@ pub fn lead_times(
 /// This is the operationally honest counterpart to [`roc_auc`] for a sparse
 /// inventory, fixing the warned area instead of a hazard threshold. Returns
 /// `None` if there are no positives or `area_fraction` is not in `(0, 1]`.
+///
+/// **Ties at the area boundary**: when a block of equal scores straddles the
+/// top-`k` cut, it is cut in input order — deterministic, but which tied units
+/// fall inside the warned area is arbitrary. With the massively tied scores of
+/// a real hazard index (every dry cell-step shares one value), prefer an
+/// `area_fraction` that lands between tie blocks, or compare runs only on
+/// identically ordered inputs.
 pub fn pod_at_area(scores: &[f64], labels: &[bool], area_fraction: f64) -> Result<Option<f64>> {
     if scores.len() != labels.len() {
         return Err(Error::InvalidParameter {

@@ -41,7 +41,7 @@ fn main() {
         let depths = vec![rain; dims.len()];
         let field = engine.push(&depths).unwrap();
         let peak = field.max_probability();
-        let status = match field.alert(ALERT) {
+        let status = match field.alert(ALERT).unwrap() {
             Some(a) => format!("ALERT — {} cell(s), {:.0}% of grid", a.n_cells, 100.0 * a.fraction),
             None => "quiet".to_string(),
         };
@@ -74,7 +74,7 @@ fn main() {
     let mut source = ReplaySource::new(UniformRain::new(dims, DT_H, storm).unwrap());
     let mut n_alerts = 0;
     run_live(&mut engine2, &mut source, |f| {
-        if f.alert(ALERT).is_some() {
+        if f.alert(ALERT).unwrap().is_some() {
             n_alerts += 1;
         }
     })

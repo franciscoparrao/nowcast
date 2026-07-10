@@ -45,7 +45,7 @@
 //! )
 //! .unwrap();
 //!
-//! let alerts = nowcast.alerts(0.5);
+//! let alerts = nowcast.alerts(0.5).unwrap();
 //! assert_eq!(alerts[0].step, 1); // alerts begin at the 40 mm/h burst
 //! ```
 

@@ -804,17 +804,29 @@ documentar su origen.
 | # | Qué | Resuelve | Esfuerzo |
 |---|-----|----------|----------|
 | 1 | ✅ (2026-07-10) PAV con pooling secundario de scores empatados (los empates colapsan a un bloque inicial antes del loop PAV; el fit vuelve a ser función de x) + tests: invarianza al orden en el borde y en bloque interior (el caso factor-2 del hallazgo), multiset barajado fitea idéntico | R3-H1 | S |
-| 2 | ✅ parcial (2026-07-10) `Calibrator::probability`/`calibrate` → `Result` (rechazan no-finito; interpolación interna `probability_finite` con `total_cmp`; binding mapea a `ValueError`; CLI con `expect` justificado — hazard finito por construcción). `alert_level` validado finito ∈ [0,1] en las fronteras: run/watch/backtest del CLI y `alerts`/`push` de Python. **Pendiente**: la variante core-side (`HazardField::alert`/`ensemble_hazard`) — `ensemble_hazard` no está expuesto por CLI/Python hoy | R3-H2, R3-M2 | S |
-| 3 | `run_point_sources`: validar bounds del `PointSource` y `q_mass` finito → `Result` | R3-H3, R3-M7 | S |
-| 4 | Cerrar las hermanas restantes: `trigger_factors`/`api` → `Result`; `susceptibility_from_raster` no-finito = nodata; `from_footprint` → `Result` | R3-M3, R3-M8, R3-M10 | S |
-| 5 | `ensemble_hazard` exige `dt_hours` uniforme; `gr4j()` exige `dt_days == 1.0` | R3-M1, R3-M9 | S |
+| 2 | ✅ (2026-07-10, en dos pasos) `Calibrator::probability`/`calibrate` → `Result` (rechazan no-finito; interpolación interna `probability_finite` con `total_cmp`; binding mapea a `ValueError`; CLI con `expect` justificado — hazard finito por construcción). `alert_level` validado finito ∈ [0,1] en TODAS las capas: fronteras CLI (run/watch/backtest) y Python (`alerts`/`push`), y core-side `validate_alert_level` compartido por `HazardField::alert` (→ `Result<Option<Alert>>`), `Nowcast::alerts`/`MultiNowcast::alerts`/`FloodNowcast::alerts` (→ `Result<Vec<Alert>>`) y `ensemble_hazard` — el guard vive donde ningún caller lo puede olvidar | R3-H2, R3-M2 | S |
+| 3 | ✅ (2026-07-10) `run_point_sources` → `Result`: valida bounds del `PointSource` contra la malla (el off-by-one que panicaba dentro del solver) y `q_mass` finito (el NaN que se lavaba a "seco" con `unstable = false` — cierra también R3-M7 en la frontera del adapter). Tests + examples actualizados | R3-H3, R3-M7 | S |
+| 4 | ✅ (2026-07-10) Hermanas cerradas: `MultiNowcast::trigger_factors` y `AntecedentTrigger::api` → `Result` (accessor interno unchecked para el contrato del trait); `susceptibility_from_raster` trata ±inf como nodata (idéntico a gridded_rain — un +inf ya no es susceptibilidad 1.0 permanente); `Runout::from_footprint` → `Result` con el guard de `pixel_size` compartido con `run_runout` | R3-M3, R3-M8, R3-M10 | S |
+| 5 | ✅ (2026-07-10) `ensemble_hazard` exige `dt_hours` uniforme entre miembros (mismo contrato de igualdad exacta que `run_live`) y valida `alert_level`; `RainflowForcing::gr4j` exige `dt_days == 1.0` (GR4J es estrictamente diario: stores y hidrogramas unitarios parametrizados en días; `RainflowForcing::new` sigue aceptando cualquier paso para series externas) | R3-M1, R3-M9 | S |
 | 6 | ✅ (2026-07-10) `csv_pairs` en el core (parser fila-a-fila: header tolerado, falla cruzada = error duro con número de línea) consumido por `cmd_calibrate`; `cmd_watch` resuelve inputs vía `resolve_inputs` (misma validación, mismo default 1×1, mismo parser que `run`) | R3-M4, R3-M5 | S-M |
 | 7 | ✅ (2026-07-10) Binding migrado a `PyArrayLike1/2<f64, AllowTypeChange>` en los 7 puntos de entrada (acepta float32/int/bool, listas Python, vistas con stride y transpuestas; verificado bit-idéntico al path float64 — cierra también R3-L4) + `to_json`/`from_json` en `PyCalibrator` (con `validate()` post-deserialización; round-trip verificado en ambos sentidos con `run --calibrator`) | R3-M6, R3-L7, R3-L4 | S |
 | 8 | **Proceso**: al aplicar cada fix de frontera, barrer el struct/módulo completo buscando hermanas con el mismo contrato (el patrón reincide 4 veces en esta ronda) — checklist en el PR/commit | (preventivo) | — |
 | 9 | Resolver R3-M11 (dataset Maipo desaparecido) **antes del DOI Zenodo**: restaurar o re-hospedar + actualizar paths de scripts | R3-M11 | M — decisión del usuario |
-| 10 | LOWs R3-L1..L11: batch oportunista al tocar cada archivo. ✅ (2026-07-10) L4 (con ítem 7), L5 (`csv_events` sin `skip(1)`: header se salta porque no parsea + test headerless), L6 (`parse_sweep` exige finitos — cierra también el LOW de ronda 1 —, MIN > 0 y cota de 100 000 corridas), L7 (con ítem 7). Abiertos: L1, L2, L3, L8, L9, L10, L11 | LOWs | S c/u |
+| 10 | LOWs R3-L1..L11: TODOS cerrados (2026-07-10). L1: `brier_score`/`reliability` rechazan preds fuera de [0,1] (muere la lectura inconsistente binned-clamped vs Brier-crudo; el verbo `calibrate` del CLI salta el before-diagram con nota cuando los scores crudos no son probabilidades, sin bloquear el fit). L2: `Combine::apply(&[])` → 0.0 en los tres modos (la identidad del producto ya no lee como "peligro máximo con cero evidencia"). L3: política de empates de `pod_at_area` documentada (corte en orden de input, determinista pero arbitrario). L4 (con ítem 7). L5 (`csv_events` sin `skip(1)` + test headerless). L6 (`parse_sweep`: finitos + MIN > 0 + cota 100k). L7 (con ítem 7). L8: `Boundaries2D`/`Side` re-exportados por nowcast-hydroflux (los examples ya no importan el solver directo). L9: `gridded_rain_from_rasters` devuelve `(GriddedRain, Georef)` — el caller puede verificar alineación sin releer archivos, y el CLI georreferencia salidas con el stack de lluvia cuando la susceptibilidad es uniforme (`--uniform-susc --rain-rasters --out-dir` ahora funciona). L10: `# Panics` documentado en `SnowmeltForcing::runoff_at`. L11: `run_fire` rechaza `horizon_min` no finito o ≤ 0 (el no-op silencioso de la cascada post-fuego) | LOWs | S c/u |
 
-**Ejecución 2026-07-10 (superficies CLI + Python, ítems 1, 2*, 6, 7, L4-L7)**:
+**Ejecución 2026-07-10, segunda tanda (core + adapters, ítems 2-completo, 3, 4, 5, L1-L3, L8-L11)**:
+verificado con `cargo test --workspace --exclude nowcast-python` (17 suites,
+63 tests en core con 5 nuevos entre multi/ensemble/calibrate, + tests nuevos en
+hydroflux/swarm/rainflow/firespread) y clippy `-D warnings` verde en todo
+(incl. nowcast-python); wheel reconstruido; regresión bit-idéntica re-verificada
+(`run`/`watch` sobre el GeoTIFF real producen el mismo JSON que antes de ambas
+tandas); guards nuevos ejercitados desde el binario y desde Python
+(`alerts(nan)` → error del core mapeado a `ValueError`, métricas rechazan
+preds fuera de [0,1], calibrate con scores logit reporta `before: null`).
+Quedan abiertos: ítem 8 (proceso, checklist de hermanas por commit) y
+ítem 9 (dataset Maipo desaparecido — decisión del usuario, bloquea Zenodo).
+
+**Ejecución 2026-07-10, primera tanda (superficies CLI + Python, ítems 1, 2*, 6, 7, L4-L7)**:
 verificado con `cargo test --workspace --exclude nowcast-python` (61 tests en
 core, 4 nuevos) y `cargo clippy --workspace --all-targets -- -D warnings` (con
 y sin `nowcast-python`) 100% verde; wheel reconstruido con maturin y batería

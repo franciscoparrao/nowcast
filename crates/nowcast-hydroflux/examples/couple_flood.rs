@@ -13,7 +13,7 @@ use ndarray::Array2;
 use nowcast_hydroflux::{
     discharge_to_inflow_m3s, Boundary, Inundation, Mesh2D, PointSource,
 };
-use hydroflux_solver_2d::{Boundaries2D, Side};
+use nowcast_hydroflux::{Boundaries2D, Side};
 
 const NR: usize = 24; // downstream rows (row 0 = inlet)
 const NC: usize = 11; // cross-section columns
@@ -51,7 +51,8 @@ fn main() {
 
     let (field, stats) = Inundation::new(valley(), bcs, 1200.0)
         .expect("positive duration")
-        .run_point_sources(&sources);
+        .run_point_sources(&sources)
+        .expect("sources are on the mesh with finite inflow");
     assert!(!stats.truncated, "integration hit the step cap");
 
     println!(

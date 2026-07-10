@@ -57,7 +57,7 @@ fn main() {
     );
     let field = nowcast.hazard_at(0).unwrap();
     for (c, &v) in vel_mm_yr.iter().enumerate() {
-        let f = nowcast.trigger_factors(c, 0);
+        let f = nowcast.trigger_factors(c, 0).expect("cell and step in range");
         let haz = field.probability()[c];
         let mark = if haz >= 0.5 { "⚠" } else { " " };
         println!(

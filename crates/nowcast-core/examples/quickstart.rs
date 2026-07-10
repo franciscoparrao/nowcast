@@ -65,7 +65,7 @@ date,rain_mm
     }
 
     println!("\nAlerts at level {alert_level}:");
-    for a in nowcast.alerts(alert_level) {
+    for a in nowcast.alerts(alert_level)? {
         println!(
             "  step {:>2}: {} cell(s) ({:.0}% of grid), peak hazard {:.3}",
             a.step,
