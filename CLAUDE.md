@@ -6,6 +6,16 @@
 > Familia de motores Rust del autor: SurtGIS, Hydroflux, Smelt, Anvil, Cantus, Criterium.
 > Doc madre: `~/proyectos/ideas-motores-rust.md` (idea N3, Parte 5).
 
+## REGLA: fixes de frontera → barrido de hermanas (OBLIGATORIO)
+
+Al arreglar cualquier bug de frontera (validación de entrada, panic OOB,
+NaN/±inf, rangos [0,1]), **NO cerrar el fix a nivel de función**: aplicar el
+barrido completo de `docs/checklist-hermanas.md` (mismo struct → mismo módulo →
+espejos en otros crates → río arriba/abajo → simetría de verbos/superficies →
+un test hostil por hermana) y dejar la línea "Barrido de hermanas: …" en el
+cuerpo del commit. Razón: el patrón "se blindó la función nombrada y quedó la
+hermana" reincidió 6 veces en 3 rondas de auditoría (tabla en el checklist).
+
 ## Qué es
 Motor de **nowcasting** de peligros (deslizamientos, crecidas) gatillado por
 forzantes dinámicas (lluvia, deshielo) en tiempo casi real, no susceptibilidad
