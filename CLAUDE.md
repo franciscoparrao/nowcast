@@ -214,8 +214,39 @@ bit-idéntico; dead-man switch del feed, notificación ntfy con histéresis de
 cruces) y units systemd (timer :12/:42). Piloto default: cordillera RM/Cajón
 del Maipo, susceptibilidad uniforme (monitor de TIMING hasta regenerar el RF —
 R3-M11). Autotest sin red: `python3 monitor/selftest.py`. Es monitor de
-eventos (~4 h detrás), NO alerta temprana; requiere temporada en modo sombra
-antes de confiar. Fase 2: telemetría DGA por noisy-OR (`multi` ya lo soporta).
+eventos, NO alerta temprana; requiere temporada en modo sombra antes de
+confiar.
+
+**Fase A del plan EWS (2026-07-11) LISTA**: fusión multi-forzante de punta a
+punta. (1) CLI: `nowcast run --fuse-rasters <stack>` repetible + `--combine
+noisy-or|max|product` — cada stack extra es su propio `IdTrigger` vía
+`MultiNowcast`; chequeo de alineación con `same_grid` nuevo en nowcast-surtgis
+(y su hermana: `resolve_inputs` ahora valida susc↔lluvia, no solo dims). Los
+errores de uso de clap ahora salen 1, no 2 (colisionaban con el contrato "exit
+2 = alerta" — un binario viejo + flag nuevo se disfrazaba de alerta). (2)
+`monitor/fetch_goes_qpe.py`: GOES-East QPE (ABI-L2-RRQPEF, 10 min, ~1.5 MB/
+gránulo, latencia MINUTOS — medida real: gránulo 14:10 disponible 14:20) desde
+AWS anónimo; reproyección geoestacionaria→0.1° con fórmulas GOES-R PUG (sin
+pyproj), 3 gránulos = paso semihorario en la MISMA grilla IMERG (verificado:
+transform idéntico y fusión aceptada por el motor con datos reales). (3)
+`monitor/fetch_dga.py`: pluviómetros in-situ vía API DMC — **verificado contra
+la API real (2026-07-11)** con el token del usuario: esquema real
+`aguaCaidaDelMinuto` (minutario, newest-first, unidades embebidas tipo
+"0.4 mm", UTC), 3/3 estaciones en modo interval. HALLAZGO: las estaciones DGA
+republicadas (El Yeso 330149 etc.) responden "Información no disponible" — la
+DMC publica su metadata, no sus datos; los defaults son EMAs DMC del dominio
+(El Colorado 2750m / San José Guayacán / La Florida; Río Clarillo no tiene
+pluviómetro). Credenciales en `monitor/config.local.env` (gitignored,
+monitor.sh lo sourcea encima de config.env — NUNCA en config.env, que es
+público); registro: /application/usuario/registroUsuario. Sin token se
+deshabilita solo. Gauges DGA cordilleranos = mejora futura vía HIDROlínea
+(snia/sat, JSF; su mapa inline solo trae el último valor). (4)
+`monitor/prepare_fusion.py` + monitor.sh: fusión sobre la UNIÓN de ventanas
+(cola rezagada de IMERG entra como cero contado — GOES/DGA cubren esas horas:
+ahí vive la ganancia ~5 h → ~15-60 min), salud por feed (secundario caído
+degrada y avisa, no mata el ciclo). Selftest `--fusion`: ráfaga solo-GOES
+alerta; sin GOES queda quiet. Fase B (lead positivo): ensemble pySTEPS sobre
+GOES QPE → `ensemble_hazard`.
 
 ## Validación
 Backtesting contra inventario de eventos fechados (SERNAGEOMIN) — hit rate,

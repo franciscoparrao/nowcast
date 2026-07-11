@@ -113,6 +113,20 @@ fn same_transform(a: &GeoTransform, b: &GeoTransform) -> bool {
         && close(a.col_rotation, b.col_rotation)
 }
 
+/// `true` when two [`Georef`]s describe the same grid placement: equal
+/// geotransform (within the serialization-noise tolerance) and, when both
+/// declare a CRS, the same CRS. This is the cross-stack twin of the check
+/// [`gridded_rain_from_rasters`] applies within one stack — use it before
+/// fusing forcings loaded from different file sets, where a same-shaped
+/// cutout from another grid would otherwise misalign silently.
+pub fn same_grid(a: &Georef, b: &Georef) -> bool {
+    same_transform(&a.transform, &b.transform)
+        && match (&a.crs, &b.crs) {
+            (Some(ca), Some(cb)) => ca == cb,
+            _ => true,
+        }
+}
+
 /// Stack per-step precipitation rasters (mm) into a [`GriddedRain`] forcing,
 /// returning the stack's [`Georef`] alongside it. All rasters must share the
 /// same shape **and georeference**; `dt_hours` is the step length.
@@ -207,6 +221,28 @@ mod tests {
         for (got, &exp) in susc.values().iter().zip(&expected) {
             assert!((got - exp as f64).abs() < 1e-6, "{got} vs {exp}");
         }
+    }
+
+    #[test]
+    fn same_grid_rejects_offset_and_crs_mismatch() {
+        let a = raster_2x3([0.0; 6], None);
+        let ga = Georef::of(&a);
+        // Identical placement: same grid.
+        assert!(same_grid(&ga, &Georef::of(&a)));
+        // Same shape, shifted origin: NOT the same grid.
+        let mut b = raster_2x3([0.0; 6], None);
+        b.set_transform(GeoTransform::new(350_030.0, 6_300_000.0, 30.0, 30.0));
+        assert!(!same_grid(&ga, &Georef::of(&b)));
+        // CRS disagreement when both declare one: NOT the same grid; one
+        // side undeclared stays permissive (matches the in-stack check).
+        let mut c = raster_2x3([0.0; 6], None);
+        c.set_transform(GeoTransform::new(350_000.0, 6_300_000.0, 30.0, 30.0));
+        c.set_crs(Some(CRS::from_epsg(32719)));
+        let mut d = raster_2x3([0.0; 6], None);
+        d.set_transform(GeoTransform::new(350_000.0, 6_300_000.0, 30.0, 30.0));
+        d.set_crs(Some(CRS::from_epsg(4326)));
+        assert!(!same_grid(&Georef::of(&c), &Georef::of(&d)));
+        assert!(same_grid(&ga, &Georef::of(&c)));
     }
 
     #[test]

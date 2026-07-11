@@ -26,3 +26,6 @@ docs/paper/*.spl
 docs/paper/*.fls
 docs/paper/*.fdb_latexmk
 docs/paper/*.pdf
+
+# Credenciales locales del monitor (token DMC, ntfy topic) — NUNCA versionar
+monitor/config.local.env

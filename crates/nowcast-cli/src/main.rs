@@ -29,11 +29,14 @@ use anyhow::{Context, Result, bail};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use nowcast_core::{
-    Calibrator, Forcing, GridDims, HazardField, IdThreshold, LiveNowcast, Nowcast,
-    SusceptibilityMap, TriggerModel, UniformRain, csv_column, csv_events, csv_month_keys,
-    csv_pairs, monthly_contingency, reliability,
+    Calibrator, Combine, Forcing, GridDims, HazardField, IdThreshold, IdTrigger, LiveNowcast,
+    MultiNowcast, Nowcast, SusceptibilityMap, Trigger, TriggerModel, UniformRain, csv_column,
+    csv_events, csv_month_keys, csv_pairs, monthly_contingency, reliability,
 };
-use nowcast_surtgis::{Georef, Raster, gridded_rain_from_rasters, read_susceptibility, write_hazard_geotiff};
+use nowcast_surtgis::{
+    Georef, Raster, gridded_rain_from_rasters, read_susceptibility, same_grid,
+    write_hazard_geotiff,
+};
 use surtgis_core::io::read_geotiff;
 
 /// Output format shared by all verbs.
@@ -123,6 +126,27 @@ struct RainArgs {
     nrows: Option<usize>,
 }
 
+/// Trigger-factor combination rule for fused sources (`run --fuse-rasters`).
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum CombineArg {
+    /// Independent sources, any may fire: 1 − ∏(1 − fᵢ).
+    NoisyOr,
+    /// The strongest source wins.
+    Max,
+    /// All sources must concur.
+    Product,
+}
+
+impl From<CombineArg> for Combine {
+    fn from(c: CombineArg) -> Self {
+        match c {
+            CombineArg::NoisyOr => Combine::NoisyOr,
+            CombineArg::Max => Combine::Max,
+            CombineArg::Product => Combine::Product,
+        }
+    }
+}
+
 #[derive(Args)]
 struct RunArgs {
     #[command(flatten)]
@@ -131,6 +155,18 @@ struct RunArgs {
     rain: RainArgs,
     #[command(flatten)]
     engine: EngineArgs,
+    /// Fuse an EXTRA per-step rain-raster stack (comma-separated GeoTIFFs in
+    /// chronological order, same grid, step count and --dt-hours as the
+    /// primary rainfall). Repeat the flag once per extra source; each stack
+    /// becomes its own I–D trigger sharing the engine parameters, and factors
+    /// combine per cell/step with --combine BEFORE susceptibility applies.
+    /// `run` only — `watch` and `explain` stay single-source.
+    #[arg(long, value_name = "TIFS", action = clap::ArgAction::Append)]
+    fuse_rasters: Vec<String>,
+    /// How fused trigger factors combine (requires --fuse-rasters).
+    /// Default when fusing: noisy-or.
+    #[arg(long, value_enum)]
+    combine: Option<CombineArg>,
     /// Alert when peak hazard ≥ this level.
     #[arg(long, default_value_t = 0.5)]
     alert_level: f64,
@@ -261,8 +297,23 @@ enum ForcingKind {
 fn main() -> ExitCode {
     // Each verb reports whether it raised ≥1 alert; that maps to exit code 2 so
     // shell pipelines can distinguish "ran and alerted" from "ran quiet" (0).
-    // Errors keep the conventional 1.
-    let alerted = match Cli::parse().command {
+    // Errors keep the conventional 1 — INCLUDING argument/usage errors, which
+    // clap would otherwise exit(2), indistinguishable from a real alert: an
+    // operational wrapper (e.g. the monitor) invoking a stale binary with an
+    // unknown flag must see a failure, not a phantom alert.
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(e) => {
+            // Keep clap's behavior for help/version (successful exits).
+            if e.exit_code() == 0 {
+                let _ = e.print();
+                return ExitCode::SUCCESS;
+            }
+            let _ = e.print();
+            return ExitCode::FAILURE;
+        }
+    };
+    let alerted = match cli.command {
         Command::Run(a) => cmd_run(a),
         Command::Backtest(a) => cmd_backtest(a),
         Command::Explain(a) => cmd_explain(a),
@@ -381,6 +432,17 @@ fn resolve_inputs(
             let (forcing, rain_georef) = gridded_rain_from_rasters(&rasters, rain.dt_hours)?;
             let dims = forcing.dims();
             let (map, georef) = build_susceptibility(susc, dims)?;
+            // Same dims is not enough: a same-shaped susceptibility cutout
+            // from a different grid would multiply against the wrong cells
+            // with no visible symptom (sister of the --fuse-rasters check).
+            if let Some(gr) = &georef
+                && !same_grid(gr, &rain_georef)
+            {
+                bail!(
+                    "the susceptibility raster is on a different grid than the rain \
+                     rasters (same shape, different georeference)"
+                );
+            }
             // The susceptibility raster's georef wins when present; otherwise
             // the rain stack's georeferences the outputs (so --uniform-susc
             // over real rain rasters can still write GeoTIFFs).
@@ -427,10 +489,56 @@ fn make_nowcast<F: Forcing>(
 
 fn cmd_run(a: RunArgs) -> Result<bool> {
     validate_alert_level(a.alert_level)?;
-    let (susc, georef, forcing) = resolve_inputs(&a.susc, &a.rain)?;
-    let mut fields = match forcing {
-        ForcingKind::Uniform(f) => make_nowcast(susc, f, &a.engine)?.run(),
-        ForcingKind::Gridded(f) => make_nowcast(susc, f, &a.engine)?.run(),
+    if a.combine.is_some() && a.fuse_rasters.is_empty() {
+        // Accepting the flag as a silent no-op would be the `watch --ncols`
+        // class of bug: contradictory arguments must not pass unremarked.
+        bail!("--combine only applies when fusing extra sources with --fuse-rasters");
+    }
+    let (susc, mut georef, forcing) = resolve_inputs(&a.susc, &a.rain)?;
+    let mut fields = if a.fuse_rasters.is_empty() {
+        match forcing {
+            ForcingKind::Uniform(f) => make_nowcast(susc, f, &a.engine)?.run(),
+            ForcingKind::Gridded(f) => make_nowcast(susc, f, &a.engine)?.run(),
+        }
+    } else {
+        let combine = Combine::from(a.combine.unwrap_or(CombineArg::NoisyOr));
+        let threshold = IdThreshold::new(a.engine.id_a, a.engine.id_b)?;
+        let model = TriggerModel::new(a.engine.k)?;
+        let mut triggers: Vec<Box<dyn Trigger>> = Vec::with_capacity(1 + a.fuse_rasters.len());
+        triggers.push(match forcing {
+            ForcingKind::Uniform(f) => {
+                Box::new(IdTrigger::new(f, threshold, model, a.engine.max_window)?)
+            }
+            ForcingKind::Gridded(f) => {
+                Box::new(IdTrigger::new(f, threshold, model, a.engine.max_window)?)
+            }
+        });
+        for (i, stack) in a.fuse_rasters.iter().enumerate() {
+            let mut rasters = Vec::new();
+            for p in stack.split(',').filter(|s| !s.is_empty()) {
+                let r: Raster<f32> = read_geotiff(Path::new(p), Some(0))
+                    .with_context(|| format!("reading fused rain raster {p}"))?;
+                rasters.push(r);
+            }
+            let (fused, fused_georef) = gridded_rain_from_rasters(&rasters, a.rain.dt_hours)
+                .with_context(|| format!("stacking fused source {}", i + 1))?;
+            // Same-shaped cutouts from a different grid must not fuse: factors
+            // would combine across misaligned cells with no visible symptom.
+            match &georef {
+                Some(gr) if !same_grid(gr, &fused_georef) => bail!(
+                    "fused source {} is on a different grid than the primary inputs \
+                     (same shape, different georeference)",
+                    i + 1
+                ),
+                Some(_) => {}
+                // Ungeoreferenced primary (uniform susc + gauge CSV): the first
+                // fused stack's georef then georeferences outputs and anchors
+                // the alignment check for later stacks.
+                None => georef = Some(fused_georef),
+            }
+            triggers.push(Box::new(IdTrigger::new(fused, threshold, model, a.engine.max_window)?));
+        }
+        MultiNowcast::new(susc, triggers, combine)?.run()
     };
     if let Some(cal) = load_calibrator(a.calibrator.as_deref())? {
         fields = fields.into_iter().map(|f| calibrate_field(f, &cal)).collect();
