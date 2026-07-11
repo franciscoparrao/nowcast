@@ -200,7 +200,7 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
 name = "debris-flow"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "rayon",
  "serde_json",
@@ -447,7 +447,7 @@ dependencies = [
  "roxmltree",
  "serde",
  "serde_json",
- "surtgis-core 0.17.0",
+ "surtgis-core 0.18.0",
  "thiserror",
 ]
 
@@ -592,7 +592,7 @@ dependencies = [
  "nowcast-core",
  "nowcast-surtgis",
  "serde_json",
- "surtgis-core 0.17.0",
+ "surtgis-core 0.18.0",
 ]
 
 [[package]]
@@ -664,7 +664,7 @@ version = "0.1.0"
 dependencies = [
  "ndarray",
  "nowcast-core",
- "surtgis-core 0.17.0",
+ "surtgis-core 0.18.0",
  "thiserror",
 ]
 
@@ -1111,7 +1111,7 @@ dependencies = [
 
 [[package]]
 name = "surtgis-core"
-version = "0.17.0"
+version = "0.18.0"
 dependencies = [
  "anyhow",
  "flate2",
@@ -1129,7 +1129,7 @@ dependencies = [
 
 [[package]]
 name = "swarm-abm"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "rand",
  "rand_chacha",
@@ -1139,7 +1139,7 @@ dependencies = [
 
 [[package]]
 name = "swarm-abm-derive"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "proc-macro2",
  "quote",

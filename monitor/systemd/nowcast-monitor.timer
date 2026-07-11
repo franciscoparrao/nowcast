@@ -1,0 +1,12 @@
+[Unit]
+Description=nowcast-monitor cada 30 min (cadencia de publicación IMERG Early)
+
+[Timer]
+# A los minutos 12 y 42: IMERG Early publica a ~HH:00/HH:30 + latencia; el
+# desfase evita golpear al servidor justo al filo de la publicación.
+OnCalendar=*-*-* *:12,42:00
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

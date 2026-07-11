@@ -204,6 +204,19 @@ motores se enchufan como proveedores nativos en v0.2.
   reliable). Ver `docs/sota-roadmap.md` eje 1.
 - Orquesta rásters de SurtGIS + salidas de rainflow/snowmelt + modelo Smelt.
 
+## Monitor operacional (`monitor/`)
+Monitor de eventos LISTO y verificado end-to-end (2026-07-10): `monitor/` trae
+fetcher incremental de **IMERG Early NRT** (GPM_3IMERGHHE v07 vía earthaccess,
+~4-5 h latencia real; recorta bbox→GeoTIFF/paso, borra HDF5, rellena huecos con
+0 MARCADOS, rota ventana), `monitor.sh` (ciclo sin estado: re-corre la ventana
+rodante de 48 h con `nowcast run --format json` — legítimo porque batch≡live es
+bit-idéntico; dead-man switch del feed, notificación ntfy con histéresis de
+cruces) y units systemd (timer :12/:42). Piloto default: cordillera RM/Cajón
+del Maipo, susceptibilidad uniforme (monitor de TIMING hasta regenerar el RF —
+R3-M11). Autotest sin red: `python3 monitor/selftest.py`. Es monitor de
+eventos (~4 h detrás), NO alerta temprana; requiere temporada en modo sombra
+antes de confiar. Fase 2: telemetría DGA por noisy-OR (`multi` ya lo soporta).
+
 ## Validación
 Backtesting contra inventario de eventos fechados (SERNAGEOMIN) — hit rate,
 falsas alarmas, lead time.

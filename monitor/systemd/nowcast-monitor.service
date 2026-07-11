@@ -1,0 +1,13 @@
+[Unit]
+Description=nowcast-monitor: ciclo de nowcasting de geohazards (IMERG Early)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Ajustar la ruta al checkout/despliegue real.
+ExecStart=%h/nowcast-monitor/monitor/monitor.sh
+Environment=CONFIG=%h/nowcast-monitor/monitor/config.env
+# El ciclo baja ~2-8 gránulos y corre el motor: minutos, no horas.
+TimeoutStartSec=30min
+Nice=10
