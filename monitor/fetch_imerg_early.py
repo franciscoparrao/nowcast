@@ -145,23 +145,33 @@ def main():
                 new.append(g)
         if new:
             print(f"[fetch] {len(new)} gránulo(s) nuevo(s) de {len(granules)} en ventana")
-            earthaccess.download(new, local_path=raw_dir)
-        for hdf5 in sorted(glob.glob(os.path.join(raw_dir, "*.HDF5"))):
+        # UNO A LA VEZ (bajar → convertir → borrar): un arranque en frío del
+        # lote completo son ~800 MB simultáneos en disco, letal en un nodo
+        # chico como sentinel (57 GB al 96 %). Así el pico transitorio queda
+        # acotado a UN gránulo (~10 MB) sin importar el tamaño de la ventana.
+        for g in new:
             try:
-                key = step_key(granule_start(hdf5))
-                out = os.path.join(steps_dir, f"step_{key}.tif")
-                if not os.path.exists(out):
-                    shape = convert(hdf5, bbox, out)
-                    fetched += 1
-                    print(f"[fetch] {key} → {out} {shape}")
-            except Exception as exc:  # un gránulo corrupto no tumba el ciclo
+                earthaccess.download([g], local_path=raw_dir)
+            except Exception as exc:
                 failed += 1
-                print(f"[fetch] ERROR convirtiendo {hdf5}: {exc}", file=sys.stderr)
-            finally:
+                print(f"[fetch] ERROR bajando gránulo: {exc}", file=sys.stderr)
+                continue
+            for hdf5 in sorted(glob.glob(os.path.join(raw_dir, "*.HDF5"))):
                 try:
-                    os.remove(hdf5)
-                except OSError:
-                    pass
+                    key = step_key(granule_start(hdf5))
+                    out = os.path.join(steps_dir, f"step_{key}.tif")
+                    if not os.path.exists(out):
+                        shape = convert(hdf5, bbox, out)
+                        fetched += 1
+                        print(f"[fetch] {key} → {out} {shape}")
+                except Exception as exc:  # un gránulo corrupto no tumba el ciclo
+                    failed += 1
+                    print(f"[fetch] ERROR convirtiendo {hdf5}: {exc}", file=sys.stderr)
+                finally:
+                    try:
+                        os.remove(hdf5)
+                    except OSError:
+                        pass
 
     # --- 3. huecos: rellenar con cero SOLO pasos viejos, y contarlos ---------
     have = {

@@ -22,6 +22,11 @@ export BBOX WORK_DIR WINDOW_HOURS STALE_HOURS
 
 mkdir -p "$WORK_DIR/out" "$WORK_DIR/state"
 LOG="$WORK_DIR/monitor.log"
+# Rotación simple: sobre 5 MB, conservar la mitad más reciente (nodo chico;
+# el log es fuente de verdad operacional pero no archivo histórico infinito).
+if [[ -f "$LOG" && $(stat -c%s "$LOG" 2>/dev/null || echo 0) -gt 5242880 ]]; then
+    tail -n 20000 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+fi
 
 log() { echo "[$(date -u +%FT%TZ)] $*" | tee -a "$LOG"; }
 

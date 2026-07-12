@@ -68,7 +68,15 @@ Principios heredados de las auditorías:
 ## Despliegue en un nodo del cluster
 
 ```bash
-# 0. En el nodo destino: python3 + pip install earthaccess xarray rasterio numpy
+# 0. En el nodo destino (Ubuntu 24.04+ es PEP 668: usar venv):
+#      python3 -m venv ~/nowcast-monitor/venv
+#      ~/nowcast-monitor/venv/bin/pip install --no-cache-dir \
+#          earthaccess xarray rasterio h5netcdf h5py cftime
+#    (h5py y cftime NO son opcionales: sin h5py el backend HDF5 no abre los
+#    gránulos IMERG y sin cftime xarray no decodifica su calendario juliano —
+#    lección del primer despliegue real. ~370 MB en disco.)
+#    En config.local.env del nodo, prepender el venv al PATH:
+#      PATH="$HOME/nowcast-monitor/venv/bin:$PATH"
 #    y ~/.netrc con las credenciales Earthdata (app "NASA GESDISC DATA ARCHIVE"
 #    autorizada — la misma cuenta ya usada por scripts/extract_event_imerg.py).
 
