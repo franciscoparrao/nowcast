@@ -63,24 +63,40 @@ def granule_start(path):
 
 
 def convert(hdf5_path, bbox, out_tif):
-    """HDF5 global → GeoTIFF del bbox en mm por paso (media hora), north-up."""
+    """HDF5 global → GeoTIFF del bbox en mm por paso (media hora), north-up.
+
+    La grilla destino se construye ANALÍTICAMENTE (target_grid, el mismo
+    convenio que los fetchers GOES y DGA) y las celdas IMERG se seleccionan
+    por centro más cercano. Derivarla de las coordenadas del archivo (slice)
+    rompía la fusión: los lon/lat vienen en float32 y un borde de bbox no
+    representable exacto (p.ej. -72.05) pierde la columna del borde y corre
+    el origen ~1e-6 — same_grid del CLI lo rechaza (correctamente). Con la
+    grilla analítica los tres feeds son bit-idénticos en georef por
+    construcción, para cualquier bbox.
+    """
     import rasterio
     import xarray as xr
     from rasterio.transform import from_origin
 
-    w, s, e, n = bbox
+    from fetch_goes_qpe import target_grid
+
+    lons_t, lats_t = target_grid(bbox)
     ds = xr.open_dataset(hdf5_path, group="Grid")
     var = "precipitation" if "precipitation" in ds else "precipitationCal"
-    da = ds[var].sel(lon=slice(w, e), lat=slice(s, n)).squeeze("time")
+    da = (
+        ds[var]
+        .sel(lon=xr.DataArray(lons_t, dims="lon"), lat=xr.DataArray(lats_t, dims="lat"),
+             method="nearest")
+        .squeeze("time")
+    )
     # (lon, lat), tasa mm/h → lámina mm por media hora; NaN/negativos → 0
     # (política idéntica al extractor probado y al bridge de nowcast-surtgis).
     a = np.clip(np.nan_to_num(np.asarray(da.values, "float64"), nan=0.0), 0.0, None) * 0.5
-    lons, lats = da["lon"].values, da["lat"].values
     ds.close()
     # A (lat, lon) con filas norte→sur para un GeoTIFF north-up estándar.
     grid = a.T[::-1, :].astype("float32")
     res = 0.1
-    transform = from_origin(float(lons.min()) - res / 2, float(lats.max()) + res / 2, res, res)
+    transform = from_origin(lons_t[0] - res / 2, lats_t[-1] + res / 2, res, res)
     with rasterio.open(
         out_tif, "w", driver="GTiff", height=grid.shape[0], width=grid.shape[1],
         count=1, dtype="float32", crs="EPSG:4326", transform=transform,
