@@ -124,6 +124,22 @@ if (( N_STEPS < ${MIN_STEPS:-96} )); then
     exit 0
 fi
 
+# --- 2a-bis. Archivo del evento (opcional) -------------------------------------
+# ARCHIVE_STEPS=1 preserva la forzante completa antes de que la rotación de la
+# ventana la borre (~300 KB/día por dominio): cada step nuevo de cada feed se
+# copia una sola vez a archive/. Con eso el evento se puede RE-CORRER offline
+# después (otros umbrales, calibración con los positivos reales, figuras).
+# Pensado para ventanas de evento (ej. 15-20 jul); apagar en régimen normal.
+if [[ "${ARCHIVE_STEPS:-0}" == "1" ]]; then
+    for D in "$WORK_DIR" "$WORK_DIR"/feeds/*; do
+        [[ -d "$D/steps" ]] || continue
+        FEEDNAME=$(basename "$D"); [[ "$D" == "$WORK_DIR" ]] && FEEDNAME=primary
+        mkdir -p "$WORK_DIR/archive/$FEEDNAME"
+        cp -n "$D"/steps/step_*.tif "$D"/steps/gapmark_* \
+            "$WORK_DIR/archive/$FEEDNAME/" 2>/dev/null
+    done
+fi
+
 # --- 2b. Salud de los feeds secundarios (dead-man por feed) --------------------
 # Un feed secundario caído no detiene el ciclo (la fusión degrada a los que
 # queden) pero SÍ se avisa: perder GOES es perder la capa de baja latencia y
@@ -203,6 +219,9 @@ if (( ${#FUSE_LISTS[@]} > 0 )); then
 fi
 
 RUN_JSON="$WORK_DIR/out/last_run.json"
+if [[ "${ARCHIVE_STEPS:-0}" == "1" ]]; then
+    mkdir -p "$WORK_DIR/out/history"
+fi
 "$NOWCAST_BIN" run "${SUSC_ARGS[@]}" \
     --rain-rasters "$RASTERS" \
     "${FUSE_ARGS[@]}" \
@@ -212,6 +231,9 @@ RUN_JSON="$WORK_DIR/out/last_run.json"
     "${CAL_ARGS[@]}" "${OUT_ARGS[@]}" \
     --format json > "$RUN_JSON" 2>>"$LOG"
 RC=$?
+if [[ "${ARCHIVE_STEPS:-0}" == "1" && -s "$RUN_JSON" ]]; then
+    cp "$RUN_JSON" "$WORK_DIR/out/history/run_$(date -u +%Y%m%dT%H%M).json" 2>/dev/null
+fi
 
 # --- 4. Interpretar y notificar ------------------------------------------------
 case $RC in

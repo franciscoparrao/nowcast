@@ -1,0 +1,13 @@
+[Unit]
+Description=nowcast-monitor (%i) cada 30 min
+
+[Timer]
+# A los minutos 12 y 42 (cadencia de publicación IMERG Early); el delay
+# aleatorio de hasta 5 min desparrama los dominios para no correr todos los
+# fetchers a la vez en un nodo chico.
+OnCalendar=*-*-* *:12,42:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

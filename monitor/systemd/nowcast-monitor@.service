@@ -1,0 +1,15 @@
+[Unit]
+Description=nowcast-monitor (%i): ciclo multi-feed del dominio %i
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/nowcast-monitor/monitor/monitor.sh
+# Cada dominio es un config; las credenciales compartidas viven en el
+# config.local.env del directorio monitor/ (LOCAL_CONFIG las inyecta).
+Environment=CONFIG=%h/nowcast-monitor/domains/%i/config.env
+Environment=LOCAL_CONFIG=%h/nowcast-monitor/monitor/config.local.env
+# Arranques en frío bajan la ventana completa: minutos-decenas de minutos.
+TimeoutStartSec=45min
+Nice=10
