@@ -1,0 +1,10 @@
+[Unit]
+Description=nowcast-forecast: pronóstico GFS+isoterma de los 3 dominios (interno)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -lc 'source %h/nowcast-monitor/monitor/config.local.env && python3 %h/nowcast-monitor/monitor/forecast_gfs.py --workdir %h/nowcast-monitor/forecast --nowcast-bin %h/nowcast-monitor/bin/nowcast >> %h/nowcast-monitor/forecast/forecast.log 2>&1'
+TimeoutStartSec=30min
+Nice=10

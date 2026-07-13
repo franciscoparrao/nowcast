@@ -1,0 +1,10 @@
+[Unit]
+Description=nowcast-forecast 4x/día (ciclos GFS 00/06/12/18z + ~4.5 h de publicación)
+
+[Timer]
+OnCalendar=*-*-* 04,10,16,22:45:00
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target
