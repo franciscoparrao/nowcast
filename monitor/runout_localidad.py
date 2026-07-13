@@ -46,7 +46,13 @@ def point_value(path, lon, lat):
 
 
 def pick_susceptibility(domain, lon, lat):
-    """El raster de cuenca del dominio cuyos bounds contienen el punto."""
+    """El raster de cuenca del dominio con DATO VÁLIDO en el punto.
+
+    No basta que los bounds contengan el punto: los rectángulos de cuencas
+    vecinas se solapan y un punto del Maule cae dentro del rect de Rapel,
+    donde el raster es nodata — sembraría el ABM con susceptibilidad 0 y la
+    corrida vacía se leería como "seguro". Se muestrea el valor real.
+    """
     for rel in DOMAIN_BASINS.get(domain, []):
         path = os.path.join(KINGSTON, rel)
         if not os.path.exists(path):
@@ -55,7 +61,10 @@ def pick_susceptibility(domain, lon, lat):
             t = Transformer.from_crs("EPSG:4326", src.crs, always_xy=True)
             x, y = t.transform(lon, lat)
             b = src.bounds
-            if b.left <= x <= b.right and b.bottom <= y <= b.top:
+            if not (b.left <= x <= b.right and b.bottom <= y <= b.top):
+                continue
+            v = list(src.sample([(x, y)]))[0][0]
+            if np.isfinite(v):
                 return path
     return None
 
