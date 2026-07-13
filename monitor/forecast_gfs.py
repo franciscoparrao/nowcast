@@ -221,19 +221,23 @@ def main():
         sdir = os.path.join(ddir, "steps")
         os.makedirs(sdir, exist_ok=True)
         keys, snowfrac_acc, iso_acc = [], [], []
+        tot_liquid = None
         for fhr in sorted(hourly):
             depth, iso0, orog = hourly[fhr]
             frac = liquid_fraction(iso0, orog)
-            liquid = bilinear_to(lats_g, lons_g, depth * frac, lons_t, lats_t)
+            liquid = np.clip(bilinear_to(lats_g, lons_g, depth * frac, lons_t, lats_t), 0, None)
             total = bilinear_to(lats_g, lons_g, depth, lons_t, lats_t)
             valid = base + timedelta(hours=fhr)
             key = valid.strftime("%Y%m%dT%H%M")
             keys.append(key)
-            write_step(os.path.join(sdir, f"step_{key}.tif"),
-                       np.clip(liquid, 0, None), lons_t, lats_t)
+            write_step(os.path.join(sdir, f"step_{key}.tif"), liquid, lons_t, lats_t)
+            tot_liquid = liquid if tot_liquid is None else tot_liquid + liquid
             tot = float(total.sum())
             snowfrac_acc.append(0.0 if tot <= 0 else 1.0 - float(liquid.sum()) / tot)
             iso_acc.append(float(bilinear_to(lats_g, lons_g, iso0, lons_t, lats_t).mean()))
+        # Ráster GIS: lluvia líquida total del horizonte (mm) — el mapa de
+        # "cuánta agua efectiva pronostica el GFS" independiente del umbral.
+        write_step(os.path.join(ddir, "rain_liquid_total.tif"), tot_liquid, lons_t, lats_t)
 
         rasters = ",".join(os.path.join(sdir, f"step_{k}.tif") for k in keys)
         # Dos umbrales por diseño: Caine GLOBAL (a de --id-a) y el intercepto
@@ -252,10 +256,15 @@ def main():
                 "variants": {}}
         parts = []
         for label, id_a in variants:
+            # --out-dir: el motor escribe el campo de peligro por paso como
+            # GeoTIFF (georef del stack de lluvia) — el insumo del bloque GIS.
+            hdir = os.path.join(ddir, f"hazard_{label}")
+            os.makedirs(hdir, exist_ok=True)
             cmd = [a.nowcast_bin, "run", "--uniform-susc", "1.0",
                    "--rain-rasters", rasters, "--dt-hours", "1", "--max-window", "48",
                    "--id-a", str(id_a), "--id-b", str(a.id_b), "--k", str(a.k),
-                   "--alert-level", str(a.alert_level), "--format", "json"]
+                   "--alert-level", str(a.alert_level), "--out-dir", hdir,
+                   "--format", "json"]
             proc = subprocess.run(cmd, capture_output=True, text=True)
             if proc.returncode not in (0, 2):
                 log(f"{name}/{label}: MOTOR FALLÓ rc={proc.returncode}: {proc.stderr[:300]}")
@@ -297,6 +306,47 @@ def main():
                 "n_crossings": len(crossings), "peak_prob": round(peak, 3),
                 "first_crossing": crossings[0]["start"] if crossings else None,
             }
+
+            # --- Salidas GIS agregadas por variante ---------------------------
+            # hazard_max: peligro máximo por celda en las 120 h (el "mapa del
+            # pronóstico"); hour_of_max: hora de pronóstico (f-hour) del máximo;
+            # first_crossing_hour: f-hour del primer cruce del alert-level por
+            # celda (NaN = nunca cruza). El stack horario queda en hazard_<label>/
+            # renombrado a la hora VÁLIDA para el control temporal de QGIS.
+            import rasterio
+
+            hmax = None
+            hourmax = None
+            firstx = None
+            fhrs = sorted(hourly)
+            for i, fhr in enumerate(fhrs):
+                src_tif = os.path.join(hdir, f"hazard_{i:04}.tif")
+                if not os.path.exists(src_tif):
+                    continue
+                with rasterio.open(src_tif) as src:
+                    hz = src.read(1)
+                    profile = src.profile
+                if hmax is None:
+                    hmax = np.full(hz.shape, -1.0, "float32")
+                    hourmax = np.zeros(hz.shape, "float32")
+                    firstx = np.full(hz.shape, np.nan, "float32")
+                newmax = hz > hmax
+                hourmax[newmax] = fhr
+                hmax = np.maximum(hmax, hz)
+                crossed = (hz >= a.alert_level) & np.isnan(firstx)
+                firstx[crossed] = fhr
+                # renombrar al timestamp válido (QGIS temporal: yyyyMMddThhmm)
+                key = keys[i]
+                os.replace(src_tif, os.path.join(hdir, f"hazard_{key}.tif"))
+            if hmax is not None:
+                profile.update(dtype="float32", nodata=float("nan"))
+                for fname, grid in [
+                    (f"hazard_max{suffix}.tif", hmax),
+                    (f"hazard_hour_of_max{suffix}.tif", hourmax),
+                    (f"first_crossing_fhour{suffix}.tif", firstx),
+                ]:
+                    with rasterio.open(os.path.join(ddir, fname), "w", **profile) as dst:
+                        dst.write(grid, 1)
             parts.append(f"{label}: {len(crossings)} cruce(s), pico {peak:.2f}"
                          + (f", 1º {crossings[0]['start']}" if crossings else ""))
         with open(os.path.join(ddir, "forecast.json"), "w") as f:
