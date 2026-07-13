@@ -62,6 +62,10 @@ EVENT_DOMAINS = {
     "rm": (-70.75, -34.25, -69.75, -33.25),
     "nuble-biobio": (-72.05, -38.25, -71.05, -36.25),
     "araucania": (-72.35, -39.95, -71.05, -38.25),
+    # Barrido completo del evento: costa a cordillera, Coquimbo → Los Ríos
+    # (~4600 celdas de 0.1° — panorama; los 4 dominios chicos siguen siendo
+    # la vista de detalle y la observación primaria).
+    "chile-centro-sur": (-74.05, -40.25, -69.75, -29.25),
 }
 SNOWLINE_BELOW_ISO0 = 300.0  # centro de la transición (m bajo la isoterma)
 BAND_HALF = 150.0            # semiancho de la banda de transición (m)

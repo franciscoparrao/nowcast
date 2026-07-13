@@ -45,6 +45,19 @@ DOMAIN_BASINS = {
     # paper1 re-aplicado sobre factores DEM de Araucania, Copernicus GLO-90).
     # TRANSFERENCIA SIN VALIDAR en destino — ver susceptibility_transfer_meta.json.
     "araucania": ["16_araucania_transfer/susceptibility_transfer_biobio.tif"],
+    # Barrido Coquimbo→Los Ríos: mosaico de TODAS las cuencas continuas
+    # disponibles (8 capas; huecos entre cuencas quedan NaN — Aconcagua,
+    # Itata, Imperial/Toltén no tienen modelo propio todavía).
+    "chile-centro-sur": [
+        "07_rio_elqui/susceptibility_XGBoost.tif",
+        "08_rio_limari/susceptibility_XGBoost.tif",
+        "09_rio_maipo/susceptibility_RandomForest.tif",
+        "10_rio_rapel/susceptibility_RandomForest.tif",
+        "11_rio_maule/susceptibility_Ridge.tif",
+        "12_rio_biobio/susceptibility_RandomForest.tif",
+        "16_araucania_transfer/susceptibility_transfer_biobio.tif",
+        "13_rio_bueno/susceptibility_XGBoost.tif",
+    ],
 }
 HAZARD_VARIANT = "hazard_max_regional-a5.5.tif"
 
