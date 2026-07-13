@@ -27,7 +27,7 @@ use swarm_abm::prelude::{Activation, Grid2D, Pos, Schedule, Simulation};
 // Re-export the model building blocks so callers need only this crate.
 pub use debris_flow::raster::{CopiapoData, Window, load};
 pub use debris_flow::{Layers, Params as DebrisParams};
-pub use swarm_abm::prelude::Grid2D as SwarmGrid;
+pub use swarm_abm::prelude::{Grid2D as SwarmGrid, Pos as SwarmPos};
 
 /// Convert a nowcast [`SusceptibilityMap`] into a `swarm_abm::Grid2D<f32>`
 /// (e.g. to assemble the debris-flow model's susceptibility layer).

@@ -12,3 +12,16 @@ nowcast-core = { path = "../nowcast-core" }
 # Sibling ABM engine + the debris-flow model built on it (swarm-abm workspace).
 swarm-abm = { path = "../../../swarm-abm/crates/swarm-abm" }
 debris-flow = { path = "../../../swarm-abm/models/debris-flow" }
+
+[dev-dependencies]
+# Only for `examples/runout_ondemand.rs` (on-demand runner: Copernicus DEM via
+# COG streaming + terrain/hydro derivatives + GeoTIFF output). Kept out of the
+# library deps so the crate itself stays lean; building surtgis-cloud is
+# online the first time (reqwest/tokio), then cached.
+nowcast-surtgis = { path = "../nowcast-surtgis" }
+surtgis-core = { path = "../../../surtgis/crates/core" }
+surtgis-algorithms = { path = "../../../surtgis/crates/algorithms" }
+surtgis-cloud = { path = "../../../surtgis/crates/cloud", features = ["native"] }
+clap.workspace = true
+anyhow.workspace = true
+serde_json = "1"
