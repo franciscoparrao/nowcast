@@ -46,7 +46,7 @@ DOMAIN_BASINS = {
     # TRANSFERENCIA SIN VALIDAR en destino — ver susceptibility_transfer_meta.json.
     "araucania": ["16_araucania_transfer/susceptibility_transfer_biobio.tif"],
     # Barrido Coquimbo→Los Ríos: mosaico de TODAS las cuencas continuas
-    # disponibles (8 capas; huecos entre cuencas quedan NaN — Aconcagua,
+    # disponibles (huecos entre cuencas quedan NaN — Aconcagua,
     # Itata, Imperial/Toltén no tienen modelo propio todavía).
     "chile-centro-sur": [
         "07_rio_elqui/susceptibility_XGBoost.tif",
@@ -57,6 +57,16 @@ DOMAIN_BASINS = {
         "12_rio_biobio/susceptibility_RandomForest.tif",
         "16_araucania_transfer/susceptibility_transfer_biobio.tif",
         "13_rio_bueno/susceptibility_XGBoost.tif",
+        # Cordillera de la Costa Valparaíso→Los Ríos por TRANSFERENCIA del RF
+        # del Biobío (SIN VALIDAR, fuera de dominio litológico — ver
+        # 17_costa_transfer/susceptibility_transfer_meta.json). Va al FINAL de
+        # la lista para que las cuencas reales ganen en solapes; OJO: aggregate()
+        # mosaica con MÁXIMO en solapes, así que el orden solo decide qué capa
+        # "siembra" la celda — en solape una transfer alta puede superar a la
+        # cuenca real. Los 3 tramos N/C/S se solapan 0.05° entre sí.
+        "17_costa_transfer/susceptibility_transfer_biobio_norte.tif",
+        "17_costa_transfer/susceptibility_transfer_biobio_centro.tif",
+        "17_costa_transfer/susceptibility_transfer_biobio_sur.tif",
     ],
 }
 HAZARD_VARIANT = "hazard_max_regional-a5.5.tif"
@@ -136,7 +146,13 @@ def main():
             src_path = os.path.join(KINGSTON, path)
             if not os.path.exists(src_path):
                 continue
+            # nombre único por ARCHIVO (no por dir de cuenca): los transfers por
+            # tramos comparten dir y colisionaban sobrescribiéndose entre sí.
+            stem = os.path.splitext(os.path.basename(path))[0]
             basin = path.split("/")[0]
+            if stem not in (f"susceptibility_XGBoost", "susceptibility_RandomForest",
+                            "susceptibility_Ridge"):
+                basin = f"{basin}_{stem.split('_')[-1]}"
             with rasterio.open(src_path) as s:
                 susc30 = s.read(1)
                 p30 = dict(s.profile)
