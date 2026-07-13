@@ -40,9 +40,11 @@ DOMAIN_BASINS = {
                  "08_rio_limari/susceptibility_XGBoost.tif"],
     "rm": ["09_rio_maipo/susceptibility_RandomForest.tif"],
     "nuble-biobio": ["12_rio_biobio/susceptibility_RandomForest.tif"],
-    # araucania: ninguna de las 15 cuencas del paper1 la cubre; el transfer a
-    # cuencas adyacentes (paper4_meta_learning_transfer) es el camino futuro.
-    "araucania": [],
+    # araucania: ninguna de las 15 cuencas del paper1 la cubre. Se usa una capa
+    # por TRANSFERENCIA desde la cuenca adyacente del Biobio (RandomForest del
+    # paper1 re-aplicado sobre factores DEM de Araucania, Copernicus GLO-90).
+    # TRANSFERENCIA SIN VALIDAR en destino — ver susceptibility_transfer_meta.json.
+    "araucania": ["16_araucania_transfer/susceptibility_transfer_biobio.tif"],
 }
 HAZARD_VARIANT = "hazard_max_regional-a5.5.tif"
 
@@ -139,9 +141,12 @@ def main():
             with rasterio.open(out30, "w", **p30) as dst:
                 dst.write(cross30, 1)
             n_hot = int((cross30 > 0.5).sum())
-            print(f"{dom} [30m {basin}]: pico {np.nanmax(cross30):.2f} | "
-                  f"{n_hot} celdas de 30 m sobre 0.5 "
-                  f"({n_hot * 9e-4:.1f} km²) → {os.path.basename(out30)}")
+            # área real de la celda desde el transform (30 m u 90 m según cuenca)
+            cell_km2 = abs(p30["transform"].a * p30["transform"].e) * 1e-6
+            px = round(abs(p30["transform"].a))
+            print(f"{dom} [{px}m {basin}]: pico {np.nanmax(cross30):.2f} | "
+                  f"{n_hot} celdas de {px} m sobre 0.5 "
+                  f"({n_hot * cell_km2:.1f} km²) → {os.path.basename(out30)}")
 
 
 if __name__ == "__main__":
