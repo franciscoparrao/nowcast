@@ -55,9 +55,10 @@ from fetch_goes_qpe import target_grid
 
 FILTER = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25_1hr.pl"
 # Región única que cubre todos los dominios (una descarga sirve a todos).
-REGION = {"leftlon": -75.0, "rightlon": -69.0, "toplat": -33.0, "bottomlat": -40.5}
+REGION = {"leftlon": -75.0, "rightlon": -69.0, "toplat": -29.0, "bottomlat": -40.5}
 HOURS = range(1, 121)  # f001..f120 horario
 EVENT_DOMAINS = {
+    "coquimbo": (-71.05, -32.25, -69.75, -29.25),
     "rm": (-70.75, -34.25, -69.75, -33.25),
     "nuble-biobio": (-72.05, -38.25, -71.05, -36.25),
     "araucania": (-72.35, -39.95, -71.05, -38.25),
