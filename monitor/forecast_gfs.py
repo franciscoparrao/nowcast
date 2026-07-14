@@ -63,7 +63,10 @@ EVENT_DOMAINS = {
     # Atacama es además el análogo histórico directo (aluviones 2015,
     # Copiapó/Chañaral) que calibra el propio simulador de flujos detríticos.
     "atacama": (-71.4, -29.8, -68.9, -25.8),
-    "coquimbo": (-71.05, -32.25, -69.75, -29.25),
+    # Litoral extendido a -71.8 (antes -71.05, que cortaba el litoral: el
+    # pico de lluvia líquida del reporte del 2026-07-14 cae justo en la
+    # costa, fuera del bbox original).
+    "coquimbo": (-71.8, -32.25, -69.75, -29.25),
     "rm": (-70.75, -34.25, -69.75, -33.25),
     "nuble-biobio": (-72.05, -38.25, -71.05, -36.25),
     "araucania": (-72.35, -39.95, -71.05, -38.25),
