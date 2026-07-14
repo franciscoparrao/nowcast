@@ -55,9 +55,14 @@ from fetch_goes_qpe import target_grid
 
 FILTER = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25_1hr.pl"
 # Región única que cubre todos los dominios (una descarga sirve a todos).
-REGION = {"leftlon": -75.0, "rightlon": -69.0, "toplat": -29.0, "bottomlat": -40.5}
+# toplat extendido a -25.5 (antes -29.0) para cubrir Atacama con margen.
+REGION = {"leftlon": -75.0, "rightlon": -68.7, "toplat": -25.5, "bottomlat": -40.5}
 HOURS = range(1, 121)  # f001..f120 horario
 EVENT_DOMAINS = {
+    # Reportes 2026-07-14: señal de riesgo mayor desplazándose al norte —
+    # Atacama es además el análogo histórico directo (aluviones 2015,
+    # Copiapó/Chañaral) que calibra el propio simulador de flujos detríticos.
+    "atacama": (-71.4, -29.8, -68.9, -25.8),
     "coquimbo": (-71.05, -32.25, -69.75, -29.25),
     "rm": (-70.75, -34.25, -69.75, -33.25),
     "nuble-biobio": (-72.05, -38.25, -71.05, -36.25),

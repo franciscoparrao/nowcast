@@ -36,6 +36,12 @@ from rasterio.warp import Resampling, reproject
 KINGSTON = "/mnt/kingston/proyectos/postdoc/papers/paper1_susceptibilidad/factors"
 # Dominio → rasters de cuenca que lo cubren (rutas relativas a KINGSTON).
 DOMAIN_BASINS = {
+    # 3 cuencas PROPIAS (sin transfer) — Atacama es la mejor cubierta de los
+    # dominios nuevos: Salado (norte), Copiapó (centro, el análogo histórico
+    # del evento 2015 que calibra swarm-abm), Huasco (sur).
+    "atacama": ["04_rio_salado/susceptibility_XGBoost.tif",
+                "05_rio_copiapo/susceptibility_Ridge.tif",
+                "06_rio_huasco/susceptibility_XGBoost.tif"],
     "coquimbo": ["07_rio_elqui/susceptibility_XGBoost.tif",
                  "08_rio_limari/susceptibility_XGBoost.tif"],
     "rm": ["09_rio_maipo/susceptibility_RandomForest.tif"],
