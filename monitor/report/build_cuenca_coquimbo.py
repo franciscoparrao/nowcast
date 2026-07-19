@@ -63,6 +63,30 @@ LOW_CONFIDENCE_COVERAGE = {
 }
 
 
+def chip_acuerdo(riesgo):
+    """Chip de confianza: ¿el peligro lo sostienen los dos modelos o uno?
+
+    El peligro sale del peor de las fuentes disponibles, así que un número
+    alto puede venir de un consenso o de un solo modelo contra otro que ve
+    casi nada. Sin esto, Alto del Carmen (solo GFS: 161 mm contra 4 mm de
+    ECMWF) y Juntas (los dos sobre 100 mm) se ven idénticos en la tabla.
+    """
+    ac = (riesgo or {}).get("acuerdo_modelos") or {}
+    conf = ac.get("confianza")
+    if not conf:
+        return "<span style='color:var(--ink-faint);'>—</span>"
+    estilo = {
+        "ALTA": "background:var(--sev-low-bg);color:var(--sev-low-fg);",
+        "MEDIA": "background:#f6e7c4;color:#7a5a12;",
+        "BAJA": "background:#f3d4d1;color:#8c2f22;",
+    }.get(conf, "background:#eceae2;color:#5a6259;")
+    g, e = ac.get("gfs_mm"), ac.get("ecmwf_mm")
+    detalle = f"GFS {g:.0f} / ECMWF {e:.0f} mm" if g is not None and e is not None else ""
+    return (f"<span class='chip' style=\"{estilo}white-space:nowrap;\" "
+            f"title=\"{ac.get('nota','')}\">{conf}</span>"
+            f"<div style='font-size:9.5px;color:var(--ink-faint);margin-top:2px;'>{detalle}</div>")
+
+
 def severity(g):
     if g is None or g < 0:
         return ("s-none", "SIN DATO")
@@ -146,6 +170,7 @@ def main():
         e_s = f"{e:.2f}&times;" if e is not None else "—"
         ranking_rows += (f"<tr><td class='num'>{i}</td><td><strong>{t['label']}</strong></td>"
                          f"<td>{t['cuenca']}</td><td class='num'>{pel_s}</td>"
+                         f"<td>{chip_acuerdo(r)}</td>"
                          f"<td class='num'>{comp_s}</td><td class='num'>{e_s}</td>"
                          f"<td class='num'>{pobexp_s}</td></tr>")
 
@@ -203,6 +228,10 @@ def main():
         if pel is not None:
             vuln_row += (f"<div class='stat-row'><span>Peligro (susc × excedencia)</span>"
                         f"<span>{pel:.2f}</span></div>")
+        ac = riesgo.get("acuerdo_modelos") or {}
+        if ac.get("confianza"):
+            vuln_row += (f"<div class='stat-row'><span>Acuerdo entre modelos</span>"
+                        f"<span>{chip_acuerdo(riesgo)}</span></div>")
         comp = riesgo.get("indice_compuesto")
         if comp is not None:
             vuln_row += (f"<div class='stat-row' style='font-weight:700;' "
@@ -279,8 +308,9 @@ def main():
   <section class="doc">
     <div class="sec-head"><span class="sec-num">02</span><h2>Ranking por peligro</h2></div>
     <p>Ordenado por <strong>peligro</strong> (susceptibilidad × excedencia I&ndash;D): dónde la tormenta pega más fuerte sobre terreno que puede fallar. El <strong>índice compuesto</strong> va en la segunda columna y ordena distinto — es riesgo, incorpora exposición urbana y vulnerabilidad social. Ver la nota de lectura arriba.</p>
+    <p><strong>La columna «acuerdo modelos» dice cuánto creerle a la fila.</strong> El peligro se calcula sobre el peor de los pronósticos disponibles, lo que es prudente pero esconde si ese número lo sostienen dos modelos o uno solo contra otro que ve casi nada. <span class="chip" style="background:var(--sev-low-bg);color:var(--sev-low-fg);">ALTA</span> = GFS y ECMWF coinciden en que llueve ahí (el menor es ≥50% del mayor); <span class="chip" style="background:#f6e7c4;color:#7a5a12;">MEDIA</span> = ambos ven lluvia pero difieren fuerte; <span class="chip" style="background:#f3d4d1;color:#8c2f22;">BAJA</span> = la señal la sostiene un solo modelo. <strong>La etiqueta mide acuerdo, no magnitud</strong>: hay que mirar los milímetros al lado para saber si además la lluvia es grande. ICON queda fuera de la etiqueta mientras no se verifique su reconstrucción horaria (declara 21 pasos nativos y escribe 120).</p>
     <div class="table-wrap"><table>
-      <thead><tr><th>#</th><th>Localidad</th><th>Cuenca</th><th class="num">Peligro</th><th class="num">Índice compuesto</th><th class="num">Excedencia I&ndash;D</th><th class="num">Pob. expuesta est.</th></tr></thead>
+      <thead><tr><th>#</th><th>Localidad</th><th>Cuenca</th><th class="num">Peligro</th><th>Acuerdo modelos</th><th class="num">Índice compuesto</th><th class="num">Excedencia I&ndash;D</th><th class="num">Pob. expuesta est.</th></tr></thead>
       <tbody>{ranking_rows}</tbody>
     </table></div>
 

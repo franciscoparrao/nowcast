@@ -64,6 +64,30 @@ TOWNS = [
 ]
 
 
+def chip_acuerdo(riesgo):
+    """Chip de confianza: ¿el peligro lo sostienen los dos modelos o uno solo?
+
+    Crítico en esta cuenca: en el ciclo 20260718T18z, GFS pone 161 mm sobre
+    Alto del Carmen y ECMWF pone 4. El peligro que reporta el sistema sale
+    del peor de las fuentes, así que sin este chip ese número se lee igual
+    que uno respaldado por consenso.
+    """
+    ac = (riesgo or {}).get("acuerdo_modelos") or {}
+    conf = ac.get("confianza")
+    if not conf:
+        return "<span style='color:var(--ink-faint);'>—</span>"
+    estilo = {
+        "ALTA": "background:var(--sev-low-bg);color:var(--sev-low-fg);",
+        "MEDIA": "background:#f6e7c4;color:#7a5a12;",
+        "BAJA": "background:#f3d4d1;color:#8c2f22;",
+    }.get(conf, "background:#eceae2;color:#5a6259;")
+    g, e = ac.get("gfs_mm"), ac.get("ecmwf_mm")
+    detalle = f"GFS {g:.0f} / ECMWF {e:.0f} mm" if g is not None and e is not None else ""
+    return (f"<span class='chip' style=\"{estilo}white-space:nowrap;\" "
+            f"title=\"{ac.get('nota','')}\">{conf}</span> "
+            f"<span style='font-size:9.5px;color:var(--ink-faint);'>{detalle}</span>")
+
+
 def severity(g):
     if g is None or g < 0:
         return ("s-none", "SIN DATO")
@@ -189,6 +213,9 @@ def main():
             if pel is not None:
                 vuln_row += (f"<div class='stat-row'><span>Peligro (susc × excedencia)</span>"
                             f"<span>{pel:.2f}</span></div>")
+            if (riesgo.get("acuerdo_modelos") or {}).get("confianza"):
+                vuln_row += (f"<div class='stat-row'><span>Acuerdo entre modelos</span>"
+                            f"<span>{chip_acuerdo(riesgo)}</span></div>")
             comp = riesgo.get("indice_compuesto")
             if comp is not None:
                 vuln_row += (f"<div class='stat-row' style='font-weight:700;' "

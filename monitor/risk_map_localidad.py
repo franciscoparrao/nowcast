@@ -141,6 +141,73 @@ def id_exceedance_at_point(fdir, lon, lat, id_a, id_b, dt_hours=1.0, max_window_
     return best if best["duracion_h"] is not None else None
 
 
+def model_agreement(forecast_dir, domain, lon, lat):
+    """Acuerdo entre modelos sobre la lluvia en el punto.
+
+    Por qué hace falta: el peligro que reporta este sistema sale de
+    `hazard_max_worst_available`, el PEOR de las fuentes disponibles. Eso es
+    defendible por precaución, pero borra la distinción que más importa para
+    decidir qué hacer: si el número lo sostienen dos modelos o uno solo.
+    Hallazgo 2026-07-18: en este evento GFS y ECMWF discrepan por un factor
+    50 en dónde cae la tormenta — en Alto del Carmen GFS da 208 mm y ECMWF
+    4 mm, mientras que en Limarí (Juntas, Combarbalá) los dos coinciden y
+    ECMWF es incluso más húmedo. Ambos casos salían con el mismo aspecto en
+    el reporte.
+
+    Se compara la LLUVIA ACUMULADA, no la excedencia I-D: ECMWF se lee a 3 h
+    y GFS a 1 h, y el umbral I-D castiga estructuralmente la resolución
+    temporal gruesa (la intensidad máxima resoluble es profundidad/3h contra
+    profundidad/1h), así que comparar excedencias estaría sesgado contra
+    ECMWF. Los totales acumulados no tienen ese sesgo.
+
+    ICON se reporta pero NO entra en la etiqueta: su acumulado no es
+    comparable sin verificar antes la reconstrucción horaria desde sus pasos
+    nativos (en el ciclo 20260718T18z declara 21 pasos nativos y escribe 120,
+    y da medias de dominio muy por debajo de las otras dos fuentes). Queda
+    pendiente resolverlo en vez de mezclarlo a ciegas.
+    """
+    out = {"gfs_mm": None, "ecmwf_mm": None, "icon_mm": None,
+           "razon_min_max": None, "confianza": None, "nota": None}
+    base = os.path.join(forecast_dir, domain)
+    for clave, sub in (("gfs_mm", ""), ("ecmwf_mm", "ecmwf"), ("icon_mm", "icon")):
+        p = os.path.join(base, sub, "rain_liquid_total.tif")
+        if os.path.exists(p):
+            v = point_value(p, lon, lat)
+            out[clave] = round(float(v), 1) if np.isfinite(v) else None
+
+    g, e = out["gfs_mm"], out["ecmwf_mm"]
+    if g is None or e is None:
+        out["confianza"] = "indeterminada"
+        out["nota"] = "falta una de las dos fuentes deterministas para comparar"
+        return out
+
+    mx, mn = max(g, e), min(g, e)
+    out["razon_min_max"] = round(mn / mx, 2) if mx > 0 else None
+    if mx < 50:
+        out["confianza"] = "sin señal relevante"
+        out["nota"] = f"ningún modelo supera 50 mm acumulados (GFS {g}, ECMWF {e})"
+    elif out["razon_min_max"] >= 0.5:
+        out["confianza"] = "ALTA"
+        # OJO con la redacción: razón 0.5 significa que un modelo ve la MITAD
+        # que el otro. Eso es acuerdo sobre QUE llueve fuerte acá, no sobre
+        # cuánto — decir "coinciden en magnitud" sería sobreafirmar.
+        out["nota"] = (f"ambos modelos ven lluvia en este punto (GFS {g} mm, "
+                       f"ECMWF {e} mm; el menor es {out['razon_min_max']:.0%} del mayor). "
+                       f"La etiqueta mide ACUERDO, no magnitud: mirar los mm para saber "
+                       f"si la lluvia además es grande")
+    elif out["razon_min_max"] >= 0.2:
+        out["confianza"] = "MEDIA"
+        out["nota"] = (f"ambos ven lluvia pero difieren fuerte en magnitud (GFS {g} mm, "
+                       f"ECMWF {e} mm; el menor es {out['razon_min_max']:.0%} del mayor)")
+    else:
+        cual = "GFS" if g > e else "ECMWF"
+        out["confianza"] = "BAJA"
+        out["nota"] = (f"la señal la sostiene SOLO {cual} (GFS {g} mm, ECMWF {e} mm; "
+                       f"razón {out['razon_min_max']}) — el otro modelo no reproduce "
+                       f"esta lluvia, tratar el peligro como una de dos hipótesis")
+    return out
+
+
 def point_susceptibility(susc_path, lon, lat):
     """Susceptibilidad estática cruda en el punto, en [0,1]."""
     if not susc_path or not os.path.exists(susc_path):
@@ -334,6 +401,9 @@ def main():
     # --- término de peligro NO SATURADO --------------------------------------
     # susceptibilidad estática × excedencia I-D cruda, en vez del factor de
     # gatillo logístico (que llega a 0.98 en E=2 y deja de discriminar).
+    acuerdo = model_agreement(forecast_dir, a.domain, a.lon, a.lat)
+    print(f"[{a.name}] acuerdo entre modelos: {acuerdo['confianza']} — {acuerdo['nota']}")
+
     exc = id_exceedance_at_point(os.path.join(forecast_dir, a.domain), a.lon, a.lat,
                                   a.id_a, a.id_b, dt_hours=a.dt_hours)
     susc_pt = point_susceptibility(susc_path, a.lon, a.lat)
@@ -370,6 +440,7 @@ def main():
         json.dump({"name": a.name, "poblacion_urbana": pob, "hazard_en_punto": hazard_pt,
                   "exposicion": exposure, "vulnerabilidad": vuln,
                   "susceptibilidad_en_punto": susc_pt,
+                  "acuerdo_modelos": acuerdo,
                   "exceedancia_id": exc,
                   "peligro_no_saturado": peligro_ns,
                   "peligro_nota": ("susceptibilidad × excedencia I-D cruda (E = I/(a·D^-b), "
