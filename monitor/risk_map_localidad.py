@@ -141,7 +141,36 @@ def id_exceedance_at_point(fdir, lon, lat, id_a, id_b, dt_hours=1.0, max_window_
     return best if best["duracion_h"] is not None else None
 
 
-def model_agreement(forecast_dir, domain, lon, lat):
+def ventana_de_fuente(base, sub):
+    """Ventana temporal REAL que cubre el acumulado de una fuente.
+
+    Existe porque las tres fuentes NO cubren el mismo periodo y nada lo
+    decía: DWD publica ICON progresivamente y `fetch_icon.py` toma los lead
+    times disponibles al momento de correr, así que su `rain_liquid_total`
+    puede acumular 24 h mientras GFS acumula 119. Comparar esos totales no
+    significa nada — ICON se ve 5× más seco por construcción. Y es
+    INTERMITENTE: el ciclo 20260718T12z alcanzó 92 pasos nativos y sí era
+    comparable; el 20260719T06z solo 25. Sin este chequeo la comparación es
+    válida o basura según la hora a la que disparó el timer, en silencio.
+    """
+    import glob as _glob
+    d = os.path.join(base, sub, "steps")
+    fs = sorted(_glob.glob(os.path.join(d, "step_*.tif")))
+    if not fs:
+        return None
+    def stamp(p):
+        return os.path.basename(p)[len("step_"):-len(".tif")]
+    t0, t1 = stamp(fs[0]), stamp(fs[-1])
+    try:
+        from datetime import datetime
+        fmt = "%Y%m%dT%H%M"
+        horas = (datetime.strptime(t1, fmt) - datetime.strptime(t0, fmt)).total_seconds() / 3600
+    except Exception:
+        horas = None
+    return {"n_pasos": len(fs), "desde": t0, "hasta": t1, "horas": horas}
+
+
+def model_agreement(forecast_dir, domain, lon, lat, tolerancia_horas=0.25):
     """Acuerdo entre modelos sobre la lluvia en el punto.
 
     Por qué hace falta: el peligro que reporta este sistema sale de
@@ -160,26 +189,52 @@ def model_agreement(forecast_dir, domain, lon, lat):
     profundidad/1h), así que comparar excedencias estaría sesgado contra
     ECMWF. Los totales acumulados no tienen ese sesgo.
 
-    ICON se reporta pero NO entra en la etiqueta: su acumulado no es
-    comparable sin verificar antes la reconstrucción horaria desde sus pasos
-    nativos (en el ciclo 20260718T18z declara 21 pasos nativos y escribe 120,
-    y da medias de dominio muy por debajo de las otras dos fuentes). Queda
-    pendiente resolverlo en vez de mezclarlo a ciegas.
+    Cada fuente se acompaña de su VENTANA real (ver `ventana_de_fuente`) y
+    solo se comparan las que cubren el mismo periodo dentro de
+    `tolerancia_horas`. ICON suele quedar fuera por esto —no por discrepar,
+    sino porque acumula menos horas— y el motivo queda escrito en la salida
+    en vez de ser una nota a mano.
     """
     out = {"gfs_mm": None, "ecmwf_mm": None, "icon_mm": None,
+           "ventanas": {}, "comparables": None,
            "razon_min_max": None, "confianza": None, "nota": None}
     base = os.path.join(forecast_dir, domain)
-    for clave, sub in (("gfs_mm", ""), ("ecmwf_mm", "ecmwf"), ("icon_mm", "icon")):
+    for clave, sub, lbl in (("gfs_mm", "", "gfs"), ("ecmwf_mm", "ecmwf", "ecmwf"),
+                            ("icon_mm", "icon", "icon")):
         p = os.path.join(base, sub, "rain_liquid_total.tif")
         if os.path.exists(p):
             v = point_value(p, lon, lat)
             out[clave] = round(float(v), 1) if np.isfinite(v) else None
+        w = ventana_de_fuente(base, sub)
+        if w:
+            out["ventanas"][lbl] = w
+
+    vg, ve = out["ventanas"].get("gfs"), out["ventanas"].get("ecmwf")
+    vi = out["ventanas"].get("icon")
+    comparables = ["gfs", "ecmwf"] if (vg and ve and vg["horas"] and ve["horas"]
+                                        and abs(vg["horas"] - ve["horas"]) <= vg["horas"] * tolerancia_horas) else []
+    if vi and vg and vi["horas"] and vg["horas"]:
+        if abs(vi["horas"] - vg["horas"]) <= vg["horas"] * tolerancia_horas:
+            comparables.append("icon")
+    out["comparables"] = comparables
 
     g, e = out["gfs_mm"], out["ecmwf_mm"]
     if g is None or e is None:
         out["confianza"] = "indeterminada"
         out["nota"] = "falta una de las dos fuentes deterministas para comparar"
         return out
+    if "gfs" not in comparables or "ecmwf" not in comparables:
+        out["confianza"] = "indeterminada"
+        out["nota"] = (f"GFS y ECMWF no cubren el mismo periodo "
+                       f"(GFS {vg['horas']:.0f} h, ECMWF {ve['horas']:.0f} h): "
+                       f"comparar sus acumulados no significa nada")
+        return out
+    if vi and "icon" not in comparables:
+        out["icon_excluido"] = (f"ICON acumula {vi['horas']:.0f} h contra {vg['horas']:.0f} h "
+                                f"de GFS ({vi['n_pasos']} pasos, {vi['desde']}→{vi['hasta']}): "
+                                f"su total NO es comparable y se excluye de la etiqueta. "
+                                f"No es que discrepe — es una ventana más corta porque DWD "
+                                f"aún no publicaba los lead times restantes al momento del fetch")
 
     mx, mn = max(g, e), min(g, e)
     out["razon_min_max"] = round(mn / mx, 2) if mx > 0 else None
