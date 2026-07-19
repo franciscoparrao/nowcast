@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Capa de análisis nivel-3: peligro pronosticado × susceptibilidad real.
 
-Cruza el `hazard_max` del pronóstico GFS (excedencia del gatillo I-D, la
-mitad CLIMÁTICA) con los modelos de susceptibilidad por cuenca del usuario
-(paper1, XGBoost/RandomForest a 30 m — la mitad de TERRENO), agregados a la
+Cruza el `hazard_max` del peor pronóstico disponible entre GFS, ECMWF e ICON
+(excedencia del gatillo I-D, la mitad CLIMÁTICA) con los modelos de susceptibilidad por cuenca del usuario
+(paper1, 15 cuencas: XGBoost en 8, RandomForest en 4, Ridge en 3, elegido por
+validación cruzada en cada cuenca — a 30 m, la mitad de TERRENO), agregados a la
 grilla 0.1° del dominio. El producto responde "¿dónde preocuparse de verdad?":
 lluvia gatillante sobre ladera que puede fallar.
 
@@ -20,8 +21,22 @@ Uso:
 
 Salidas en <forecast>/<dominio>/:
     susc_mean_0p1.tif / susc_max_0p1.tif      terreno agregado
-    hazard_x_susc_mean.tif / hazard_x_susc_max.tif   el cruce (con la
-        variante regional-a5.5 del hazard, la calibrada para forzante gruesa)
+    hazard_x_susc_mean.tif / hazard_x_susc_max.tif   el cruce
+
+VARIANTE DE UMBRAL POR FUENTE (2026-07-16): GFS y ECMWF se reproyectan por
+bilineal a 0.25°/0.1° — la interpolación diluye los picos de intensidad, así
+que usan `regional-a5.5` (intercepto I-D calibrado para esa forzante gruesa,
+ver docstring de forecast_gfs.py). ICON se reproyecta por vecino-más-cercano
+desde su malla nativa ~13 km (ver fetch_icon.py) — no diluye picos, así que
+aplicarle el mismo intercepto permisivo satura el hazard a 1.0 casi en
+cualquier evento con lluvia real (verificado: 272/275 comunas en ALTO,
+peak_terreno del watchlist saturado 0.999-1.0 en el top-20 completo, sin
+poder discriminar nada). Para ICON se usa `caine-global` (a=14.82, el
+intercepto sin diluir), que sigue alto durante este evento pero SÍ discrimina
+entre dominios (0.61-0.99 en vez de 1.0 plano). Ninguna de las dos variantes
+está "más validada" que la otra para ICON — es un ajuste razonado de
+consistencia de resolución, no una recalibración con backtesting propio;
+queda pendiente evaluarlo contra inventario cuando termine el evento.
 """
 
 import argparse
@@ -43,7 +58,12 @@ DOMAIN_BASINS = {
                 "05_rio_copiapo/susceptibility_Ridge.tif",
                 "06_rio_huasco/susceptibility_XGBoost.tif"],
     "coquimbo": ["07_rio_elqui/susceptibility_XGBoost.tif",
-                 "08_rio_limari/susceptibility_XGBoost.tif"],
+                 "08_rio_limari/susceptibility_XGBoost.tif",
+                 # Provincia del Choapa (Illapel/Salamanca/Los Vilos): sin cuenca
+                 # propia -- TRANSFERENCIA (sustituto RandomForest, R2=0.916
+                 # contra Limari, 14/15 factores, sin s_CSI). Ver
+                 # 18_choapa_transfer/susceptibility_transfer_meta.json.
+                 "18_choapa_transfer/susceptibility_transfer_limari.tif"],
     "rm": ["09_rio_maipo/susceptibility_RandomForest.tif"],
     "nuble-biobio": ["12_rio_biobio/susceptibility_RandomForest.tif"],
     # araucania: ninguna de las 15 cuencas del paper1 la cubre. Se usa una capa
@@ -57,6 +77,14 @@ DOMAIN_BASINS = {
     "chile-centro-sur": [
         "07_rio_elqui/susceptibility_XGBoost.tif",
         "08_rio_limari/susceptibility_XGBoost.tif",
+        # Provincia del Choapa — la MISMA capa de transferencia que ya estaba
+        # en el dominio `coquimbo`. Faltaba acá (hallazgo 2026-07-18): este es
+        # el barrido que usa select_watchlist.py para TODA la Región IV
+        # (domain_for_region manda region 4 a `chile-centro-sur`, no a
+        # `coquimbo`), así que sin esta línea Illapel quedaba EXCLUIDA de la
+        # watchlist por "sin dato en el punto" y Canela caía al relleno
+        # contaminado de 08_rio_limari en vez de a su transferencia propia.
+        "18_choapa_transfer/susceptibility_transfer_limari.tif",
         "09_rio_maipo/susceptibility_RandomForest.tif",
         "10_rio_rapel/susceptibility_RandomForest.tif",
         "11_rio_maule/susceptibility_Ridge.tif",
@@ -75,7 +103,122 @@ DOMAIN_BASINS = {
         "17_costa_transfer/susceptibility_transfer_biobio_sur.tif",
     ],
 }
-HAZARD_VARIANT = "hazard_max_regional-a5.5.tif"
+# GFS/ECMWF: bilineal, forzante diluida -> intercepto regional permisivo.
+# ICON: vecino-mas-cercano, ~13 km nativo sin diluir -> intercepto global sin
+# descuento (ver nota de módulo). Mismo criterio en comuna_impact.py.
+HAZARD_VARIANT_BY_SOURCE = {
+    "gfs": "hazard_max_regional-a5.5.tif",
+    "ecmwf": "hazard_max_regional-a5.5.tif",
+    "icon": "hazard_max.tif",
+}
+HAZARD_COMBINED = "hazard_max_worst_available.tif"
+HAZARD_SOURCES = [("gfs", ""), ("ecmwf", "ecmwf"), ("icon", "icon")]
+
+
+def raster_coverage_warning(path, lon, lat, window_km=3.0):
+    """Heurística de QA reutilizable: ¿este punto cae en la cuenca REAL
+    delineada del raster de susceptibilidad, o en el RELLENO del rectángulo
+    DEM descargado alrededor de ella?
+
+    Los rasters de paper1_susceptibilidad cubren el rectángulo completo de
+    la descarga, no solo la cuenca delineada — no hay un polígono de cuenca
+    real en el dataset para recortar. Fuera de la cuenca el valor es
+    interpolación/extrapolación de borde del modelo, no señal de terreno.
+    Hallazgo 2026-07-17: confirmado por inspección visual en 7 localidades
+    de 4 cuencas distintas (Canela y Coquimbo en el reporte de Coquimbo/
+    Choapa; Capitán Pastene y Contulmo en 12_rio_biobio; Caldera y
+    Vallenar-ICON en 05_rio_copiapo; La Higuera-ICON en 07_rio_elqui) — en
+    todos los casos el punto cae geográficamente fuera de la mancha de
+    drenaje real dibujada por el raster, en una franja plana o con un
+    artefacto de enrutamiento de flujo diagonal (relleno calculado sobre el
+    rectángulo, no sobre la cuenca).
+
+    Combina dos señales baratas (calibradas contra esas 7 localidades más 6
+    localidades reales de control en 08_rio_limari/18_choapa_transfer/
+    09_rio_maipo):
+      - varianza local de textura en una ventana de `window_km` (el relleno
+        es casi plano; la cuenca real tiene relieve, incluso en fondo de
+        valle)
+      - distancia del punto al borde del rectángulo del raster (el relleno
+        por definición toca el borde de la descarga)
+
+    LIMITACIÓN CONOCIDA, documentada a propósito: fondo de valle plano REAL
+    cerca del borde de la ventana (ej. Las Cabras/Requínoa en 09_rio_maipo,
+    terreno agrícola genuinamente plano del Valle Central) da FALSO
+    POSITIVO — es estadísticamente indistinguible del relleno usando solo
+    estas 2 señales baratas. La única distinción robusta que se encontró
+    fue la inspección visual contra la forma real del drenaje, que no es
+    automatizable sin un polígono de cuenca real. Por eso esto es un AVISO
+    para revisión humana (igual que calibration_domain_warning o
+    mass_balance_ratio en runout_localidad.py), NO un filtro duro: no
+    reasignar ni descartar una localidad solo por `sospechoso=True` sin
+    mirar el mapa.
+    """
+    from pyproj import Transformer as _Transformer
+
+    with rasterio.open(path) as s:
+        crs = s.crs
+        res = s.res[0]
+        left, bottom, right, top = s.bounds
+        t = _Transformer.from_crs("EPSG:4326", crs, always_xy=True)
+        x, y = t.transform(lon, lat)
+        dist_borde_km = min(x - left, right - x, y - bottom, top - y) / 1000.0
+        col = int((x - left) / res)
+        row = int((top - y) / res)
+        half = max(1, int(window_km * 1000 / res))
+        row0, row1 = max(0, row - half), min(s.height, row + half)
+        col0, col1 = max(0, col - half), min(s.width, col + half)
+        win = s.read(1, window=((row0, row1), (col0, col1)))
+
+    finite = win[np.isfinite(win)]
+    std_local = float(np.std(finite)) if finite.size else float("nan")
+    sospechoso = bool(
+        np.isfinite(std_local)
+        and (std_local < 0.01
+             or (std_local < 0.03 and dist_borde_km < 20)
+             or dist_borde_km < 6)
+    )
+    nota = (
+        f"varianza local {std_local:.3f} a {dist_borde_km:.1f} km del borde "
+        "de la ventana descargada — " + (
+            "posible RELLENO fuera de la cuenca real (no cuenca real): "
+            "revisar visualmente antes de confiar en el valor de este punto "
+            "(ver docstring de raster_coverage_warning en susc_overlay.py)"
+            if sospechoso else "sin señal de relleno"
+        )
+    )
+    return {"sospechoso": sospechoso, "std_local": round(std_local, 4),
+            "distancia_borde_km": round(dist_borde_km, 1), "nota": nota}
+
+
+def combined_hazard(ddir):
+    """Maximo celda-a-celda entre GFS, ECMWF e ICON disponibles."""
+    out = None
+    profile = None
+    used = []
+    for label, subdir in HAZARD_SOURCES:
+        variant = HAZARD_VARIANT_BY_SOURCE[label]
+        path = os.path.join(ddir, subdir, variant) if subdir else os.path.join(ddir, variant)
+        if not os.path.exists(path):
+            continue
+        with rasterio.open(path) as src:
+            arr = src.read(1).astype("float32")
+            if profile is None:
+                profile = dict(src.profile)
+                out = np.full(arr.shape, np.nan, "float32")
+            elif arr.shape != out.shape:
+                print(f"  AVISO: {label} tiene grilla {arr.shape}, se omite en combinado", file=sys.stderr)
+                continue
+        valid = np.isfinite(arr)
+        out[valid] = np.where(np.isfinite(out[valid]), np.maximum(out[valid], arr[valid]), arr[valid])
+        used.append(label)
+    if out is None:
+        return None, []
+    profile.update(dtype="float32", nodata=np.nan)
+    out_path = os.path.join(ddir, HAZARD_COMBINED)
+    with rasterio.open(out_path, "w", **profile) as dst:
+        dst.write(out, 1)
+    return out_path, used
 
 
 def aggregate(basins, ref_profile, resampling):
@@ -114,10 +257,11 @@ def main():
     for dom in domains:
         basins = DOMAIN_BASINS.get(dom, [])
         ddir = os.path.join(fdir, dom)
-        hz_path = os.path.join(ddir, HAZARD_VARIANT)
-        if not os.path.exists(hz_path):
-            print(f"{dom}: sin {HAZARD_VARIANT}, se omite", file=sys.stderr)
+        hz_path, hz_sources = combined_hazard(ddir)
+        if hz_path is None:
+            print(f"{dom}: sin hazard_max de GFS/ECMWF/ICON, se omite", file=sys.stderr)
             continue
+        print(f"{dom}: hazard combinado desde {','.join(hz_sources)}")
         if not basins:
             print(f"{dom}: sin cuenca modelada en paper1 — sin capa de terreno "
                   f"(transfer pendiente, paper4)")
