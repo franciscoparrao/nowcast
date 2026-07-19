@@ -1,0 +1,14 @@
+[package]
+name = "nowcast-omori"
+description = "Seismicity as a trigger: omori's forecast ETAS aftershock rate (events/day, M>=m0) as a composable nowcast trigger, fusable with rainfall I-D (post-seismic landslide priming)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+nowcast-core = { path = "../nowcast-core" }
+# Sibling seismicity-statistics engine (omori workspace): ETAS conditional
+# rate given an observed catalog.
+omori-core = { path = "../../../omori/crates/omori-core" }

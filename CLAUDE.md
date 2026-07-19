@@ -169,6 +169,18 @@ motores se enchufan como proveedores nativos en v0.2.
   ⊕ deformación por noisy-OR — donde el terreno repta (v≳v_crit) el peligro cruza
   el umbral aunque la lluvia sola no gatille. insar-core: ~5300 LOC, PS-InSAR/SBAS,
   validado Fernandina; `run_sbas` produce el VelocityMap.
+- **omori** → forzante de **sismicidad** (3er trigger, 2026-07-12). LISTO: crate
+  `nowcast-omori` envuelve `omori-core` (estadística de catálogos + ETAS,
+  validado vs SAPP/cluster2000x/SeismoStats): `SeismicityForcing` construye la
+  serie **causal** de tasa ETAS esperada por paso (eventos/día M≥m0, 1ª
+  generación dada solo la historia previa a cada paso; uniforme en espacio v1)
+  y `seismicity_trigger` la monta en un `ThresholdTrigger` (tasa/tasa_crit).
+  Caso de uso: debilitamiento post-sísmico de laderas — tras un mainshock la
+  secuencia de réplicas caliente baja la lluvia necesaria para fallar
+  (Chi-Chi, Wenchuan, Gorkha); fusión `lluvia I-D ⊕ tasa de réplicas` por
+  noisy-OR. Tests: decaimiento Omori de la serie, causalidad (evento dentro de
+  la ventana no afecta su propio paso), entradas hostiles, alerta sin lluvia.
+  Adapter LISTO.
 - **firespread** → peligro paralelo (fuego): crate `nowcast-firespread` envuelve
   `firespread-core` (Rothermel + minimum-travel-time). `run_fire`→`FireField`
   (arrival/ROS/intensidad por celda, `fire_hazard` normalizado) y la **cascada

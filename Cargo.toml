@@ -8,6 +8,7 @@ members = [
     "crates/nowcast-surtgis",
     "crates/nowcast-swarm",
     "crates/nowcast-insar",
+    "crates/nowcast-omori",
     "crates/nowcast-firespread",
     "crates/nowcast-cli",
     "crates/nowcast-python",
@@ -23,6 +24,7 @@ default-members = [
     "crates/nowcast-surtgis",
     "crates/nowcast-swarm",
     "crates/nowcast-insar",
+    "crates/nowcast-omori",
     "crates/nowcast-firespread",
     "crates/nowcast-cli",
 ]
