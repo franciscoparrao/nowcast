@@ -51,6 +51,8 @@ from datetime import datetime, timedelta, timezone
 
 import numpy as np
 
+from window_meta import ventana_desde_keys
+
 from fetch_goes_qpe import target_grid
 
 FILTER = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25_1hr.pl"
@@ -271,6 +273,7 @@ def main():
         variants = [("caine-global", a.id_a), ("regional-a5.5", 5.5)]
         meta = {"cycle": cycle_id, "generated_utc": now.strftime("%Y-%m-%dT%H:%MZ"),
                 "n_steps": len(keys), "failed_hours": failed,
+                "ventana": ventana_desde_keys(keys, step_hours=1),
                 "iso0_mean_m": round(float(np.mean(iso_acc)), 0),
                 "snow_fraction_mean": round(float(np.mean(snowfrac_acc)), 3),
                 "params": {"id_b": a.id_b, "k": a.k, "alert_level": a.alert_level,

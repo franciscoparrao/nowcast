@@ -33,6 +33,8 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
+
+from window_meta import ventana_desde_keys
 import rasterio
 from rasterio.transform import from_origin
 
@@ -410,6 +412,7 @@ def main():
             "fields": list(RAIN_PARAMS),
             "reprojection": "nearest-neighbour ICON cell centre -> 0.1 deg target grid",
             "n_steps": len(keys),
+            "ventana": ventana_desde_keys(keys, step_hours=1),
             "failed_icon_steps": failed,
             "step_hours": 1,
             "native_step_types": sorted(x for x in step_types if x),

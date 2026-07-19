@@ -51,6 +51,8 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
+
+from window_meta import ventana_desde_keys
 import rasterio
 from rasterio.transform import from_origin
 
@@ -273,7 +275,9 @@ def main():
 
         meta = {"cycle": cycle_id, "generated_utc": now.strftime("%Y-%m-%dT%H:%MZ"),
                 "source": "ECMWF HRES (oper, 0.25°) via Open Data", "n_steps": len(keys),
-                "failed_steps": failed, "step_hours": STEP_H, "variants": variants_out}
+                "failed_steps": failed, "step_hours": STEP_H,
+                "ventana": ventana_desde_keys(keys, step_hours=STEP_H),
+                "variants": variants_out}
         # Comparación directa con GFS si su forecast.json del mismo ciclo existe.
         gfs_meta_p = os.path.join(a.workdir, "latest", name, "forecast.json")
         if os.path.exists(gfs_meta_p):

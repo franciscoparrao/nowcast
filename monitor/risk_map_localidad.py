@@ -153,6 +153,21 @@ def ventana_de_fuente(base, sub):
     comparable; el 20260719T06z solo 25. Sin este chequeo la comparación es
     válida o basura según la hora a la que disparó el timer, en silencio.
     """
+    # Desde 2026-07-19 los tres fetchers escriben `ventana` en su metadata
+    # (ver monitor/window_meta.py). Se prefiere esa, que es la autoritativa;
+    # el escaneo del directorio queda como respaldo para ciclos generados
+    # antes del cambio, que siguen en disco y hay que poder leer.
+    meta_name = {"": "forecast.json", "ecmwf": "ecmwf.json", "icon": "icon.json"}.get(sub)
+    if meta_name:
+        mp = os.path.join(base, sub, meta_name)
+        if os.path.exists(mp):
+            try:
+                v = (json.load(open(mp)) or {}).get("ventana")
+                if v and v.get("horas") is not None:
+                    return v
+            except Exception:
+                pass
+
     import glob as _glob
     d = os.path.join(base, sub, "steps")
     fs = sorted(_glob.glob(os.path.join(d, "step_*.tif")))
