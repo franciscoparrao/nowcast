@@ -5,11 +5,17 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=%h/nowcast-monitor/monitor/monitor.sh
+# Rutas REALES de esta máquina (corregidas 2026-07-18): el script vive en el
+# repo (~/proyectos/nowcast), pero los CONFIGS POR DOMINIO son datos de
+# despliegue, no código, y siguen en ~/nowcast-monitor/domains/<dominio>/.
+# Ese árbol no existe todavía acá: hay que crearlo antes de instanciar esta
+# unidad (`systemctl --user start nowcast-monitor@maipo` falla sin él).
+ExecStart=%h/proyectos/nowcast/monitor/monitor.sh
 # Cada dominio es un config; las credenciales compartidas viven en el
-# config.local.env del directorio monitor/ (LOCAL_CONFIG las inyecta).
+# config.local.env del directorio monitor/ del repo (LOCAL_CONFIG las inyecta).
 Environment=CONFIG=%h/nowcast-monitor/domains/%i/config.env
-Environment=LOCAL_CONFIG=%h/nowcast-monitor/monitor/config.local.env
+Environment=LOCAL_CONFIG=%h/proyectos/nowcast/monitor/config.local.env
+Environment=NOWCAST_BIN=%h/proyectos/nowcast/target/release/nowcast
 # Arranques en frío bajan la ventana completa: minutos-decenas de minutos.
 TimeoutStartSec=45min
 Nice=10

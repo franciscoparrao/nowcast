@@ -1,10 +1,28 @@
 [Unit]
-Description=nowcast-forecast: pronóstico GFS+isoterma de los 3 dominios (interno)
+Description=nowcast-forecast: pronóstico GFS+ECMWF+ICON + cadena de análisis (interno)
 Wants=network-online.target
 After=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -lc 'source %h/nowcast-monitor/monitor/config.local.env && python3 %h/nowcast-monitor/monitor/forecast_gfs.py --workdir %h/nowcast-monitor/forecast --nowcast-bin %h/nowcast-monitor/bin/nowcast >> %h/nowcast-monitor/forecast/forecast.log 2>&1'
-TimeoutStartSec=30min
+# Rutas REALES de esta máquina (corregidas 2026-07-18): el repo es un checkout
+# de desarrollo en ~/proyectos/nowcast y el workdir de datos es
+# ~/nowcast-forecast. Las versiones anteriores apuntaban a ~/nowcast-monitor/,
+# un layout de despliegue que NO existe acá — por eso la unidad nunca pudo
+# haber corrido aunque se hubiese instalado.
+Environment=FORECAST_WORKDIR=%h/nowcast-forecast
+Environment=NOWCAST_BIN=%h/proyectos/nowcast/target/release/nowcast
+
+# Dos pasos encadenados y en este orden. Si el pronóstico falla, systemd no
+# ejecuta el segundo: no tiene sentido analizar un ciclo que no bajó. Si el
+# análisis falla, la unidad queda en `failed` a propósito — el pronóstico
+# crudo sigue siendo válido en disco, pero hay que enterarse de que la
+# watchlist NO se actualizó (ver cabecera de analysis_all.sh).
+ExecStart=%h/proyectos/nowcast/monitor/forecast_all.sh
+ExecStart=%h/proyectos/nowcast/monitor/analysis_all.sh
+
+# El pronóstico son ~20 min (3 fuentes) y el análisis ~10 min (overlay 30 m +
+# agregación censal de 18.5M filas). 90 min deja margen para reintentos
+# lentos de NOMADS/ECMWF sin colgar la unidad indefinidamente.
+TimeoutStartSec=90min
 Nice=10

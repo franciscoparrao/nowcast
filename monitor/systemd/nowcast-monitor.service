@@ -5,9 +5,14 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-# Ajustar la ruta al checkout/despliegue real.
-ExecStart=%h/nowcast-monitor/monitor/monitor.sh
-Environment=CONFIG=%h/nowcast-monitor/monitor/config.env
+# Rutas REALES de esta máquina (corregidas 2026-07-18): repo de desarrollo en
+# ~/proyectos/nowcast. WORK_DIR (datos rotativos IMERG, estado, logs) lo fija
+# config.env y por default es ~/nowcast-monitor, que acá NO existe todavía —
+# el monitor de eventos nunca ha corrido en esta máquina. Se crea solo al
+# primer ciclo; si se quiere otro sitio, sobrescribir WORK_DIR abajo.
+ExecStart=%h/proyectos/nowcast/monitor/monitor.sh
+Environment=CONFIG=%h/proyectos/nowcast/monitor/config.env
+Environment=NOWCAST_BIN=%h/proyectos/nowcast/target/release/nowcast
 # El ciclo baja ~2-8 gránulos y corre el motor: minutos, no horas.
 TimeoutStartSec=30min
 Nice=10
