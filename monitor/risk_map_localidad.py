@@ -281,6 +281,21 @@ def main():
             # esta indexada por nombre aqui -- se intenta con el propio nombre
             # de la localidad tal cual viene en el argumento.
             urb_c = urb_all[urb_all["LOCALIDAD"].str.upper() == a.comuna.upper()]
+        if urb_c.empty:
+            # FALLBACK A ALDEAS (2026-07-18), hermana del mismo fallback en
+            # select_watchlist.py: las comunas rurales no tienen polígono en
+            # Limite_Urbano_CPV24 y sin esto quedaban sin exposición ni índice
+            # compuesto — justo las de mayor peligro del evento (Alto del
+            # Carmen, Río Hurtado). `Aldeas_CPV24` trae el mismo esquema.
+            ald_all = gpd.read_file(CENSUS_GPKG, layer="Aldeas_CPV24")
+            ald_c = ald_all[ald_all["ENTIDAD"].astype(str).str.upper()
+                            .str.contains(a.comuna.upper(), na=False)
+                            | ald_all["COMUNA"].astype(str).str.upper()
+                            .str.contains(a.comuna.upper(), na=False)]
+            if not ald_c.empty:
+                urb_c = ald_c
+                print(f"[{a.name}] sin área urbana censada; exposición calculada "
+                      f"sobre el polígono de ALDEA (Aldeas_CPV24)")
         if not urb_c.empty:
             urb_c = urb_c.sort_values("n_per", ascending=False)
             urb = urb_c.to_crs(crs)

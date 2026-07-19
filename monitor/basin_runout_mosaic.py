@@ -19,6 +19,7 @@ Salida: ~/nowcast-forecast/risk_maps/cuenca_huasco/mapa_runout_cuenca.png
 import argparse
 import glob
 import os
+import sys
 
 import numpy as np
 import rasterio
@@ -34,11 +35,26 @@ def main():
     ap.add_argument("--out-root", default=os.path.expanduser("~/nowcast-forecast/risk_maps"))
     ap.add_argument("--pattern", default="vallenar,freirina,huasco,huasco_valle_*",
                     help="nombres de corridas a mosaicar, separados por coma (soporta glob)")
+    # La grilla de referencia y el directorio de salida eran fijos al Huasco.
+    # Parametrizados (2026-07-18) para poder barrer Limarí y Choapa con el
+    # mismo código en vez de clonar el script por cuenca.
+    ap.add_argument("--domain", default="atacama",
+                    help="dominio del pronóstico que contiene el hazard de referencia")
+    ap.add_argument("--hazard-tif", default="hazard_x_susc_30m_06_rio_huasco.tif",
+                    help="nombre del hazard_x_susc_30m_*.tif que fija la grilla de salida")
+    ap.add_argument("--out-name", default="cuenca_huasco",
+                    help="subdirectorio de --out-root donde se escribe el mosaico")
+    ap.add_argument("--towns", default=None,
+                    help="rótulos y encuadre: 'Nombre:lon,lat;Otro:lon,lat' "
+                         "(default: los 3 pueblos del Huasco)")
+    ap.add_argument("--titulo", default=None, help="título del mapa")
     a = ap.parse_args()
 
     forecast_dir = os.path.realpath(os.path.expanduser(a.forecast))
-    hz_path = os.path.join(forecast_dir, "atacama", "hazard_x_susc_30m_06_rio_huasco.tif")
-    out = os.path.join(a.out_root, "cuenca_huasco")
+    hz_path = os.path.join(forecast_dir, a.domain, a.hazard_tif)
+    if not os.path.exists(hz_path):
+        sys.exit(f"no existe el hazard de referencia: {hz_path}")
+    out = os.path.join(a.out_root, a.out_name)
     os.makedirs(out, exist_ok=True)
 
     with rasterio.open(hz_path) as src:
@@ -87,11 +103,24 @@ def main():
     with rasterio.open(hz_path) as src:
         hz = src.read(1)
 
-    TOWNS = {
-        "Vallenar": (-70.76517, -28.5774),
-        "Freirina": (-71.07987, -28.50991),
-        "Huasco": (-71.219017, -28.467542),
-    }
+    # Los rótulos y el encuadre salían de una lista FIJA de los 3 pueblos del
+    # Huasco (2026-07-18): al generalizar el script a Limarí y Choapa, esos
+    # mapas quedaban rotulados con pueblos de otra cuenca y encuadrados sobre
+    # coordenadas ajenas. Ahora se pasan por --towns.
+    if a.towns:
+        TOWNS = {}
+        for item in a.towns.split(";"):
+            if not item.strip():
+                continue
+            nombre, coords = item.split(":")
+            lon, lat = coords.split(",")
+            TOWNS[nombre.strip()] = (float(lon), float(lat))
+    else:
+        TOWNS = {
+            "Vallenar": (-70.76517, -28.5774),
+            "Freirina": (-71.07987, -28.50991),
+            "Huasco": (-71.219017, -28.467542),
+        }
     from pyproj import Transformer
     t = Transformer.from_crs("EPSG:4326", base_crs, always_xy=True)
     town_xy = [t.transform(lon, lat) for lon, lat in TOWNS.values()]
@@ -124,10 +153,10 @@ def main():
     for spine in ax.spines.values():
         spine.set_edgecolor(RULE)
 
-    fig.suptitle("Cobertura continua de runout — cuenca del Huasco", fontsize=14,
+    fig.suptitle(a.titulo or "Cobertura continua de runout — cuenca del Huasco", fontsize=14,
                 fontweight="bold", color=INK, y=0.97)
     fig.text(0.5, 0.925,
-             f"{n_used} corridas del ABM mosaicadas (3 pueblos + {n_used-3} puntos intermedios a lo largo del valle) — "
+             f"{n_used} corridas del ABM mosaicadas ({len(TOWNS)} poblados rotulados + {n_used-len(TOWNS)} puntos de barrido sobre los cauces) — "
              f"mancha oscura = footprint unión, no solo los 3 puntos originales",
              fontsize=8.5, color="#5a6259", ha="center")
 

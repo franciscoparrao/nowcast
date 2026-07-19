@@ -17,10 +17,13 @@ Criterio de desempate y exclusión:
   - Requiere `peak_terreno` no nulo (si no, la comuna no tiene cobertura de
     susceptibilidad — no hay semilla de terreno, la corrida no sería
     informativa; mismo principio que el guard de `pick_susceptibility`).
-  - Requiere al menos una entidad en `Limite_Urbano_CPV24` para esa comuna
-    (si no hay área urbana censada, no hay "el pueblo" al que referir la
-    distancia del footprint — el ABM seguiría corriendo pero el reporte
-    perdería su métrica central).
+  - Requiere un poblado censado al que referir la distancia del footprint.
+    Se busca primero en `Limite_Urbano_CPV24` y, si la comuna no tiene área
+    urbana, se cae a `Aldeas_CPV24` (campo `fuente_poblado` en la salida).
+    El fallback se agregó el 2026-07-18: exigir polígono urbano excluía POR
+    CONSTRUCCIÓN a las comunas rurales, y entre ellas estaba Alto del Carmen
+    — el peak_terreno MÁS ALTO de las 260 comunas modeladas — que nunca
+    había podido entrar a la lista.
   - Si el punto urbano exacto no tiene dato de susceptibilidad (puede pasar:
     el máximo de la comuna cae en una esquina cordillerana lejos del pueblo),
     se excluye esa comuna y se completa con la siguiente en el ranking —
@@ -42,6 +45,7 @@ import os
 
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 import pyogrio
 import rasterio
 from pyproj import Transformer
@@ -118,12 +122,36 @@ def main():
     # cabecera; algunas comunas grandes tienen 2+ áreas urbanas conurbadas).
     urb_main = urb.sort_values("n_per", ascending=False).groupby("CUT", as_index=False).first()
     urb_main["centroid"] = urb_main.geometry.representative_point()
+    urb_main["fuente_poblado"] = "urbano"
     log(f"{len(urb_main)} comunas con área urbana censada de {urb['CUT'].nunique()} con alguna entidad")
 
+    # FALLBACK A ALDEAS (2026-07-18). Exigir polígono urbano dejaba fuera, POR
+    # CONSTRUCCIÓN, a las comunas rurales cuyos poblados el censo cataloga como
+    # aldeas — y no son casos marginales: Alto del Carmen tiene el peak_terreno
+    # MÁS ALTO de las 260 comunas modeladas (0.999, 4.788 hab, valle andino del
+    # Huasco) y jamás pudo entrar a la watchlist. Río Hurtado, misma situación
+    # (0.974). Son 6 comunas y ~35 mil personas, pero concentradas justo en la
+    # geografía donde los aluviones matan. `Aldeas_CPV24` trae el mismo esquema
+    # (ENTIDAD, n_per, geometría), así que el reemplazo es directo.
+    ald = pyogrio.read_dataframe(
+        CENSUS_GPKG, layer="Aldeas_CPV24", columns=["CUT", "ENTIDAD", "CATEGORIA", "n_per"])
+    ald["CUT"] = ald["CUT"].astype(int)
+    ald_main = ald.sort_values("n_per", ascending=False).groupby("CUT", as_index=False).first()
+    ald_main["centroid"] = ald_main.geometry.representative_point()
+    ald_main["fuente_poblado"] = "aldea"
+    ald_main["LOCALIDAD"] = ald_main["ENTIDAD"]
+    faltantes = ald_main[~ald_main["CUT"].isin(set(urb_main["CUT"]))]
+    log(f"{len(faltantes)} comunas SIN área urbana pero CON aldea censada — se suman por fallback")
+
+    cols = ["CUT", "ENTIDAD", "n_per", "centroid", "fuente_poblado"]
+    poblados = gpd.GeoDataFrame(
+        pd.concat([urb_main[cols], faltantes[cols]], ignore_index=True))
+
     comunas["CUT"] = comunas["CUT"].astype(int)
-    merged = comunas.merge(
-        urb_main[["CUT", "ENTIDAD", "n_per", "centroid"]], on="CUT", how="inner")
-    log(f"{len(merged)} comunas cruzan terreno modelado + área urbana censada")
+    merged = comunas.merge(poblados, on="CUT", how="inner")
+    n_ald = int((merged["fuente_poblado"] == "aldea").sum())
+    log(f"{len(merged)} comunas cruzan terreno modelado + poblado censado "
+        f"({n_ald} vía aldea)")
 
     merged = merged.sort_values("peak_terreno", ascending=False).reset_index(drop=True)
 
@@ -151,13 +179,14 @@ def main():
             "peak_icon": round(float(row["peak_icon"]), 3) if "peak_icon" in row and row["peak_icon"] is not None else None,
             "poblacion_comuna": int(row["poblacion"]) if row["poblacion"] is not None else None,
             "poblacion_urbana": int(row["n_per"]) if row["n_per"] is not None else None,
+            "fuente_poblado": row["fuente_poblado"],
             "cobertura_raster_sospechosa": cobertura["sospechoso"],
             "cobertura_raster_nota": cobertura["nota"],
         })
 
     n_sospechosas = sum(1 for s in selected if s["cobertura_raster_sospechosa"])
     log(f"seleccionadas {len(selected)} localidades (top-{a.top_n} por gatillo×susceptibilidad "
-        f"real, con área urbana censada) | {len(excluded)} excluidas por falta de dato en el punto exacto "
+        f"real, con poblado censado — urbano o aldea) | {len(excluded)} excluidas por falta de dato en el punto exacto "
         f"| {n_sospechosas} con AVISO QA de cobertura de raster (relleno posible, revisar antes de confiar)")
     for s in selected:
         aviso = " ⚠ COBERTURA" if s["cobertura_raster_sospechosa"] else ""
@@ -170,8 +199,9 @@ def main():
     with open(a.out, "w") as f:
         json.dump({"selected": selected, "excluded": excluded,
                    "criterio": "top-N por peak_terreno (hazard climático × susceptibilidad real de "
-                              "terreno), restringido a comunas con área urbana censada (Limite_Urbano_"
-                              "CPV24) y con dato de susceptibilidad en el punto urbano exacto"},
+                              "terreno), restringido a comunas con poblado censado — Limite_Urbano_CPV24 "
+                              "y, si la comuna no tiene área urbana, Aldeas_CPV24 (ver fuente_poblado) — "
+                              "y con dato de susceptibilidad en el punto exacto del poblado"},
                   f, indent=1, ensure_ascii=False)
     log(f"lista guardada en {a.out}")
 
