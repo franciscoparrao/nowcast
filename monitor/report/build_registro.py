@@ -37,20 +37,23 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 DOMAIN_LABELS = {
     "chile-centro-sur": "Barrido macro (Coquimbo → Los Ríos)",
-    "coquimbo": "Coquimbo", "rm": "Región Metropolitana",
+    "atacama": "Atacama", "coquimbo": "Coquimbo", "rm": "Región Metropolitana",
     "nuble-biobio": "Ñuble – Biobío", "araucania": "Araucanía",
 }
-DOMAIN_ORDER = ["chile-centro-sur", "coquimbo", "rm", "nuble-biobio", "araucania"]
+DOMAIN_ORDER = ["chile-centro-sur", "atacama", "coquimbo", "rm", "nuble-biobio", "araucania"]
 
-LOC_LABELS = {
-    "quilaco": ("Quilaco", "Biobío"), "santa_barbara": ("Santa Bárbara", "Biobío"),
-    "tome": ("Tomé", "Biobío (costa)"), "futrono": ("Futrono", "Los Ríos"),
-    "neltume": ("Neltume", "Los Ríos"), "ralco": ("Ralco", "Alto Biobío"),
-    "curacautin": ("Curacautín", "Araucanía"), "las_trancas": ("Las Trancas", "Ñuble"),
-    "monte_patria": ("Monte Patria", "Coquimbo"), "antuco": ("Antuco", "Biobío"),
-    "melipeuco": ("Melipeuco", "Araucanía"), "san_clemente": ("San Clemente", "Maule"),
-    "san_jose_maipo": ("San José de Maipo", "RM · Cajón del Maipo"),
-}
+def load_loc_labels(forecast_dir):
+    """name -> (label, region), leída de watchlist.json (selección objetiva de
+    select_watchlist.py) — ya no una lista hardcodeada. Si watchlist.json no
+    existe (corridas legacy), cae a title-case del nombre del directorio."""
+    p = os.path.join(forecast_dir, "watchlist.json")
+    if not os.path.exists(p):
+        return {}
+    wl = json.load(open(p))
+    labels = {s["name"]: (s["label"].title(), s["region"].title()) for s in wl["selected"]}
+    for s in wl.get("regional_check_norte", {}).get("localidades", []):
+        labels[s["name"]] = (s["label"], s["region"].title() + " · chequeo Norte")
+    return labels
 
 
 def severity(g):
@@ -127,7 +130,7 @@ def make_maps(forecast_dir, runouts_dir, watchlist, out_img):
         ax.add_feature(cfeature.COASTLINE, linewidth=0.6, edgecolor=INK, zorder=4)
         ax.add_feature(cfeature.BORDERS, linewidth=0.5, edgecolor="#8a8474", zorder=4, linestyle=(0, (3, 2)))
         gl = ax.gridlines(draw_labels=True, linewidth=0.3, color=RULE, alpha=0.7,
-                           xlocs=np.arange(-76, -68, 1), ylocs=np.arange(-41, -28, 1))
+                           xlocs=np.arange(-76, -68, 1), ylocs=np.arange(-41, -25, 1))
         gl.top_labels = False; gl.right_labels = False
         gl.xlabel_style = {"size": 7, "color": "#6b6656"}
         gl.ylabel_style = {"size": 7, "color": "#6b6656"}
@@ -180,17 +183,53 @@ def make_maps(forecast_dir, runouts_dir, watchlist, out_img):
         plt.savefig(f"{out_img}/{out_name}.png", facecolor=PAPER)
         plt.close(fig)
 
-    hz_path = f"{forecast_dir}/chile-centro-sur/hazard_max_regional-a5.5.tif"
+    hz_path = f"{forecast_dir}/chile-centro-sur/hazard_max_worst_available.tif"
+    if not os.path.exists(hz_path):
+        hz_path = f"{forecast_dir}/chile-centro-sur/hazard_max_regional-a5.5.tif"
+        hz_subtitle = "Ciclo GFS base · horizonte 120 h · enmascarado a tierra"
+    else:
+        hz_subtitle = "Peor escenario disponible entre GFS, ECMWF e ICON · horizonte 120 h"
     xs_path = f"{forecast_dir}/chile-centro-sur/hazard_x_susc_max.tif"
     cycle = json.load(open(f"{forecast_dir}/chile-centro-sur/forecast.json"))["cycle"]
     panel(hz_path, "Excedencia del gatillo lluvia–duración pronosticada",
-          f"Ciclo GFS {cycle}  ·  horizonte 120 h  ·  enmascarado a tierra",
+          hz_subtitle,
           "Índice de peligro pronosticado (excedencia I–D, umbral regional)",
           "mapa_panorama", marker_by_hazard=True)
     panel(xs_path, "Dónde el gatillo cae sobre terreno susceptible",
           "Mosaico de capas de susceptibilidad (propias + transferencias)",
           "Gatillo climático × susceptibilidad de terreno (agregado 0.1°, MAX)",
           "mapa_overlay", marker_by_hazard=False)
+
+    comuna_geojson = f"{forecast_dir}/comuna_impact/comuna_impact.geojson"
+    if os.path.exists(comuna_geojson):
+        import geopandas as gpd
+        cg = gpd.read_file(comuna_geojson)
+        # Extent propio: el de los otros paneles se corta en -29°S (diseñado
+        # para el barrido macro chile-centro-sur) y dejaría fuera casi toda
+        # Atacama, justo la región que se agregó a este cruce.
+        extent_comuna = [-74.3, -68.7, -40.4, -25.5]
+        fig = plt.figure(figsize=(7.4, 11.6), dpi=200)
+        ax = plt.axes([0.09, 0.07, 0.87, 0.87], projection=ccrs.PlateCarree())
+        basemap(ax, extent_comuna)
+        sev_none = "#c9c6ba"
+        for _, row in cg.iterrows():
+            v = row["peak_worst"]
+            color = sev_none if v is None or (isinstance(v, float) and np.isnan(v)) else HAZARD_CMAP(v)
+            geoms = [row.geometry] if row.geometry.geom_type == "Polygon" else list(row.geometry.geoms)
+            ax.add_geometries(geoms, crs=ccrs.PlateCarree(), facecolor=color,
+                               edgecolor=INK, linewidth=0.12, zorder=3, alpha=0.92)
+        sm = plt.cm.ScalarMappable(cmap=HAZARD_CMAP, norm=mcolors.Normalize(0, 1))
+        cax = fig.add_axes([0.14, 0.035, 0.72, 0.013])
+        cb = plt.colorbar(sm, cax=cax, orientation="horizontal")
+        cb.set_label("Peor de los tres modelos (GFS, ECMWF, ICON) — gris = sin dato", fontsize=7.3, color=INK)
+        cb.ax.tick_params(labelsize=6.3, color=INK)
+        cb.outline.set_edgecolor(RULE)
+        fig.text(0.09, 0.965, "Gatillo por comuna, peor escenario de los tres modelos",
+                  fontsize=11.5, color=INK, fontweight="bold", ha="left")
+        fig.text(0.09, 0.945, "Límite comunal oficial (Censo 2024) · III Atacama a XIV Los Ríos + Ñuble",
+                  fontsize=8, color="#5a6259", ha="left")
+        plt.savefig(f"{out_img}/mapa_comunas.png", facecolor=PAPER)
+        plt.close(fig)
 
     os.makedirs(f"{out_img}/localidades", exist_ok=True)
     for name, r in watchlist.items():
@@ -326,6 +365,7 @@ td.mono { font-family: 'MonoInstr', monospace; font-size: 12.5px; color: var(--i
 .s-mid  { background: var(--sev-mid-bg);  color: var(--sev-mid-fg); }
 .s-low  { background: var(--sev-low-bg);  color: var(--sev-low-fg); }
 .s-none { background: var(--sev-none-bg); color: var(--sev-none-fg); }
+.chip-domain { background: var(--data-soft); color: var(--data); border: 1px dashed var(--data); }
 figure.map { margin: 22px 0; } figure.map img { width: 100%; display: block; border: 1px solid var(--rule); border-radius: 3px; }
 figcaption { font-size: 12.5px; color: var(--ink-faint); margin-top: 8px; font-family: 'HerosCn', sans-serif; letter-spacing: .01em; }
 figcaption .cap-num { color: var(--data); font-weight: 700; }
@@ -341,6 +381,9 @@ figcaption .cap-num { color: var(--data); font-weight: 700; }
   font-family: 'MonoInstr', monospace; color: var(--ink-soft); padding-top: 4px; border-top: 1px solid var(--rule);
   white-space: nowrap; }
 .loc-card .stat-row + .stat-row { border-top: none; padding-top: 2px; }
+.loc-card .stat-row.implausible { color: var(--sev-none-fg); font-weight: 700; border-top: 1px dashed var(--rule-strong); margin-top: 4px; padding-top: 6px; }
+.loc-card .stat-row.domain-warn { color: var(--data); font-weight: 700; border-top: 1px dashed var(--rule-strong); margin-top: 4px; padding-top: 6px; }
+.loc-card .implaus-reason { font-size: 10.5px; color: var(--ink-faint); line-height: 1.4; padding: 2px 0 4px; white-space: normal; }
 .arch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap: 16px; margin: 18px 0; }
 .arch-card { border: 1px solid var(--rule); border-radius: 4px; padding: 16px 18px; background: var(--paper-raised); }
 .arch-card .arch-k { font-family:'HerosCn',sans-serif; font-size:10.5px; font-weight:700; letter-spacing:.08em;
@@ -365,7 +408,13 @@ footer strong { color: var(--ink-soft); }
 """
 
 
-def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_utc):
+DOMAIN_ENSEMBLE_LABEL = {"atacama": "Atacama", "coquimbo": "Coquimbo", "rm": "Región Metropolitana"}
+
+
+def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_utc, comuna=None,
+               ensemble=None, gefs=None, loc_labels=None, norte_check=None, runout_ensemble=None):
+    runout_ensemble = runout_ensemble or {}
+    loc_labels = loc_labels or {}
     gen_stamp = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
     rows = sorted(
         ((r["signal"].get("hazard_max_regional") if r["signal"].get("hazard_max_regional") is not None else -1,
@@ -373,36 +422,95 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
         key=lambda x: -x[0])
 
     dom_rows = ""
+    any_ecmwf = any("ecmwf" in forecast[d] for d in DOMAIN_ORDER if d in forecast)
+    any_icon = any("icon" in forecast[d] for d in DOMAIN_ORDER if d in forecast)
     for d in DOMAIN_ORDER:
         if d not in forecast:
             continue
         m = forecast[d]
         v = m["variants"]["regional-a5.5"]
+        ecmwf_cell = ""
+        if any_ecmwf:
+            ev = m.get("ecmwf", {}).get("variants", {}).get("regional-a5.5")
+            ecmwf_cell = f"<td class='num'>{ev['peak_prob']:.2f}</td>" if ev else "<td class='num'>—</td>"
+        icon_cell = ""
+        if any_icon:
+            iv = m.get("icon", {}).get("variants", {}).get("regional-a5.5")
+            icon_cell = f"<td class='num'>{iv['peak_prob']:.2f}</td>" if iv else "<td class='num'>—</td>"
         dom_rows += (f"<tr><td>{DOMAIN_LABELS[d]}</td><td class='num'>{m['iso0_mean_m']:.0f} m</td>"
                      f"<td class='num'>{m['snow_fraction_mean']*100:.0f}%</td>"
-                     f"<td class='num'>{v['peak_prob']:.2f}</td><td class='num'>{v['n_crossings']}</td>"
+                     f"<td class='num'>{v['peak_prob']:.2f}</td>{ecmwf_cell}{icon_cell}"
+                     f"<td class='num'>{v['n_crossings']}</td>"
                      f"<td class='mono'>{v['first_crossing'] or 'sin cruce'}</td></tr>")
+
+    def plaus_chip(r):
+        """Chip 'NO PLAUSIBLE' cuando runout_localidad.py marcó el footprint
+        como esparcimiento difuso sin canalización real (ver guard 2026-07-17
+        en runout_localidad.py) — mismo criterio de honestidad que el guard
+        de flood_localidad.py. Ausencia del campo (corridas legacy) no marca
+        nada, no se asume plausible ni implausible."""
+        if r.get("physically_plausible") is False:
+            return "<span class='chip s-none' title=\"" + \
+                "; ".join(r.get("implausibility_reasons", [])).replace('"', "&quot;") + \
+                "\">NO PLAUSIBLE</span>"
+        return ""
+
+    def domain_chip(r):
+        """Aviso 'sin calibrar aquí' — pregunta DISTINTA de plaus_chip: no es
+        si la forma del footprint es creíble, es si hay algún evento real
+        contra el cual se haya validado la ESCALA fuera de Atacama (ver nota
+        DOMINIO DE CALIBRACIÓN en runout_localidad.py). Se muestra aunque la
+        forma sea plausible."""
+        if r.get("calibration_domain_warning"):
+            note = (r.get("calibration_domain_note") or "").replace('"', "&quot;")
+            return f"<span class='chip chip-domain' title=\"{note}\">sin calibrar aquí</span>"
+        return ""
 
     tbl_rows = ""
     for g, name, r in rows:
-        label, region = LOC_LABELS.get(name, (name.replace("_", " ").title(), "—"))
+        label, region = loc_labels.get(name, (name.replace("_", " ").title(), "—"))
         cls, txt = severity(g)
         s, p = r["signal"], r["proximity"]
         tbl_rows += (f"<tr><td><strong>{label}</strong><br><span class='region-tag'>{region}</span></td>"
-                     f"<td><span class='chip {cls}'>{txt}</span></td>"
+                     f"<td><span class='chip {cls}'>{txt}</span> {plaus_chip(r)} {domain_chip(r)}</td>"
                      f"<td class='num'>{s['hazard_max_regional']:.2f}</td>"
                      f"<td class='mono'>{fmt_hour(s['first_crossing_fhour'])}</td>"
                      f"<td class='num'>{fmt_mm(s['rain_liquid_total_mm'])}</td>"
                      f"<td class='num'>{fmt_dist(p['min_distance_m'])}</td></tr>")
 
+    def ensemble_row(name):
+        """Rango de área afectada entre GFS/ECMWF/ICON (ver runout_ensemble.py)
+        — un footprint determinístico único esconde el desacuerdo real entre
+        fuentes; esto lo muestra en vez de ocultarlo."""
+        e = runout_ensemble.get(name)
+        if not e:
+            return ""
+        title = "; ".join(
+            f"{src}: {m['affected_km2']:.1f} km² ({'plausible' if m['physically_plausible'] else 'no plausible'})"
+            for src, m in e["members"].items()
+        )
+        return (f"<div class='stat-row' title=\"{title}\">"
+                f"<span>Área afectada (rango {e['n_members']} fuentes)</span>"
+                f"<span>{e['affected_km2_min']:.0f}&ndash;{e['affected_km2_max']:.0f} km²</span></div>"
+                f"<div class='stat-row'><span>Plausible en</span>"
+                f"<span>{e['n_plausible']}/{e['n_members']} fuentes</span></div>")
+
     loc_cards = ""
     for g, name, r in rows:
         if name not in loc_images:
             continue
-        label, region = LOC_LABELS.get(name, (name.replace("_", " ").title(), "—"))
+        label, region = loc_labels.get(name, (name.replace("_", " ").title(), "—"))
         cls, txt = severity(g)
         s, p = r["signal"], r["proximity"]
         rain3 = ", ".join(f"{v:.0f}" for v in r["rain3_mm_day"])
+        implaus = ""
+        if r.get("physically_plausible") is False:
+            implaus = (f"<div class='stat-row implausible'><span>⚠ No plausible</span></div>"
+                       f"<div class='implaus-reason'>{'; '.join(r.get('implausibility_reasons', []))}</div>")
+        domain_note = ""
+        if r.get("calibration_domain_warning"):
+            domain_note = (f"<div class='stat-row domain-warn'><span>⚠ Sin calibrar aquí</span></div>"
+                           f"<div class='implaus-reason'>{r.get('calibration_domain_note', '')}</div>")
         loc_cards += (
             f"<div class='loc-card'><img src='data:image/png;base64,{loc_images[name]}' "
             f"alt='Footprint simulado de flujo detrítico en {label}' />"
@@ -413,10 +521,157 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
             f"<div class='stat-row'><span>Gatillo</span><span>{s['hazard_max_regional']:.2f}</span></div>"
             f"<div class='stat-row'><span>Dist. al footprint</span><span>{fmt_dist(p['min_distance_m'])}</span></div>"
             f"<div class='stat-row'><span>Anillo 0.5&nbsp;km cubierto</span>"
-            f"<span>{fmt_pct(p['rings'].get('0.5km'))}</span></div></div></div>")
+            f"<span>{fmt_pct(p['rings'].get('0.5km'))}</span></div>"
+            f"<div class='stat-row' title=\"{(r.get('mass_balance_note') or '').replace(chr(34), '&quot;')}\">"
+            f"<span>Techo físico agua/sedimento</span>"
+            f"<span>{r.get('mass_balance_ratio', 0)*100:.0f}%</span></div>"
+            f"{ensemble_row(name)}"
+            f"{implaus}{domain_note}</div></div>")
 
     n_high = sum(1 for g, _, _ in rows if g >= 0.8)
     cycle = forecast["chile-centro-sur"]["cycle"]
+
+    comuna_section = ""
+    comuna_bullet = ""
+    if comuna:
+        region_rows = ""
+        for r in sorted(comuna["por_region"], key=lambda x: -(x["n_alto"] / max(x["n_comunas"], 1))):
+            frac_alto = r["n_alto"] / max(r["n_comunas"], 1)
+            if frac_alto >= 0.5:
+                cls, txt = "s-high", "ALTO"
+            elif frac_alto >= 0.15 or r["n_medio"] > 0:
+                cls, txt = "s-mid", "MEDIO"
+            else:
+                cls, txt = "s-low", "BAJO"
+            pico = f"{r['peak_worst_region']:.2f}" if r["peak_worst_region"] is not None else "—"
+            region_rows += (
+                f"<tr><td>{r['REGION'].title()}</td><td class='num'>{r['n_comunas']}</td>"
+                f"<td class='num'>{r['n_alto']}</td><td class='num'>{r['n_medio']}</td>"
+                f"<td class='num'>{pico}</td>"
+                f"<td class='num'>{r['poblacion']:,}</td>"
+                f"<td><span class='chip {cls}'>{txt}</span></td></tr>")
+        any_vuln = any(r.get("indice_vulnerabilidad") is not None for r in comuna["top_alto"])
+        top_rows = ""
+        for r in comuna["top_alto"][:25]:
+            terr = f"{r['peak_terreno']:.2f}" if r["peak_terreno"] is not None else "s/d"
+            pob = f"{r['poblacion']:,}" if r["poblacion"] is not None else "—"
+            vuln_cell = ""
+            if any_vuln:
+                iv = r.get("indice_vulnerabilidad")
+                am = r.get("tasa_adulto_mayor")
+                iv_s = f"{iv:.2f}" if iv is not None else "—"
+                am_s = f"{am*100:.0f}%" if am is not None else "s/d"
+                vuln_cell = f"<td class='num'>{iv_s}</td><td class='num'>{am_s}</td>"
+            top_rows += (
+                f"<tr><td><strong>{r['COMUNA'].title()}</strong><br>"
+                f"<span class='region-tag'>{r['REGION'].title()}</span></td>"
+                f"<td class='num'>{r['peak_gfs']:.2f}</td><td class='num'>{r['peak_ecmwf']:.2f}</td>"
+                f"<td class='num'>{r.get('peak_icon', float('nan')):.2f}</td><td class='num'>{terr}</td><td class='num'>{pob}</td>{vuln_cell}</tr>")
+        map_fig = ""
+        if "mapa_comunas" in images:
+            map_fig = f"""<figure class="map">
+      <img src="data:image/png;base64,{images['mapa_comunas']}" alt="Mapa de gatillo pronosticado por comuna, peor de los dos modelos" />
+      <figcaption><span class="cap-num">Figura 3.</span> Peor escenario entre GFS, ECMWF e ICON por comuna (máximo dentro del polígono, grilla 0.1&deg;). Gris = comuna fuera de cobertura de terreno modelado, no "sin riesgo".</figcaption>
+    </figure>"""
+        comuna_section = f"""
+  <section class="doc wide">
+    <div class="sec-head"><span class="sec-num">03</span><h2>Comunas potencialmente afectadas (Atacama a Los Ríos)</h2></div>
+    <p>Cruce del gatillo pronosticado con el límite comunal oficial (Censo 2024, capa <code>Comunal_CPV24</code>) y la población censal 2024 por comuna, para el tramo solicitado: III Región de Atacama a XIV Región de Los Ríos, incluida Ñuble. El nivel de cada comuna es el <strong>peor de los tres modelos</strong> (GFS, ECMWF, ICON) — no un promedio ni una elección de cuál modelo "tiene razón".</p>
+    <p><strong>Cómo leer esto (limitaciones duras):</strong> el valor es el máximo dentro del polígono comunal a resolución ~10&nbsp;km — una comuna extensa con una sola esquina cordillerana puede marcar ALTO sin que la mayor parte de su territorio esté afectada. La población es el total censal de la comuna, no una estimación de personas realmente expuestas: es una cota superior gruesa, útil para priorizar dónde mirar primero, no para dimensionar una respuesta.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Región</th><th class="num">Comunas</th><th class="num">Alto</th><th class="num">Medio</th><th class="num">Pico</th><th class="num">Población</th><th>Nivel</th></tr></thead>
+      <tbody>{region_rows}</tbody>
+    </table></div>
+    <h3>Comunas en nivel ALTO (top 25 por índice, de {comuna['n_alto']} en total)</h3>
+    {"<p><strong>Vulnerabilidad</strong> (Censo 2024, microdato de vivienda): promedio de 4 tasas — vivienda precaria, hacinamiento, sin agua de red pública, sin alcantarillado. Se reporta <strong>separada</strong> del peligro, nunca multiplicada: el peligro es probabilidad física, la vulnerabilidad describe qué tan grave sería la consecuencia si el peligro se concreta — dos preguntas distintas. <strong>Adulto mayor</strong> aparece \"s/d\" en varias comunas: se detectó que el campo edad del microdato viene corrupto (valores negativos, ej. −66) para 51 comunas completas del barrido — se excluyen del cálculo en vez de reportar un 0% fabricado.</p>" if any_vuln else ""}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Comuna</th><th class="num">Pico GFS</th><th class="num">Pico ECMWF</th><th class="num">Pico ICON</th><th class="num">Terreno</th><th class="num">Población</th>{"<th class='num'>Vulnerab.</th><th class='num'>Adulto mayor</th>" if any_vuln else ""}</tr></thead>
+      <tbody>{top_rows}</tbody>
+    </table></div>
+    {map_fig}
+  </section>"""
+        comuna_bullet = (
+            f"<li>El cruce comunal (III Atacama&ndash;XIV Los Ríos, Censo 2024) marca "
+            f"<strong>{comuna['n_alto']} comunas en nivel ALTO</strong> (población censal "
+            f"{comuna['poblacion_en_comunas_alto']:,}) y {comuna['n_medio']} en MEDIO, contando el "
+            f"peor de los tres modelos &mdash; cifra de cota superior gruesa, no de expuestos reales "
+            f"(ver secci&oacute;n 03).</li>")
+
+    ecmwf_th = "<th class=\"num\">Pico ECMWF</th>" if any_ecmwf else ""
+    icon_th = "<th class=\"num\">Pico ICON</th>" if any_icon else ""
+    ecmwf_note = (
+        "<p>Se agrega, a partir del ciclo 2026&ndash;07&ndash;14 12z, el modelo determinístico "
+        "<strong>ECMWF HRES</strong> (0.25&deg;, Open Data, 2 ciclos/día) corriendo en paralelo e "
+        "independiente de GFS &mdash; misma ventana I&ndash;D, mismo umbral regional, lluvia líquida "
+        "obtenida restando directamente el campo de nieve (<code>sf</code>) del total (<code>tp</code>), "
+        "sin necesitar la aproximación por isoterma que usa la ruta GFS. Donde ambos modelos difieren "
+        "sustancialmente (columna <em>Pico ECMWF</em> muy por sobre <em>Pico GFS</em>), se lee como "
+        "señal de que el consenso entre modelos es bajo para este evento &mdash; no que uno de los dos "
+        "esté \"equivocado\".</p>" if any_ecmwf else "")
+    icon_note = (
+        "<p>También se agrega <strong>DWD ICON global</strong> (~13&nbsp;km nativo, Open Data) como "
+        "tercera fuente determinística gratuita. ICON no reemplaza a GFS/ECMWF, pero en la prueba "
+        "del 2026&ndash;07&ndash;15 fue la única fuente que reprodujo montos del orden DMC en Vallenar, "
+        "Freirina y Huasco. Donde <em>Pico ICON</em> diverge de GFS/ECMWF, debe leerse como "
+        "incertidumbre espacial/orográfica y no como pronóstico oficial.</p>" if any_icon else "")
+
+    ensemble_note = ""
+    if ensemble:
+        rows_e = "".join(
+            f"<li><strong>{DOMAIN_ENSEMBLE_LABEL.get(d, d)}</strong>: {v['n_members']} miembros, "
+            f"{v['min_mm']:.0f}&ndash;{v['max_mm']:.0f}&nbsp;mm (mediana {v['median_mm']:.0f}&nbsp;mm) "
+            f"de lluvia líquida acumulada en 120&nbsp;h; {v['frac_over_100mm']*100:.0f}% de los miembros "
+            f"sobre 100&nbsp;mm.</li>"
+            for d, v in ensemble.items())
+        gefs_block = ""
+        if gefs:
+            rows_g = "".join(
+                f"<li><strong>{DOMAIN_ENSEMBLE_LABEL.get(d, d)}</strong>: {v['n_members']} miembros, "
+                f"{v['min_mm']:.0f}&ndash;{v['max_mm']:.0f}&nbsp;mm (mediana {v['median_mm']:.0f}&nbsp;mm) "
+                f"de precipitación total; {v['frac_over_100mm']*100:.0f}% de los miembros sobre 100&nbsp;mm.</li>"
+                for d, v in gefs.items())
+            gefs_block = f"""
+      <h3>Tercera fuente: ensemble GEFS (NOAA)</h3>
+      <p>Familia de modelo y sistema de asimilación distintos a ECMWF &mdash; 31 miembros (control
+      <code>gec00</code> + 30 perturbados), NOMADS. <strong>Ojo:</strong> el producto de superficie de
+      GEFS no trae isoterma 0&deg;C, así que esta cifra es precipitación <strong>total</strong>
+      (agua+nieve equivalente), no partida en líquida/sólida &mdash; no comparable número a número con
+      las cifras de líquido de ECMWF, pero sí como chequeo independiente de orden de magnitud.</p>
+      <ul>{rows_g}</ul>"""
+        ensemble_note = f"""<div class="callout" style="margin-top:22px;">
+      <h2>¿Es un outlier de una sola corrida? &mdash; chequeo de ensembles (ECMWF + GEFS)</h2>
+      <p>Ante lo inusual de estos números, se corrió el <strong>ensemble</strong> de ECMWF (stream
+      <code>enfo</code>, 50 miembros perturbados, mismo ciclo, acumulado a 120&nbsp;h) para los
+      dominios de mayor divergencia con GFS &mdash; no el CFS (modelo estacional, ~1&deg;, no resuelve
+      una tormenta de días; no es la herramienta para esta pregunta).</p>
+      <ul>{rows_e}</ul>
+      <p>Ningún miembro del ensemble ECMWF muestra un escenario "tranquilo": el HRES determinístico
+      ya reportado cae dentro del rango central de su propio ensemble, no en la cola.</p>
+      {gefs_block}
+      <p>Con las dos familias de ensemble consultadas, <strong>ningún miembro de ninguna de las dos
+      (81 corridas en total) muestra un escenario tranquilo</strong> en estos tres dominios. Esto no
+      confirma el evento &mdash; sigue siendo pronóstico, no observación &mdash; pero descarta con
+      bastante solidez que el número extremo sea un capricho de una única corrida determinística de
+      un solo modelo.</p>
+    </div>"""
+
+    norte_note = ""
+    if norte_check:
+        rows_n = ""
+        for loc in norte_check["localidades"]:
+            r = watchlist.get(loc["name"])
+            g = r["signal"]["hazard_max_regional"] if r else None
+            rain = r["signal"]["rain_liquid_total_mm"] if r else None
+            rows_n += (f"<li><strong>{loc['label']}</strong>: gatillo en el punto exacto del pueblo "
+                       f"{g:.2f} (vs. {loc['peak_worst_comuna_agregado']:.2f} agregado a nivel comuna) "
+                       f"&mdash; lluvia líquida 120&nbsp;h {rain:.1f}&nbsp;mm.</li>")
+        norte_note = f"""<div class="callout" style="margin-top:22px;">
+      <h2>¿Y el Norte? &mdash; por qué Atacama no entra al top-20 (con una corrección propia)</h2>
+      <p>{norte_check['motivo']}</p>
+      <p>{norte_check.get('correccion', '')}</p>
+      <ul>{rows_n}</ul>
+      <p>{norte_check['resultado']}</p>
+    </div>"""
 
     body = f"""
 <div class="sheet">
@@ -428,7 +683,7 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
       <div class="meta-item"><span class="k">Generado</span><span class="v">{gen_stamp}</span></div>
       <div class="meta-item"><span class="k">Hora Chile</span><span class="v">{(now_utc.hour-4)%24:02d}:{now_utc.minute:02d} (UTC&minus;4)</span></div>
       <div class="meta-item"><span class="k">Ciclo GFS base</span><span class="v">{cycle}</span></div>
-      <div class="meta-item"><span class="k">Dominios activos</span><span class="v">5 (2 nodos)</span></div>
+      <div class="meta-item"><span class="k">Dominios activos</span><span class="v">{len(forecast)} (2 nodos)</span></div>
       <div class="meta-item"><span class="k">Localidades en vigilancia</span><span class="v">{len(rows)}</span></div>
     </div>
   </div>
@@ -437,9 +692,10 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
     <h2>Resumen ejecutivo</h2>
     <p>Este documento fija en el tiempo el estado de un sistema experimental de nowcasting de geopeligros (motor <em>nowcast</em>) corriendo de forma autónoma sobre dos nodos del cluster doméstico del autor, en modo sombra, ante el pronóstico de un sistema frontal con río atmosférico extremo afectando Chile centro-sur. Su propósito es doble: servir de base para comparar el pronóstico contra lo efectivamente ocurrido una vez cerrado el evento, y dejar constancia verificable — con huella de integridad y timestamp — de qué se sabía y cuándo.</p>
     <ul>
-      <li>El pronóstico GFS del ciclo <strong>{cycle}</strong> muestra excedencia sostenida del umbral lluvia&ndash;duración regional, concentrada en la precordillera y cordillera de Ñuble, Biobío, Araucanía y Los Ríos.</li>
+      <li>El pronóstico GFS del ciclo <strong>{cycle}</strong> muestra excedencia sostenida del umbral lluvia&ndash;duración regional, concentrada en la precordillera y cordillera de Ñuble, Biobío, Araucanía y Los Ríos. ECMWF e ICON (secc. 01) agregan una mirada independiente; ICON 13&nbsp;km levanta especialmente el valle del Huasco, donde GFS venía severamente bajo.</li>
       <li>El cruce con los modelos de susceptibilidad de terreno identifica <strong>{n_high} localidades en nivel ALTO</strong> de vigilancia combinada.</li>
       <li>Simulaciones de flujo detrítico por agentes (parámetros de Atacama 2015, sin calibrar localmente) muestran footprints ilustrativos que en algunos casos alcanzan a menos de 20&nbsp;m del centro poblado.</li>
+      {comuna_bullet}
       <li><strong>Nada de este documento es un aviso oficial.</strong> Las fuentes de verdad para decisiones de protección civil son SENAPRED, SERNAGEOMIN y la Dirección Meteorológica de Chile.</li>
     </ul>
   </div>
@@ -448,29 +704,33 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
 
   <section class="doc">
     <div class="sec-head"><span class="sec-num">01</span><h2>Qué pronosticaba el sistema en este momento</h2></div>
-    <p>El motor consume el pronóstico determinístico GFS (0.25&deg;, NOAA/NCEP) cuatro veces al día, particiona la precipitación en líquida y sólida según la altura de la isoterma 0&deg;C del propio modelo contra su propia orografía, y corre el umbral lluvia&ndash;duración regional (intercepto <em>a</em>=5.5, calibrado contra el inventario histórico del río Maipo) sobre una ventana de 120&nbsp;h.</p>
+    <p>El motor consume el pronóstico determinístico GFS (0.25&deg;, NOAA/NCEP) cuatro veces al día, particiona la precipitación en líquida y sólida según la altura de la isoterma 0&deg;C del propio modelo contra su propia orografía, y corre el umbral lluvia&ndash;duración regional (intercepto <em>a</em>=5.5, calibrado contra el inventario histórico del río Maipo) sobre una ventana de 120&nbsp;h. ECMWF Open Data e ICON global se procesan en paralelo cuando están disponibles, con la misma ventana y umbral.</p>
+    {ecmwf_note}
+    {icon_note}
     <div class="table-wrap"><table>
-      <thead><tr><th>Dominio</th><th class="num">Isoterma 0&deg;C</th><th class="num">Fracción nieve</th><th class="num">Pico de índice</th><th class="num">Cruces</th><th>Primer cruce (UTC)</th></tr></thead>
+      <thead><tr><th>Dominio</th><th class="num">Isoterma 0&deg;C</th><th class="num">Fracción nieve</th><th class="num">Pico GFS</th>{ecmwf_th}{icon_th}<th class="num">Cruces</th><th>Primer cruce (UTC)</th></tr></thead>
       <tbody>{dom_rows}</tbody>
     </table></div>
     <figure class="map">
       <img src="data:image/png;base64,{images['mapa_panorama']}" alt="Mapa de excedencia del gatillo lluvia-duración pronosticado" />
       <figcaption><span class="cap-num">Figura 1.</span> Índice de excedencia del umbral I&ndash;D regional pronosticado para el horizonte completo de 120&nbsp;h (ciclo {cycle}).</figcaption>
     </figure>
+    {ensemble_note}
   </section>
 
   <section class="doc">
     <div class="sec-head"><span class="sec-num">02</span><h2>Dónde el terreno amplifica la señal climática</h2></div>
-    <p>El índice anterior describe sólo la mitad climática del peligro. Se cruza celda a celda con modelos de susceptibilidad de remociones en masa entrenados por el autor (RandomForest / XGBoost, 15 cuencas nacionales). Dos cuencas sin modelo propio se completaron por <strong>transferencia</strong> del modelo del Biobío — decisión metodológica explícita, rotulada en los metadatos como <em>transferencia sin validar</em>.</p>
+    <p>El índice anterior describe sólo la mitad climática del peligro. Se cruza celda a celda con modelos de susceptibilidad de remociones en masa entrenados por el autor sobre <strong>15 cuencas nacionales</strong> (paper1): el algoritmo se elige por cuenca según validación cruzada — XGBoost en 8 (incl. Elqui, Limarí, Huasco, Bueno), RandomForest en 4 (incl. Maipo, Biobío) y Ridge en 3 (incl. <strong>Copiapó</strong> y <strong>Maule</strong>), con AUC de validación entre 0.61 y 0.91 según cuenca. Dos zonas sin modelo propio (Araucanía y la Cordillera de la Costa Valparaíso&ndash;Los Ríos) se completaron por <strong>transferencia</strong> del modelo del Biobío — decisión metodológica explícita, rotulada en los metadatos como <em>transferencia sin validar</em>.</p>
     <figure class="map">
       <img src="data:image/png;base64,{images['mapa_overlay']}" alt="Mapa de cruce entre gatillo climático y susceptibilidad de terreno" />
       <figcaption><span class="cap-num">Figura 2.</span> Producto del índice de gatillo climático por la susceptibilidad de terreno agregada a 0.1&deg;.</figcaption>
     </figure>
   </section>
-
+{comuna_section}
   <section class="doc wide">
-    <div class="sec-head"><span class="sec-num">03</span><h2>Localidades bajo vigilancia</h2></div>
-    <p>Localidades seleccionadas por criterio del autor, ordenadas por índice de gatillo climático puntual. Para cada una se corrió una simulación de flujo detrítico por agentes (modelo <code>debris-flow</code> sobre <code>swarm-abm</code>, parámetros de Atacama 2015 — análogo ilustrativo, no predicción calibrada) forzada con la lluvia y la isoterma del ciclo vigente.</p>
+    <div class="sec-head"><span class="sec-num">04</span><h2>Localidades bajo vigilancia</h2></div>
+    <p>Localidades seleccionadas <strong>objetivamente</strong> (no a criterio del autor): las 20 comunas con mayor producto gatillo climático&times;susceptibilidad real de terreno (secc. 02) dentro del barrido III&ndash;XIV, restringidas a las que tienen área urbana censada (Censo 2024, límite urbano oficial) con dato de susceptibilidad válido en el punto exacto del pueblo &mdash; ver <code>select_watchlist.py</code>. Para cada una se corrió una simulación de flujo detrítico por agentes (modelo <code>debris-flow</code> sobre <code>swarm-abm</code>, parámetros de Atacama 2015 — análogo ilustrativo, no predicción calibrada) forzada con la lluvia y la isoterma del ciclo vigente. El ABM está calibrado sobre terreno de abanico aluvial abrupto; en localidades de fondo de valle plano sin frente montañoso real cerca del punto, el footprint puede esparcirse de forma difusa en vez de canalizarse — un guard de plausibilidad física marca esos casos como <span class="chip s-none">NO PLAUSIBLE</span> y no deben leerse con el mismo peso que los canalizados. Aparte de la forma, la <strong>escala</strong> del footprint (km² afectados) tampoco está validada fuera de Atacama: el preset por defecto se ajustó contra el footprint real de Copiapó 2015 con un ajuste flojo (IoU 0.171 en su propio evento) y no existe un evento real mapeado en esta región contra el cual calibrar el tamaño — eventos reales documentados aquí (SERNAGEOMIN, sistema frontal ene-2021, Malloa/San Vicente/Coinco) se localizaron a sectores puntuales, no a la extensión que muestran estos mapas. Esas corridas llevan <span class="chip chip-domain">sin calibrar aquí</span>.</p>
+    {norte_note}
     <div class="table-wrap"><table>
       <colgroup><col class="c-loc"><col class="c-lvl"><col><col><col><col></colgroup>
       <thead><tr><th>Localidad</th><th>Nivel</th><th class="num">Gatillo</th><th>Cruce</th><th class="num">Lluvia 120h</th><th class="num">Footprint</th></tr></thead>
@@ -482,25 +742,27 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
   </section>
 
   <section class="doc">
-    <div class="sec-head"><span class="sec-num">04</span><h2>Arquitectura del sistema</h2></div>
+    <div class="sec-head"><span class="sec-num">05</span><h2>Arquitectura del sistema</h2></div>
     <p>El sistema opera en tres capas independientes, cada una con su propia cadencia y grado de validación.</p>
     <div class="arch-grid">
       <div class="arch-card"><div class="arch-k">Observación (cada 30 min)</div><p>Fusión por noisy&ndash;OR de IMERG Early NRT, GOES&ndash;East QPE y pluviómetros DMC, sobre 5 dominios geográficos, replicada en dos nodos independientes.</p></div>
-      <div class="arch-card"><div class="arch-k">Pronóstico (4&times;/día)</div><p>GFS 0.25&deg; + partición por isoterma 0&deg;C, horizonte 120&nbsp;h, dos variantes de umbral. Es la capa que sustenta este informe.</p></div>
+      <div class="arch-card"><div class="arch-k">Pronóstico (4&times;/día)</div><p>GFS 0.25&deg; + ECMWF Open Data 0.25&deg; + DWD ICON global ~13&nbsp;km cuando están disponibles; horizonte 120&nbsp;h y dos variantes de umbral.</p></div>
       <div class="arch-card"><div class="arch-k">Simulación (bajo demanda)</div><p>Modelo de agentes de flujo detrítico sobre DEM Copernicus y susceptibilidad real, disparado sobre localidades de interés.</p></div>
     </div>
   </section>
 
   <section class="doc">
-    <div class="sec-head"><span class="sec-num">05</span><h2>Metodología y limitaciones honestas</h2></div>
+    <div class="sec-head"><span class="sec-num">06</span><h2>Metodología y limitaciones honestas</h2></div>
     <p>Ninguna capa de este sistema ha pasado por un ciclo de validación operacional:</p>
     <ul>
       <li><strong>Pronóstico determinístico, sin ensamble.</strong> No hay medida de incertidumbre ni probabilidad calibrada.</li>
       <li><strong>Umbral regional calibrado en una sola cuenca</strong> (Maipo, 1979&ndash;2016) y extrapolado al país.</li>
       <li><strong>Dos capas de susceptibilidad por transferencia sin validar</strong>, rotuladas explícitamente en los metadatos.</li>
       <li><strong>Simulaciones con parámetros de un régimen distinto</strong> (Atacama árido) aplicados a cuencas templadas/húmedas.</li>
-      <li><strong>Resolución del forzante</strong> (~25&nbsp;km GFS) muy por debajo de la escala de las quebradas reales.</li>
+      <li><strong>Resolución del forzante</strong> (~25&nbsp;km GFS/ECMWF y ~13&nbsp;km ICON global) sigue por debajo de la escala de las quebradas reales.</li>
       <li><strong>Sin verificación operacional a la fecha de este documento.</strong></li>
+      <li><strong>ECMWF HRES e ICON global son también determinísticos</strong> (sin ensamble), igual que GFS — su inclusión da puntos de vista independientes, no una probabilidad calibrada ni un "voto de desempate"; cuando difieren, ninguno se descarta por defecto.</li>
+      <li><strong>El cruce comunal (secc. 03) es administrativo, no de exposición fina</strong>: máximo a ~10&nbsp;km dentro del polígono, población total censal de la comuna (no expuestos reales), y con huecos de modelo de terreno en varias comunas (Valparaíso costero, O'Higgins, partes de Los Ríos) donde no hay cuenca propia ni transferencia calculada.</li>
     </ul>
     <p>Este documento se declara explícitamente como <strong>material de registro y de investigación personal</strong>, no como un producto de alerta temprana operacional.</p>
   </section>
@@ -533,19 +795,66 @@ def main():
         p = f"{forecast_dir}/{d}/forecast.json"
         if os.path.exists(p):
             forecast[d] = json.load(open(p))
+            ep = f"{forecast_dir}/{d}/ecmwf/ecmwf.json"
+            if os.path.exists(ep):
+                forecast[d]["ecmwf"] = json.load(open(ep))
+            ip = f"{forecast_dir}/{d}/icon/icon.json"
+            if os.path.exists(ip):
+                forecast[d]["icon"] = json.load(open(ip))
     if "chile-centro-sur" not in forecast:
         sys.exit(f"falta el dominio macro chile-centro-sur en {forecast_dir}")
 
+    # Filtrado a la seleccion VIGENTE de watchlist.json — runouts_dir acumula
+    # corridas de ciclos/watchlists anteriores (nombres que ya no estan en la
+    # seleccion objetiva actual) que de otro modo se colaban en el reporte
+    # mezclados con la seleccion de hoy, contradiciendo el propio texto del
+    # informe ("las 20 comunas..."). Ver docs/auditoria-motor.md, hallazgo
+    # 2026-07-17.
+    wl_names_p = os.path.join(forecast_dir, "watchlist.json")
+    current_names = None
+    if os.path.exists(wl_names_p):
+        current_names = {s["name"] for s in json.load(open(wl_names_p))["selected"]}
+
     watchlist = {}
+    skipped_stale = []
     for d in sorted(glob.glob(os.path.join(runouts_dir, "*"))):
+        name = os.path.basename(d)
         p = os.path.join(d, "resumen.json")
-        if os.path.exists(p):
-            watchlist[os.path.basename(d)] = json.load(open(p))
+        if not os.path.exists(p):
+            continue
+        if current_names is not None and name not in current_names:
+            skipped_stale.append(name)
+            continue
+        watchlist[name] = json.load(open(p))
+    if skipped_stale:
+        print(f"runouts fuera de la watchlist vigente, omitidos del reporte: "
+              f"{', '.join(skipped_stale)}")
     if not watchlist:
         sys.exit(f"sin corridas en {runouts_dir} — correr runout_localidad.py primero")
 
+    comuna_p = f"{forecast_dir}/comuna_impact/comuna_impact.json"
+    comuna = json.load(open(comuna_p)) if os.path.exists(comuna_p) else None
+    vuln_p = f"{forecast_dir}/comuna_impact/comuna_vulnerability.json"
+    if comuna and os.path.exists(vuln_p):
+        vuln = json.load(open(vuln_p))["por_comuna"]
+        for r in comuna["top_alto"]:
+            v = vuln.get(str(int(r["CUT"])))
+            r["indice_vulnerabilidad"] = v["indice_vulnerabilidad"] if v else None
+            r["tasa_adulto_mayor"] = v["tasa_adulto_mayor"] if v else None
+
+    ensemble_p = f"{forecast_dir}/ecmwf_ensemble_check.json"
+    ensemble = json.load(open(ensemble_p)) if os.path.exists(ensemble_p) else None
+
+    gefs_p = f"{forecast_dir}/gefs_ensemble_check.json"
+    gefs = json.load(open(gefs_p)) if os.path.exists(gefs_p) else None
+
+    runout_ens_p = f"{forecast_dir}/runout_ensemble.json"
+    runout_ensemble = json.load(open(runout_ens_p)) if os.path.exists(runout_ens_p) else {}
+
     data_hash = hashlib.sha256(
-        (json.dumps(forecast, sort_keys=True) + json.dumps(watchlist, sort_keys=True)).encode()
+        (json.dumps(forecast, sort_keys=True) + json.dumps(watchlist, sort_keys=True)
+         + json.dumps(comuna, sort_keys=True) + json.dumps(ensemble, sort_keys=True)
+         + json.dumps(gefs, sort_keys=True) + json.dumps(runout_ensemble, sort_keys=True)).encode()
     ).hexdigest()
 
     work = os.path.join(a.out, ".build")
@@ -554,14 +863,21 @@ def main():
     print("generando mapas...")
     make_maps(forecast_dir, runouts_dir, watchlist, img_dir)
 
-    images = {n: b64(f"{img_dir}/{n}.png") for n in ("mapa_panorama", "mapa_overlay")}
+    img_names = ["mapa_panorama", "mapa_overlay"]
+    if os.path.exists(f"{img_dir}/mapa_comunas.png"):
+        img_names.append("mapa_comunas")
+    images = {n: b64(f"{img_dir}/{n}.png") for n in img_names}
     loc_images = {name: b64(f"{img_dir}/localidades/{name}.png")
                   for name in watchlist if os.path.exists(f"{img_dir}/localidades/{name}.png")}
     fonts = {n.replace("-", "_"): b64(f"{HERE}/fonts/{n}.woff2") for n in
              ("schola-reg", "schola-bold", "schola-ital", "heroscn-reg", "heroscn-bold", "mono-reg", "mono-bold")}
 
     now = datetime.now(timezone.utc)
-    html = build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now)
+    loc_labels = load_loc_labels(forecast_dir)
+    wl_p = os.path.join(forecast_dir, "watchlist.json")
+    norte_check = json.load(open(wl_p)).get("regional_check_norte") if os.path.exists(wl_p) else None
+    html = build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now, comuna, ensemble,
+                      gefs, loc_labels, norte_check, runout_ensemble)
 
     stamp = now.strftime("%Y%m%dT%H%MZ")
     html_path = os.path.join(a.out, f"registro-evento-{stamp}.html")

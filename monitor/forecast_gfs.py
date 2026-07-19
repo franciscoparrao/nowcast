@@ -136,9 +136,20 @@ def liquid_fraction(iso0, orog):
 
 def bilinear_to(lats_g, lons_g, field, lons_t, lats_t):
     """GFS 0.25° → centros de la grilla destino 0.1° (bilineal, numpy puro).
-    lats_g decreciente (norte→sur) como viene del grib; lons_g en 0-360."""
-    la = lats_g[::-1]
-    fi = field[::-1, :]
+    lats_g en cualquier orientación (norte->sur o sur->norte) — el filtro
+    grib_filter de NOMADS con subregión devuelve las latitudes ascendentes
+    (sur->norte) via cfgrib, distinto de la convención habitual del GRIB
+    global (descendente); asumir la orientación fija colapsaba np.interp al
+    mismo índice de borde para cualquier latitud destino (bug 2026-07-17,
+    ver docs/auditoria-motor.md). Se detecta la orientación real y solo se
+    invierte si hace falta, para que `la` quede siempre ascendente.
+    lons_g en 0-360."""
+    if lats_g[0] > lats_g[-1]:
+        la = lats_g[::-1]
+        fi = field[::-1, :]
+    else:
+        la = lats_g
+        fi = field
     lo = lons_g - 360.0 if lons_g.max() > 180 else lons_g
     yi = np.interp(lats_t, la, np.arange(la.size))
     xi = np.interp(lons_t, lo, np.arange(lo.size))
