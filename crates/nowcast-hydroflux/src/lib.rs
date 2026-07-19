@@ -15,6 +15,12 @@
 //!
 //! `nowcast-core` stays dependency-light and offline; this adapter pulls the
 //! hydrodynamic stack, so it builds online once (then from cache).
+//!
+//! [`Inundation::run_rain`] and [`Inundation::run_point_sources`] each drive a
+//! single forcing from a dry start; [`Inundation::run_rain_and_point_sources`]
+//! combines both within one integration for the case where local rain falls
+//! on a window while a routed upstream discharge also enters at its edge
+//! (see `examples/flood_ondemand.rs`).
 
 use hydroflux_solver_2d::{
     apply_point_sources, apply_rain, cfl_time_step_with_bcs, manning_friction_step, ssprk2_step,
@@ -257,7 +263,46 @@ impl Inundation {
         &self,
         sources: &[PointSource],
     ) -> Result<(DepthField, IntegrationStats)> {
-        let (nr, nc) = self.mesh.bed.dim();
+        Self::validate_sources(&self.mesh, sources)?;
+        let (dx, dy) = (self.mesh.dx, self.mesh.dy);
+        Ok(self.integrate(|s, dt| apply_point_sources(s, sources, dt, dx, dy)))
+    }
+
+    /// Run with **both** a uniform rainfall rate (m/s) over the whole domain
+    /// and volumetric point inflows (m³/s), applied within the *same*
+    /// integration.
+    ///
+    /// [`run_rain`](Self::run_rain) and [`run_point_sources`](Self::run_point_sources)
+    /// each drive the state from a dry start with a single forcing — there is
+    /// no way to chain their outputs, since every run starts dry — so
+    /// simulating "local rain falling on a window while a routed river
+    /// discharge enters at its edge" (the flash-flood nowcast scenario this
+    /// crate exists for) needs both source terms applied at every step of
+    /// *one* integration, not two independent runs. Superposing two
+    /// separately-run depth fields (e.g. taking the element-wise max) would
+    /// not be physically valid for a nonlinear shallow-water system — this
+    /// method exists so callers never have to reach for that shortcut.
+    ///
+    /// Same source validation and truncation/instability reporting as
+    /// [`run_point_sources`](Self::run_point_sources).
+    pub fn run_rain_and_point_sources(
+        &self,
+        rate_m_s: f64,
+        sources: &[PointSource],
+    ) -> Result<(DepthField, IntegrationStats)> {
+        Self::validate_sources(&self.mesh, sources)?;
+        let (dx, dy) = (self.mesh.dx, self.mesh.dy);
+        Ok(self.integrate(|s, dt| {
+            apply_point_sources(s, sources, dt, dx, dy);
+            apply_rain(s, rate_m_s, dt);
+        }))
+    }
+
+    /// Shared bounds/finiteness check for point sources (see
+    /// [`run_point_sources`](Self::run_point_sources) for what each rejection
+    /// used to silently do instead).
+    fn validate_sources(mesh: &Mesh2D, sources: &[PointSource]) -> Result<()> {
+        let (nr, nc) = mesh.bed.dim();
         for (i, s) in sources.iter().enumerate() {
             if s.row >= nr || s.col >= nc {
                 return Err(Error::InvalidParameter {
@@ -275,8 +320,7 @@ impl Inundation {
                 });
             }
         }
-        let (dx, dy) = (self.mesh.dx, self.mesh.dy);
-        Ok(self.integrate(|s, dt| apply_point_sources(s, sources, dt, dx, dy)))
+        Ok(())
     }
 }
 
@@ -316,6 +360,37 @@ mod tests {
         assert!(!stats.truncated);
         assert!(field.max_depth() > 0.0, "no water from the inflow");
         assert!(field.inundated_fraction(H_DRY) > 0.0);
+    }
+
+    #[test]
+    fn combined_rain_and_point_source_applies_both_forcings() {
+        let inund = Inundation::new(flat_mesh(9, 9), Boundaries2D::WALLS, 120.0).unwrap();
+        let rate = 1.0e-3; // m/s rain
+        let src = vec![PointSource { row: 4, col: 4, q_mass: 5.0 }];
+        let (rain_only, _) = inund.run_rain(rate);
+        let (combined, stats) = inund.run_rain_and_point_sources(rate, &src).unwrap();
+        assert!(!stats.truncated);
+        // Combined carries at least as much water everywhere as rain alone,
+        // and strictly more right at the point source.
+        assert!(combined.mean_depth() > rain_only.mean_depth());
+        assert!(combined.depth()[4 * 9 + 4] > rain_only.depth()[4 * 9 + 4]);
+    }
+
+    #[test]
+    fn combined_forcing_rejects_bad_sources_like_point_sources_does() {
+        let inund = Inundation::new(flat_mesh(4, 4), Boundaries2D::WALLS, 10.0).unwrap();
+        assert!(inund
+            .run_rain_and_point_sources(1.0e-3, &[PointSource { row: 99, col: 0, q_mass: 1.0 }])
+            .is_err());
+        assert!(inund
+            .run_rain_and_point_sources(
+                1.0e-3,
+                &[PointSource { row: 1, col: 1, q_mass: f64::NAN }]
+            )
+            .is_err());
+        assert!(inund
+            .run_rain_and_point_sources(1.0e-3, &[PointSource { row: 1, col: 1, q_mass: 1.0 }])
+            .is_ok());
     }
 
     #[test]

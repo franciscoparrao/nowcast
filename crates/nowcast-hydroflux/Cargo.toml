@@ -13,3 +13,17 @@ nowcast-core = { path = "../nowcast-core" }
 # semver-compatible so `Array2` / `Conserved2D` unify across the boundary.
 hydroflux-solver-2d = { path = "../../../postdoc/hydroflux/solver-2d" }
 ndarray.workspace = true
+
+[dev-dependencies]
+# Only for `examples/flood_ondemand.rs` (on-demand runner: Copernicus DEM via
+# COG streaming + terrain/hydro derivatives + GeoTIFF output) — same pattern
+# as `nowcast-swarm/examples/runout_ondemand.rs`. These are already workspace
+# dependencies of nowcast-swarm, so pulling them in here does not add new
+# package versions to Cargo.lock, just a new "used by" edge.
+nowcast-surtgis = { path = "../nowcast-surtgis" }
+surtgis-core = { path = "../../../surtgis/crates/core" }
+surtgis-algorithms = { path = "../../../surtgis/crates/algorithms" }
+surtgis-cloud = { path = "../../../surtgis/crates/cloud", features = ["native"] }
+clap.workspace = true
+anyhow.workspace = true
+serde_json = "1"

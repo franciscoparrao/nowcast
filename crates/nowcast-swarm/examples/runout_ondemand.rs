@@ -94,8 +94,11 @@ struct Args {
     /// contributing area.
     #[arg(long, default_value_t = 1.0)]
     stream_km2: f64,
-    /// Parameter preset: de (DE-calibrated, data/best_params_de.json),
-    /// optuna (model default), 18iters, chanaral.
+    /// Parameter preset: de (DE-calibrated, data/best_params_de.json,
+    /// Copiapó, IoU 0.171), optuna (model default, IoU 0.134), 18iters,
+    /// chanaral (older fixed-radius Chañaral fit), chanaral_enhanced
+    /// (data/best_params_chanaral_enhanced.json — IoU 0.555 medio / 0.587
+    /// máximo out-of-sample, la mejor calibración real disponible; 2026-07-17).
     #[arg(long, default_value = "de")]
     params: String,
     /// Override the number of rain agents (default: the preset's).
@@ -207,14 +210,10 @@ fn main() -> Result<()> {
 
     // ── 5. Terrain derivatives: filled DEM → slope, streams ─────────────
     let filled = fill_sinks(&dem, FillSinksParams::default()).context("fill_sinks")?;
-    let slope_pct = slope(
-        &filled,
-        SlopeParams {
-            units: SlopeUnits::Percent,
-            z_factor: 1.0,
-        },
-    )
-    .context("slope")?;
+    let mut slope_params = SlopeParams::default();
+    slope_params.units = SlopeUnits::Percent;
+    let slope_pct = slope(&filled, slope_params)
+        .context("slope")?;
     // Percent / 100 = tangent (m/m), the unit of the Copiapó slope layer.
     let slope_frac: Vec<f64> = slope_pct.data().iter().map(|&v| v / 100.0).collect();
     let (s50, s95) = percentiles(&slope_frac);
@@ -455,7 +454,8 @@ fn build_params(args: &Args) -> Result<DebrisParams> {
         "optuna" | "default" => DebrisParams::default(),
         "18iters" => DebrisParams::preset_18iters(),
         "chanaral" => DebrisParams::preset_chanaral(),
-        other => bail!("unknown --params '{other}' (de|optuna|18iters|chanaral)"),
+        "chanaral_enhanced" => DebrisParams::preset_chanaral_enhanced(),
+        other => bail!("unknown --params '{other}' (de|optuna|18iters|chanaral|chanaral_enhanced)"),
     };
     if let Some(a) = args.agents {
         p.n_rain_agents = a;
