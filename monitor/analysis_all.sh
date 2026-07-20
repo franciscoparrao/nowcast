@@ -87,4 +87,19 @@ else
     log "analysis_all: run_localidades DESACTIVADA (LOCALIDADES_ENABLED=0)"
 fi
 
+# 6. Registro de constancia (HTML+PDF con hash de integridad: "qué sabía el
+#    sistema en este ciclo"). BLANDA por las mismas dos razones que la etapa 5:
+#    (a) es el informe, no la salida operacional —watchlist/comunas/localidades
+#    ya quedaron válidas; un fallo de cartopy/Chrome no debe tumbar el ciclo.
+#    (b) es caro (mapas + PDF headless). Idempotente por ciclo (marca .last_cycle
+#    en el dir de informes: re-correr analysis_all no reescribe el mismo ciclo).
+#    REGISTRO_ENABLED=0 la apaga sin tocar el resto.
+if [[ "${REGISTRO_ENABLED:-1}" == "1" ]]; then
+    if ! python3 "$HERE/report/build_registro.py" --forecast "$FORECAST_WORKDIR/latest" >>"$LOG" 2>&1; then
+        log "analysis_all: WARN build_registro falló; el ciclo (watchlist/comunas/localidades) queda válido, sin informe"
+    fi
+else
+    log "analysis_all: build_registro DESACTIVADO (REGISTRO_ENABLED=0)"
+fi
+
 log "analysis_all: fin"

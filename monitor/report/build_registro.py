@@ -14,10 +14,17 @@ runout_localidad.py). Usa cartopy (con datos Natural Earth ya cacheados
 offline) y adjustText para los mapas; Chrome/Chromium headless para el PDF
 (se omite si no está disponible, dejando el HTML igual).
 
+Idempotente por ciclo (sexta etapa de analysis_all.sh): deja una marca
+`.last_cycle` en --out con el ciclo del último registro generado y, si el ciclo
+vigente ya está registrado, se salta —para que re-correr analysis_all no apile
+un informe duplicado del mismo ciclo (mismo forecast/watchlist/runouts → misma
+constancia). --forzar lo ignora. La cadencia normal (un ciclo nuevo por corrida
+del timer) sí genera un registro por ciclo.
+
 Uso:
     python3 monitor/report/build_registro.py
     python3 monitor/report/build_registro.py --forecast ~/nowcast-forecast/latest \\
-        --out ~/nowcast-forecast/informes
+        --out ~/nowcast-forecast/informes [--forzar]
 """
 import argparse
 import base64
@@ -829,11 +836,26 @@ def main():
     ap.add_argument("--runouts", default=os.path.expanduser("~/nowcast-forecast/runouts"))
     ap.add_argument("--out", default=os.path.expanduser("~/nowcast-forecast/informes"))
     ap.add_argument("--no-pdf", action="store_true")
+    ap.add_argument("--forzar", action="store_true",
+                    help="regenerar aunque ya exista un registro del ciclo vigente")
     a = ap.parse_args()
 
     forecast_dir = os.path.realpath(os.path.expanduser(a.forecast))
     runouts_dir = os.path.realpath(os.path.expanduser(a.runouts))
     os.makedirs(a.out, exist_ok=True)
+
+    # Idempotencia por ciclo: el ciclo vigente es el basename del target de
+    # `latest` (mismo criterio que run_localidades). Si ya se generó un registro
+    # para él, no hay dato nuevo que registrar — se salta salvo --forzar.
+    cycle = os.path.basename(forecast_dir)
+    marker = os.path.join(a.out, ".last_cycle")
+    if not a.forzar and os.path.exists(marker):
+        try:
+            if open(marker).read().strip() == cycle:
+                print(f"registro del ciclo {cycle} ya existe; se salta (--forzar para regenerar)")
+                return
+        except OSError:
+            pass
 
     forecast = {}
     for d in DOMAIN_ORDER:
@@ -939,6 +961,11 @@ def main():
         f.write(html)
     print(f"HTML: {html_path} ({os.path.getsize(html_path)/1024:.0f} KB)")
     print(f"hash de integridad: {data_hash}")
+
+    # Marca de idempotencia: recién ahora que el registro quedó en disco se
+    # anota el ciclo, para que un fallo previo no deje la marca adelantada.
+    with open(marker, "w") as f:
+        f.write(cycle + "\n")
 
     shutil.rmtree(work, ignore_errors=True)
 
