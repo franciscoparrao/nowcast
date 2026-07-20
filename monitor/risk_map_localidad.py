@@ -433,25 +433,34 @@ def main():
     try:
         import geopandas as gpd
         from shapely.geometry import Point as _Point
+        # Filtrar por la columna COMUNA, no buscando el nombre de comuna dentro
+        # de LOCALIDAD/ENTIDAD. Esos campos guardan el nombre del POBLADO, que en
+        # muchas comunas NO coincide con el de la comuna: Cajón es la cabecera
+        # urbana de Vilcún, Pichasca de Río Hurtado, Ralco de Alto Biobío. El
+        # método viejo (LOCALIDAD~comuna) no encontraba la cabecera —buscar
+        # "VILCÚN" en LOCALIDAD ignora el polígono "CAJÓN"— y dejaba la comuna
+        # sin exposición ni compuesto. 5 comunas de la watchlist vigente caían
+        # en esto (hallazgo 2026-07-20). La capa trae COMUNA y CUT al lado; se
+        # usan directamente.
         urb_all = gpd.read_file(CENSUS_GPKG, layer="Limite_Urbano_CPV24")
-        urb_c = urb_all[urb_all["LOCALIDAD"].str.upper().str.contains(a.comuna.upper(), na=False)
-                         | urb_all.get("ENTIDAD", "").astype(str).str.upper().str.contains(a.comuna.upper(), na=False)]
+        urb_c = urb_all[urb_all["COMUNA"].astype(str).str.upper() == a.comuna.upper()]
         if urb_c.empty:
-            # fallback: la entidad mas poblada cuya comuna coincide via CUT no
-            # esta indexada por nombre aqui -- se intenta con el propio nombre
-            # de la localidad tal cual viene en el argumento.
-            urb_c = urb_all[urb_all["LOCALIDAD"].str.upper() == a.comuna.upper()]
+            # respaldo por CUT (nombres con tilde/variante que no matchean como
+            # texto) — resuelve la comuna vía Comunal_CPV24, igual que la
+            # vulnerabilidad.
+            com_layer = gpd.read_file(CENSUS_GPKG, layer="Comunal_CPV24", columns=["CUT", "COMUNA"])
+            m = com_layer[com_layer["COMUNA"].astype(str).str.upper() == a.comuna.upper()]
+            if not m.empty and "CUT" in urb_all.columns:
+                cut = int(m.iloc[0]["CUT"])
+                urb_c = urb_all[urb_all["CUT"].astype("Int64") == cut]
         if urb_c.empty:
-            # FALLBACK A ALDEAS (2026-07-18), hermana del mismo fallback en
-            # select_watchlist.py: las comunas rurales no tienen polígono en
-            # Limite_Urbano_CPV24 y sin esto quedaban sin exposición ni índice
-            # compuesto — justo las de mayor peligro del evento (Alto del
-            # Carmen, Río Hurtado). `Aldeas_CPV24` trae el mismo esquema.
+            # FALLBACK A ALDEAS (2026-07-18): las comunas rurales no tienen
+            # polígono en Limite_Urbano y sin esto quedaban sin exposición —
+            # justo las de mayor peligro del evento (Alto del Carmen, Río
+            # Hurtado). Mismo criterio: por columna COMUNA, no por nombre de
+            # poblado.
             ald_all = gpd.read_file(CENSUS_GPKG, layer="Aldeas_CPV24")
-            ald_c = ald_all[ald_all["ENTIDAD"].astype(str).str.upper()
-                            .str.contains(a.comuna.upper(), na=False)
-                            | ald_all["COMUNA"].astype(str).str.upper()
-                            .str.contains(a.comuna.upper(), na=False)]
+            ald_c = ald_all[ald_all["COMUNA"].astype(str).str.upper() == a.comuna.upper()]
             if not ald_c.empty:
                 urb_c = ald_c
                 print(f"[{a.name}] sin área urbana censada; exposición calculada "
