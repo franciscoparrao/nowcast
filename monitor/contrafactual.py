@@ -60,7 +60,25 @@ def es_hecho_de_terreno(r):
     return not any(m in f for m in FUENTES_ANALISIS)
 
 
-def eventos_del_registro(lugar=None, incluir_analisis=False):
+def tiene_hora_real(r):
+    """¿La hora del registro es una hora medida, o un marcador de relleno?
+
+    Las alertas oficiales de SENAPRED vienen con resolución de DÍA y se anotan
+    con 00:00Z como marcador. Usarlas como referencia de anticipación da un
+    número que parece preciso y no lo es: para Alto del Carmen la Alerta Roja
+    (18-jul 00:00Z, marcador) daba 19.8 h donde la evacuación real (18-jul
+    09:50Z, hora publicada) da 29.7 h. Se detecta por el campo `precision` y,
+    para los registros escritos antes de que ese campo existiera, por la marca
+    en la nota — el registro es append-only, así que no se reescriben.
+    """
+    if str(r.get("precision") or "").lower().startswith("dia"):
+        return False
+    if "RESOLUCIÓN DE DÍA" in str(r.get("nota") or ""):
+        return False
+    return bool(r.get("cuando"))
+
+
+def eventos_del_registro(lugar=None, incluir_analisis=False, solo_hora_real=True):
     from verif_log import leer
     evs = []
     for r in leer():
@@ -69,6 +87,8 @@ def eventos_del_registro(lugar=None, incluir_analisis=False):
         if lugar and r.get("lugar") != lugar:
             continue
         if not incluir_analisis and not es_hecho_de_terreno(r):
+            continue
+        if solo_hora_real and not tiene_hora_real(r):
             continue
         try:
             t = datetime.strptime(r["cuando"], "%Y-%m-%dT%H:%M:%SZ")
@@ -87,6 +107,8 @@ def main():
     ap.add_argument("--lugar", help="solo esta localidad")
     ap.add_argument("--workdir", default=WORKDIR)
     ap.add_argument("--variante", default="regional-a5.5")
+    ap.add_argument("--incluir-dia", action="store_true",
+                    help="aceptar eventos con resolución de día (marcador 00:00Z) como referencia")
     ap.add_argument("--incluir-analisis", action="store_true",
                     help="usar también anotaciones propias como referencia (circular, solo para inspección)")
     a = ap.parse_args()
@@ -101,7 +123,8 @@ def main():
 
     for nombre, info in puntos.items():
         lon, lat, dom = info["lon"], info["lat"], info["domain"]
-        evs = eventos_del_registro(nombre, incluir_analisis=a.incluir_analisis)
+        evs = eventos_del_registro(nombre, incluir_analisis=a.incluir_analisis,
+                                   solo_hora_real=not a.incluir_dia)
         ev_t, ev_r = (evs[0] if evs else (None, None))
 
         print(f"══ {nombre}")
