@@ -64,7 +64,7 @@ LOW_CONFIDENCE_COVERAGE = {
 
 
 def chip_acuerdo(riesgo):
-    """Chip de confianza: ¿el peligro lo sostienen los dos modelos o uno?
+    """Chip de ACUERDO (no de confianza): ¿cuántas fuentes sostienen el número?
 
     El peligro sale del peor de las fuentes disponibles, así que un número
     alto puede venir de un consenso o de un solo modelo contra otro que ve
@@ -72,7 +72,7 @@ def chip_acuerdo(riesgo):
     ECMWF) y Juntas (los dos sobre 100 mm) se ven idénticos en la tabla.
     """
     ac = (riesgo or {}).get("acuerdo_modelos") or {}
-    conf = ac.get("confianza")
+    conf = ac.get("acuerdo") or ac.get("confianza")  # `confianza` = ciclos previos al 19-jul
     if not conf:
         return "<span style='color:var(--ink-faint);'>—</span>"
     estilo = {
@@ -229,7 +229,7 @@ def main():
             vuln_row += (f"<div class='stat-row'><span>Peligro (susc × excedencia)</span>"
                         f"<span>{pel:.2f}</span></div>")
         ac = riesgo.get("acuerdo_modelos") or {}
-        if ac.get("confianza"):
+        if ac.get("acuerdo"):
             vuln_row += (f"<div class='stat-row'><span>Acuerdo entre modelos</span>"
                         f"<span>{chip_acuerdo(riesgo)}</span></div>")
         comp = riesgo.get("indice_compuesto")
@@ -308,7 +308,11 @@ def main():
   <section class="doc">
     <div class="sec-head"><span class="sec-num">02</span><h2>Ranking por peligro</h2></div>
     <p>Ordenado por <strong>peligro</strong> (susceptibilidad × excedencia I&ndash;D): dónde la tormenta pega más fuerte sobre terreno que puede fallar. El <strong>índice compuesto</strong> va en la segunda columna y ordena distinto — es riesgo, incorpora exposición urbana y vulnerabilidad social. Ver la nota de lectura arriba.</p>
-    <p><strong>La columna «acuerdo modelos» dice cuánto creerle a la fila.</strong> El peligro se calcula sobre el peor de los pronósticos disponibles, lo que es prudente pero esconde si ese número lo sostienen dos modelos o uno solo contra otro que ve casi nada. <span class="chip" style="background:var(--sev-low-bg);color:var(--sev-low-fg);">ALTA</span> = GFS y ECMWF coinciden en que llueve ahí (el menor es ≥50% del mayor); <span class="chip" style="background:#f6e7c4;color:#7a5a12;">MEDIA</span> = ambos ven lluvia pero difieren fuerte; <span class="chip" style="background:#f3d4d1;color:#8c2f22;">BAJA</span> = la señal la sostiene un solo modelo. <strong>La etiqueta mide acuerdo, no magnitud</strong>: hay que mirar los milímetros al lado para saber si además la lluvia es grande. ICON queda fuera de la etiqueta por una razón que se verifica automáticamente en cada corrida: <strong>acumula menos horas que las otras dos</strong>. DWD publica ICON progresivamente y el fetcher toma los lead times disponibles al momento de correr, así que su total puede cubrir 24&nbsp;h mientras GFS cubre 119 — comparar esos acumulados no significa nada, ICON se vería más seco por construcción. No es discrepancia meteorológica. El campo <code>ventanas</code> de cada <code>riesgo.json</code> trae la ventana real de cada fuente.</p>
+    <p><strong>La columna «acuerdo modelos» dice cuántas fuentes sostienen el número, y nada más.</strong> El peligro se calcula sobre el peor de los pronósticos disponibles, lo que es prudente pero esconde si ese número lo sostienen dos modelos o uno solo contra otro que ve casi nada. <span class="chip" style="background:var(--sev-low-bg);color:var(--sev-low-fg);">ALTA</span> = GFS y ECMWF coinciden en que llueve ahí (el menor es ≥50% del mayor); <span class="chip" style="background:#f6e7c4;color:#7a5a12;">MEDIA</span> = ambos ven lluvia pero difieren fuerte; <span class="chip" style="background:#f3d4d1;color:#8c2f22;">BAJA</span> = la señal la sostiene un solo modelo. Mide acuerdo, <strong>no magnitud</strong> (hay que mirar los milímetros al lado) y <strong>no exactitud</strong> (ver recuadro).</p>
+
+    <div class="disclaimer" style="border-left:3px solid #8c2f22;"><strong>Acuerdo no es exactitud — verificado en terreno el 19-jul-2026, y salió al revés.</strong> Esta columna se llamaba «confianza» hasta que el evento la puso a prueba. En el valle del Huasco, <strong>Freirina</strong> estaba etiquetada MEDIA —descontada porque ECMWF pronosticaba 25–32&nbsp;mm— y es donde se activaron las quebradas Maitencillo y Alarcón, con evacuaciones ordenadas por SENAPRED. <strong>Alto del Carmen</strong> estaba BAJA —ECMWF daba 4–10&nbsp;mm— y es donde más llovió de toda la región: 66&nbsp;mm registrados en la estación El Corral. ECMWF se equivocó por un orden de magnitud; GFS, el modelo «solo», acertó, y el pronóstico oficial de la DMC (80–120&nbsp;mm) quedó cerca de GFS.<br><br>Es decir: <strong>quien hubiera usado esta columna para priorizar habría despriorizado los dos lugares correctos.</strong> Dos modelos de acuerdo pueden estar consensuadamente equivocados, y un modelo solo puede tener razón. Por eso el campo pasó a llamarse <code>acuerdo</code>: describe un hecho verificable —cuántas fuentes coinciden— y no una inferencia que no sostiene. Sirve para decidir <em>qué contrastar con datos de estación</em>; nunca como factor de descuento. Ponderar por <em>skill</em> histórico regional sería lo correcto y está pendiente.</div>
+
+    <p>ICON queda fuera de la etiqueta por una razón que se verifica automáticamente en cada corrida: <strong>acumula menos horas que las otras dos</strong>. DWD publica ICON progresivamente y el fetcher toma los lead times disponibles al momento de correr, así que su total puede cubrir 24&nbsp;h mientras GFS cubre 119 — comparar esos acumulados no significa nada, ICON se vería más seco por construcción. No es discrepancia meteorológica. El campo <code>ventanas</code> de cada <code>riesgo.json</code> trae la ventana real de cada fuente.</p>
     <div class="table-wrap"><table>
       <thead><tr><th>#</th><th>Localidad</th><th>Cuenca</th><th class="num">Peligro</th><th>Acuerdo modelos</th><th class="num">Índice compuesto</th><th class="num">Excedencia I&ndash;D</th><th class="num">Pob. expuesta est.</th></tr></thead>
       <tbody>{ranking_rows}</tbody>

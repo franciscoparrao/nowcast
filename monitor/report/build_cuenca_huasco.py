@@ -65,7 +65,7 @@ TOWNS = [
 
 
 def chip_acuerdo(riesgo):
-    """Chip de confianza: ¿el peligro lo sostienen los dos modelos o uno solo?
+    """Chip de ACUERDO (no de confianza): ¿cuántas fuentes sostienen el número?
 
     Crítico en esta cuenca: en el ciclo 20260718T18z, GFS pone 161 mm sobre
     Alto del Carmen y ECMWF pone 4. El peligro que reporta el sistema sale
@@ -73,7 +73,7 @@ def chip_acuerdo(riesgo):
     que uno respaldado por consenso.
     """
     ac = (riesgo or {}).get("acuerdo_modelos") or {}
-    conf = ac.get("confianza")
+    conf = ac.get("acuerdo") or ac.get("confianza")  # `confianza` = ciclos previos al 19-jul
     if not conf:
         return "<span style='color:var(--ink-faint);'>—</span>"
     estilo = {
@@ -213,7 +213,7 @@ def main():
             if pel is not None:
                 vuln_row += (f"<div class='stat-row'><span>Peligro (susc × excedencia)</span>"
                             f"<span>{pel:.2f}</span></div>")
-            if (riesgo.get("acuerdo_modelos") or {}).get("confianza"):
+            if (riesgo.get("acuerdo_modelos") or {}).get("acuerdo"):
                 vuln_row += (f"<div class='stat-row'><span>Acuerdo entre modelos</span>"
                             f"<span>{chip_acuerdo(riesgo)}</span></div>")
             comp = riesgo.get("indice_compuesto")
@@ -269,6 +269,8 @@ def main():
   </div>
 
   <div class="disclaimer"><strong>Cómo leer las cifras (cambio de definición, 18-jul-2026).</strong> Hasta este ciclo el término de peligro usaba el factor de gatillo logístico, que por diseño llega a 0,98 cuando la lluvia dobla el umbral I&ndash;D y a partir de ahí <strong>deja de discriminar</strong>. Ahora el peligro es <strong>susceptibilidad × excedencia I&ndash;D cruda</strong> (E = I/(a·D<sup>−b</sup>), a=5,5, b=0,39, ventanas rodantes horarias), que no satura: E&nbsp;=&nbsp;1 es justo el umbral, E&nbsp;=&nbsp;3 es tres veces por sobre. <strong>Vallenar marca 3,33× en una ventana de 40 h (173,9 mm)</strong>, la excedencia más alta de las 12 localidades tratadas en los dos reportes de cuenca. Con la definición anterior ese valor era indistinguible del de una localidad con un tercio de esa lluvia.<br><br>El «índice compuesto» sigue siendo otra cosa: es riesgo (peligro × exposición × vulnerabilidad), y por eso Vallenar queda relativamente abajo pese a tener el peligro más alto &mdash; solo el 10% de su área urbana cae bajo el footprint y su vulnerabilidad social es la menor del grupo (0,09). Las dos lecturas son válidas y responden preguntas distintas.</div>
+
+  <div class="disclaimer" style="border-left:3px solid #8c2f22;"><strong>Verificación contra el evento real — 19-jul-2026.</strong> Esta cuenca dejó de ser un escenario: SENAPRED ordenó evacuar Maitencillo Bajo y el sector Amancay en <strong>Freirina</strong> por activación de las quebradas Maitencillo y Alarcón, y la población Pablo Neruda en <strong>Vallenar</strong> por desborde del canal Ventana. Alerta Roja para toda la provincia. Acumulados observados: El Corral (Alto del Carmen) 66&nbsp;mm, Puente Nicolasa (Freirina) 55,9, Vallenar DGA 54,4, Huasco Bajo 51,0.<br><br><strong>Qué se verificó y qué no.</strong> Se verificó la LLUVIA: GFS (161&nbsp;mm en Alto del Carmen) acertó y ECMWF (4–10&nbsp;mm) se equivocó por un orden de magnitud, con el pronóstico oficial de la DMC (80–120&nbsp;mm) cerca de GFS. <strong>NO se ha verificado el footprint del ABM</strong>, que es lo que este documento realmente predice: que se activaran quebradas es consistente en lo cualitativo, pero si las manchas modeladas se parecen a lo que bajó sigue sin saberse y requiere mapeo de terreno posterior. Tampoco hubo anticipación propia: la DMC alertó el 16-jul y SENAPRED declaró Alerta Roja el 18-jul, ambas <em>antes</em> de que este sistema pusiera Freirina en su lista. El aporte, si lo hubo, es de detalle espacial, no de tiempo.<br><br>La única señal espacial a favor: la estación con más lluvia de todo el reporte regional (El Corral, 66&nbsp;mm) está en <strong>Alto del Carmen</strong>, la localidad que este sistema ranqueó primera en peligro y que era invisible a su propia watchlist hasta el 18-jul por exigir polígono urbano censado. Es un acierto de un punto, no una validación.</div>
 
   <div class="disclaimer"><strong>Sobre la naturaleza de este registro.</strong> Escenario ilustrativo de un sistema experimental sin validación operacional. La calibración chanaral_enhanced tiene anclaje real (IoU&gt;0.5) en Chañaral, no en el Huasco mismo &mdash; sigue sin existir un footprint real mapeado de esta cuenca contra el cual validar directamente. Documento generado el {gen_stamp}.</div>
 

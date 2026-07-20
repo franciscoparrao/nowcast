@@ -188,10 +188,32 @@ def ventana_de_fuente(base, sub):
 def model_agreement(forecast_dir, domain, lon, lat, tolerancia_horas=0.25):
     """Acuerdo entre modelos sobre la lluvia en el punto.
 
-    Por qué hace falta: el peligro que reporta este sistema sale de
+    ACUERDO NO ES EXACTITUD — leer esto antes de usar el campo.
+    Verificado contra la realidad el 2026-07-19, y salió al revés: Freirina
+    estaba etiquetada MEDIA (descontada porque ECMWF daba 25-32 mm) y es
+    donde se activaron las quebradas Maitencillo y Alarcón, con evacuaciones
+    de SENAPRED. Alto del Carmen estaba BAJA (ECMWF daba 4-10 mm) y es donde
+    MÁS llovió de toda la región: 66 mm en la estación El Corral. ECMWF se
+    equivocó por un orden de magnitud y GFS, el modelo "solo", tenía razón
+    —el pronóstico oficial de la DMC (80-120 mm) quedó cerca de GFS—.
+
+    O sea: quien hubiera usado este campo para priorizar habría
+    DESPRIORIZADO los dos lugares correctos. Dos modelos de acuerdo pueden
+    estar consensuadamente equivocados y un modelo solo puede tener razón.
+    Por eso el campo se llama `acuerdo` y NO `confianza` (renombrado
+    2026-07-19): describe cuántas fuentes coinciden, que es un hecho
+    verificable, y no cuánto creerle al pronóstico, que es una inferencia
+    que este campo NO sostiene. Ponderar por skill histórico por región
+    sería lo correcto y está pendiente.
+
+    Para qué sirve entonces: para saber si un número es robusto entre
+    fuentes o depende de una sola —información real y útil para decidir qué
+    verificar con datos de estación— pero nunca como factor de descuento.
+
+    Por qué existe: el peligro que reporta este sistema sale de
     `hazard_max_worst_available`, el PEOR de las fuentes disponibles. Eso es
-    defendible por precaución, pero borra la distinción que más importa para
-    decidir qué hacer: si el número lo sostienen dos modelos o uno solo.
+    defendible por precaución, pero borra la distinción entre un número
+    sostenido por dos modelos y uno sostenido por uno solo.
     Hallazgo 2026-07-18: en este evento GFS y ECMWF discrepan por un factor
     50 en dónde cae la tormenta — en Alto del Carmen GFS da 208 mm y ECMWF
     4 mm, mientras que en Limarí (Juntas, Combarbalá) los dos coinciden y
@@ -212,7 +234,7 @@ def model_agreement(forecast_dir, domain, lon, lat, tolerancia_horas=0.25):
     """
     out = {"gfs_mm": None, "ecmwf_mm": None, "icon_mm": None,
            "ventanas": {}, "comparables": None,
-           "razon_min_max": None, "confianza": None, "nota": None}
+           "razon_min_max": None, "acuerdo": None, "nota": None}
     base = os.path.join(forecast_dir, domain)
     for clave, sub, lbl in (("gfs_mm", "", "gfs"), ("ecmwf_mm", "ecmwf", "ecmwf"),
                             ("icon_mm", "icon", "icon")):
@@ -235,11 +257,11 @@ def model_agreement(forecast_dir, domain, lon, lat, tolerancia_horas=0.25):
 
     g, e = out["gfs_mm"], out["ecmwf_mm"]
     if g is None or e is None:
-        out["confianza"] = "indeterminada"
+        out["acuerdo"] = "indeterminada"
         out["nota"] = "falta una de las dos fuentes deterministas para comparar"
         return out
     if "gfs" not in comparables or "ecmwf" not in comparables:
-        out["confianza"] = "indeterminada"
+        out["acuerdo"] = "indeterminada"
         out["nota"] = (f"GFS y ECMWF no cubren el mismo periodo "
                        f"(GFS {vg['horas']:.0f} h, ECMWF {ve['horas']:.0f} h): "
                        f"comparar sus acumulados no significa nada")
@@ -254,10 +276,10 @@ def model_agreement(forecast_dir, domain, lon, lat, tolerancia_horas=0.25):
     mx, mn = max(g, e), min(g, e)
     out["razon_min_max"] = round(mn / mx, 2) if mx > 0 else None
     if mx < 50:
-        out["confianza"] = "sin señal relevante"
+        out["acuerdo"] = "sin señal relevante"
         out["nota"] = f"ningún modelo supera 50 mm acumulados (GFS {g}, ECMWF {e})"
     elif out["razon_min_max"] >= 0.5:
-        out["confianza"] = "ALTA"
+        out["acuerdo"] = "ALTA"
         # OJO con la redacción: razón 0.5 significa que un modelo ve la MITAD
         # que el otro. Eso es acuerdo sobre QUE llueve fuerte acá, no sobre
         # cuánto — decir "coinciden en magnitud" sería sobreafirmar.
@@ -266,12 +288,12 @@ def model_agreement(forecast_dir, domain, lon, lat, tolerancia_horas=0.25):
                        f"La etiqueta mide ACUERDO, no magnitud: mirar los mm para saber "
                        f"si la lluvia además es grande")
     elif out["razon_min_max"] >= 0.2:
-        out["confianza"] = "MEDIA"
+        out["acuerdo"] = "MEDIA"
         out["nota"] = (f"ambos ven lluvia pero difieren fuerte en magnitud (GFS {g} mm, "
                        f"ECMWF {e} mm; el menor es {out['razon_min_max']:.0%} del mayor)")
     else:
         cual = "GFS" if g > e else "ECMWF"
-        out["confianza"] = "BAJA"
+        out["acuerdo"] = "BAJA"
         out["nota"] = (f"la señal la sostiene SOLO {cual} (GFS {g} mm, ECMWF {e} mm; "
                        f"razón {out['razon_min_max']}) — el otro modelo no reproduce "
                        f"esta lluvia, tratar el peligro como una de dos hipótesis")
@@ -472,7 +494,7 @@ def main():
     # susceptibilidad estática × excedencia I-D cruda, en vez del factor de
     # gatillo logístico (que llega a 0.98 en E=2 y deja de discriminar).
     acuerdo = model_agreement(forecast_dir, a.domain, a.lon, a.lat)
-    print(f"[{a.name}] acuerdo entre modelos: {acuerdo['confianza']} — {acuerdo['nota']}")
+    print(f"[{a.name}] acuerdo entre modelos: {acuerdo['acuerdo']} — {acuerdo['nota']}")
 
     exc = id_exceedance_at_point(os.path.join(forecast_dir, a.domain), a.lon, a.lat,
                                   a.id_a, a.id_b, dt_hours=a.dt_hours)
