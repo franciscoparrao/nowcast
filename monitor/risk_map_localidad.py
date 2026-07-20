@@ -432,6 +432,7 @@ def main():
     urb = None
     try:
         import geopandas as gpd
+        from shapely.geometry import Point as _Point
         urb_all = gpd.read_file(CENSUS_GPKG, layer="Limite_Urbano_CPV24")
         urb_c = urb_all[urb_all["LOCALIDAD"].str.upper().str.contains(a.comuna.upper(), na=False)
                          | urb_all.get("ENTIDAD", "").astype(str).str.upper().str.contains(a.comuna.upper(), na=False)]
@@ -456,8 +457,25 @@ def main():
                 print(f"[{a.name}] sin área urbana censada; exposición calculada "
                       f"sobre el polígono de ALDEA (Aldeas_CPV24)")
         if not urb_c.empty:
-            urb_c = urb_c.sort_values("n_per", ascending=False)
-            urb = urb_c.to_crs(crs)
+            # Elegir por CERCANÍA al punto, no por población. Una comuna grande
+            # puede tener varias entidades urbanas con el mismo nombre (La Serena
+            # tiene dos polígonos "LA SERENA": el interior/Islón, 213 mil hab,
+            # justo en el punto de peligro, y el costero, 226 mil, a 13.5 km).
+            # Ordenar por n_per tomaba el costero, que cae FUERA de la ventana de
+            # 6 km alrededor del punto → 0 celdas urbanas → exposición None,
+            # justo en la comuna del aluvión de Islón. Es la misma lección que
+            # pick_susceptibility: pertenencia por distancia, no por orden ni
+            # tamaño. Hallazgo 2026-07-20.
+            urb_c = urb_c.to_crs(crs)
+            x0c, y0c = Transformer.from_crs("EPSG:4326", crs, always_xy=True).transform(a.lon, a.lat)
+            urb_c = urb_c.assign(_d=urb_c.geometry.distance(
+                gpd.GeoSeries([_Point(x0c, y0c)] * len(urb_c), crs=crs, index=urb_c.index)))
+            urb_c = urb_c.sort_values("_d")
+            urb = urb_c
+            if len(urb_c) > 1:
+                print(f"[{a.name}] {len(urb_c)} polígonos urbanos '{a.comuna}': se usa el "
+                      f"más cercano al punto ({int(urb_c.iloc[0]['n_per'] or 0):,} hab a "
+                      f"{urb_c.iloc[0]['_d']/1000:.1f} km), no el más poblado")
     except Exception as e:
         print(f"[{a.name}] AVISO: sin limite urbano ({e})", file=sys.stderr)
 
