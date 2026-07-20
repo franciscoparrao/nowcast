@@ -40,7 +40,17 @@ import os
 import sys
 from datetime import datetime, timezone
 
-REGISTRO = os.path.expanduser("~/nowcast-forecast/verificacion/registro.jsonl")
+# El registro vive DENTRO DEL REPO y se versiona, a diferencia del resto de
+# las salidas (que van al workdir ~/nowcast-forecast y se regeneran solas).
+# La razón es que este archivo es IRREEMPLAZABLE: son observaciones de un
+# momento que no vuelve — estaciones que reportan durante el evento, notas de
+# prensa que se editan o caen. `data/` está gitignoreado porque es derivado y
+# cualquier script lo reconstruye; esto no lo reconstruye nadie. Se puede
+# apuntar a otro sitio con NOWCAST_VERIF_LOG (útil para pruebas, para no
+# ensuciar el registro real).
+_REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REGISTRO = os.environ.get(
+    "NOWCAST_VERIF_LOG", os.path.join(_REPO, "verificacion", "registro.jsonl"))
 
 
 def _ahora():
