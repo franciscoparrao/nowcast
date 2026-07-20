@@ -411,10 +411,28 @@ footer strong { color: var(--ink-soft); }
 DOMAIN_ENSEMBLE_LABEL = {"atacama": "Atacama", "coquimbo": "Coquimbo", "rm": "Región Metropolitana"}
 
 
+def lista_chip(nombres):
+    """Chip de a qué lista(s) pertenece la comuna. Las dos listas responden
+    preguntas distintas y separadas a propósito (ver select_watchlist): PELIGRO
+    = dónde el terreno amplifica más la señal, EXPOSICIÓN = dónde hay más gente
+    bajo peligro alto. Lo que aparece SOLO en una es lo informativo."""
+    if not nombres:
+        return ""
+    if "peligro" in nombres and "exposicion" in nombres:
+        return "<span class='chip' style='background:#dfe6df;color:#33502f;'>ambas</span>"
+    if "exposicion" in nombres:
+        return "<span class='chip' style='background:#e7dcef;color:#5a3a78;'>exposición</span>"
+    return "<span class='chip' style='background:#f0e6d2;color:#6b5418;'>peligro</span>"
+
+
 def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_utc, comuna=None,
-               ensemble=None, gefs=None, loc_labels=None, norte_check=None, runout_ensemble=None):
+               ensemble=None, gefs=None, loc_labels=None, norte_check=None, runout_ensemble=None,
+               en_lista=None, dos_listas=False, solo_exposicion=None, solo_peligro=None):
     runout_ensemble = runout_ensemble or {}
     loc_labels = loc_labels or {}
+    en_lista = en_lista or {}
+    solo_exposicion = solo_exposicion or []
+    solo_peligro = solo_peligro or []
     gen_stamp = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
     rows = sorted(
         ((r["signal"].get("hazard_max_regional") if r["signal"].get("hazard_max_regional") is not None else -1,
@@ -466,13 +484,39 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
             return f"<span class='chip chip-domain' title=\"{note}\">sin calibrar aquí</span>"
         return ""
 
+    col_lista = "<th>Criterio</th>" if dos_listas else ""
+    col_lista_grp = "<col>" if dos_listas else ""
+    dos_listas_nota = ""
+    if dos_listas:
+        se = ", ".join(solo_exposicion) or "—"
+        sp = ", ".join(solo_peligro) or "—"
+        dos_listas_nota = (
+            "<div class=\"callout\"><h3>Dos criterios de selección, no uno</h3>"
+            "<p>La watchlist se arma con <strong>dos</strong> listas del mismo universo de comunas, "
+            "porque responden preguntas distintas y colapsarlas en un solo número borra la que "
+            "importa. <span class='chip' style='background:#f0e6d2;color:#6b5418;'>peligro</span> "
+            "= dónde el terreno amplifica más la señal climática (sesga a valles rurales chicos). "
+            "<span class='chip' style='background:#e7dcef;color:#5a3a78;'>exposición</span> = dónde "
+            "hay más población bajo peligro alto (umbral de gatillo×susceptibilidad, para que no "
+            "dominen ciudades planas por puro tamaño). <span class='chip' style='background:#dfe6df;"
+            "color:#33502f;'>ambas</span> cuando coinciden.</p>"
+            f"<p><strong>Solo por exposición</strong> (las que un ranking de peligro puro dejaría "
+            f"fuera pese a su población): {se}.<br>"
+            f"<strong>Solo por peligro</strong> (terreno crítico, población baja): {sp}.</p>"
+            "<p style='color:var(--ink-faint);'>Este cambio nació del evento de julio 2026: La "
+            "Serena (250&nbsp;mil hab, 7 desaparecidos por aluvión en Pueblo Islón) quedaba 44ª por "
+            "peligro puro y nunca entraba a la lista de 20, pese a que el sistema sí tenía señal ahí. "
+            "El umbral está ajustado sobre ese caso &mdash; se reporta, no se afirma como definitivo.</p>"
+            "</div>")
     tbl_rows = ""
     for g, name, r in rows:
         label, region = loc_labels.get(name, (name.replace("_", " ").title(), "—"))
         cls, txt = severity(g)
         s, p = r["signal"], r["proximity"]
+        celda_lista = f"<td>{lista_chip(en_lista.get(name, []))}</td>" if dos_listas else ""
         tbl_rows += (f"<tr><td><strong>{label}</strong><br><span class='region-tag'>{region}</span></td>"
                      f"<td><span class='chip {cls}'>{txt}</span> {plaus_chip(r)} {domain_chip(r)}</td>"
+                     f"{celda_lista}"
                      f"<td class='num'>{s['hazard_max_regional']:.2f}</td>"
                      f"<td class='mono'>{fmt_hour(s['first_crossing_fhour'])}</td>"
                      f"<td class='num'>{fmt_mm(s['rain_liquid_total_mm'])}</td>"
@@ -729,11 +773,12 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
 {comuna_section}
   <section class="doc wide">
     <div class="sec-head"><span class="sec-num">04</span><h2>Localidades bajo vigilancia</h2></div>
-    <p>Localidades seleccionadas <strong>objetivamente</strong> (no a criterio del autor): las 20 comunas con mayor producto gatillo climático&times;susceptibilidad real de terreno (secc. 02) dentro del barrido III&ndash;XIV, restringidas a las que tienen área urbana censada (Censo 2024, límite urbano oficial) con dato de susceptibilidad válido en el punto exacto del pueblo &mdash; ver <code>select_watchlist.py</code>. Para cada una se corrió una simulación de flujo detrítico por agentes (modelo <code>debris-flow</code> sobre <code>swarm-abm</code>, parámetros de Atacama 2015 — análogo ilustrativo, no predicción calibrada) forzada con la lluvia y la isoterma del ciclo vigente. El ABM está calibrado sobre terreno de abanico aluvial abrupto; en localidades de fondo de valle plano sin frente montañoso real cerca del punto, el footprint puede esparcirse de forma difusa en vez de canalizarse — un guard de plausibilidad física marca esos casos como <span class="chip s-none">NO PLAUSIBLE</span> y no deben leerse con el mismo peso que los canalizados. Aparte de la forma, la <strong>escala</strong> del footprint (km² afectados) tampoco está validada fuera de Atacama: el preset por defecto se ajustó contra el footprint real de Copiapó 2015 con un ajuste flojo (IoU 0.171 en su propio evento) y no existe un evento real mapeado en esta región contra el cual calibrar el tamaño — eventos reales documentados aquí (SERNAGEOMIN, sistema frontal ene-2021, Malloa/San Vicente/Coinco) se localizaron a sectores puntuales, no a la extensión que muestran estos mapas. Esas corridas llevan <span class="chip chip-domain">sin calibrar aquí</span>.</p>
+    {dos_listas_nota}
+    <p>Localidades seleccionadas <strong>objetivamente</strong> (no a criterio del autor) dentro del barrido III&ndash;XIV, restringidas a las que tienen poblado censado (Censo 2024) con dato de susceptibilidad válido en el punto exacto &mdash; ver <code>select_watchlist.py</code>. Para cada una se corrió una simulación de flujo detrítico por agentes (modelo <code>debris-flow</code> sobre <code>swarm-abm</code>, parámetros de Atacama 2015 — análogo ilustrativo, no predicción calibrada) forzada con la lluvia y la isoterma del ciclo vigente. El ABM está calibrado sobre terreno de abanico aluvial abrupto; en localidades de fondo de valle plano sin frente montañoso real cerca del punto, el footprint puede esparcirse de forma difusa en vez de canalizarse — un guard de plausibilidad física marca esos casos como <span class="chip s-none">NO PLAUSIBLE</span> y no deben leerse con el mismo peso que los canalizados. Aparte de la forma, la <strong>escala</strong> del footprint (km² afectados) tampoco está validada fuera de Atacama: el preset por defecto se ajustó contra el footprint real de Copiapó 2015 con un ajuste flojo (IoU 0.171 en su propio evento) y no existe un evento real mapeado en esta región contra el cual calibrar el tamaño — eventos reales documentados aquí (SERNAGEOMIN, sistema frontal ene-2021, Malloa/San Vicente/Coinco) se localizaron a sectores puntuales, no a la extensión que muestran estos mapas. Esas corridas llevan <span class="chip chip-domain">sin calibrar aquí</span>.</p>
     {norte_note}
     <div class="table-wrap"><table>
-      <colgroup><col class="c-loc"><col class="c-lvl"><col><col><col><col></colgroup>
-      <thead><tr><th>Localidad</th><th>Nivel</th><th class="num">Gatillo</th><th>Cruce</th><th class="num">Lluvia 120h</th><th class="num">Footprint</th></tr></thead>
+      <colgroup><col class="c-loc"><col class="c-lvl">{col_lista_grp}<col><col><col><col></colgroup>
+      <thead><tr><th>Localidad</th><th>Nivel</th>{col_lista}<th class="num">Gatillo</th><th>Cruce</th><th class="num">Lluvia 120h</th><th class="num">Footprint</th></tr></thead>
       <tbody>{tbl_rows}</tbody>
     </table></div>
     <h3>Footprint simulado por localidad</h3>
@@ -875,9 +920,18 @@ def main():
     now = datetime.now(timezone.utc)
     loc_labels = load_loc_labels(forecast_dir)
     wl_p = os.path.join(forecast_dir, "watchlist.json")
-    norte_check = json.load(open(wl_p)).get("regional_check_norte") if os.path.exists(wl_p) else None
+    wl_meta = json.load(open(wl_p)) if os.path.exists(wl_p) else {}
+    norte_check = wl_meta.get("regional_check_norte")
+    # name -> ["peligro"|"exposicion", ...] desde el watchlist.json de dos listas
+    # (select_watchlist >= 2026-07-20). Para watchlist.json viejas (sin en_lista)
+    # queda vacío y la columna simplemente no aparece.
+    en_lista = {s["name"]: s.get("en_lista", []) for s in wl_meta.get("selected", [])}
+    dos_listas = bool(wl_meta.get("lista_exposicion")) and any(en_lista.values())
     html = build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now, comuna, ensemble,
-                      gefs, loc_labels, norte_check, runout_ensemble)
+                      gefs, loc_labels, norte_check, runout_ensemble,
+                      en_lista=en_lista, dos_listas=dos_listas,
+                      solo_exposicion=wl_meta.get("solo_exposicion", []),
+                      solo_peligro=wl_meta.get("solo_peligro", []))
 
     stamp = now.strftime("%Y%m%dT%H%MZ")
     html_path = os.path.join(a.out, f"registro-evento-{stamp}.html")
