@@ -105,6 +105,9 @@ def domain_for_region(cod_region):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--top-n", type=int, default=20)
+    ap.add_argument("--umbral-exposicion", type=float, default=0.85,
+                    help="peak_terreno mínimo para la lista de exposición; evita que "
+                         "comunas planas grandes (Santiago, Maipú) entren por tamaño")
     ap.add_argument("--out", default=os.path.join(FORECAST_DIR, "watchlist.json"))
     a = ap.parse_args()
 
@@ -153,12 +156,16 @@ def main():
     log(f"{len(merged)} comunas cruzan terreno modelado + poblado censado "
         f"({n_ald} vía aldea)")
 
+    # POOL COMPLETO primero, rankings después. El loop anterior cortaba en
+    # top_n MIENTRAS evaluaba peak_terreno, así que una comuna que solo
+    # entraría por exposición ni siquiera se puntuaba. Ese corte prematuro es
+    # lo que dejó La Serena (250 mil hab, peligro 0.865, con 7 desaparecidos el
+    # 20-jul) fuera de todo: quedaba 44a por terreno y el loop paraba en la 20.
+    # Ahora se evalúan TODAS las candidatas válidas una vez y de ese pool salen
+    # las dos listas.
     merged = merged.sort_values("peak_terreno", ascending=False).reset_index(drop=True)
-
-    selected, excluded = [], []
+    pool, excluded = [], []
     for _, row in merged.iterrows():
-        if len(selected) >= a.top_n:
-            break
         lon, lat = row["centroid"].x, row["centroid"].y
         domain = domain_for_region(int(row["COD_REGION"]))
         susc = pick_susceptibility(domain, lon, lat)
@@ -170,7 +177,7 @@ def main():
         name = (row["ENTIDAD"] or row["COMUNA"]).lower().replace(" ", "_").replace("í", "i") \
             .replace("á", "a").replace("é", "e").replace("ó", "o").replace("ú", "u").replace("ñ", "n")
         cobertura = raster_coverage_warning(susc, lon, lat)
-        selected.append({
+        pool.append({
             "name": name, "label": row["ENTIDAD"] or row["COMUNA"], "comuna": row["COMUNA"],
             "region": row["REGION"], "lon": round(lon, 5), "lat": round(lat, 5),
             "domain": domain, "peak_terreno": round(float(row["peak_terreno"]), 3),
@@ -184,26 +191,73 @@ def main():
             "cobertura_raster_nota": cobertura["nota"],
         })
 
-    n_sospechosas = sum(1 for s in selected if s["cobertura_raster_sospechosa"])
-    log(f"seleccionadas {len(selected)} localidades (top-{a.top_n} por gatillo×susceptibilidad "
-        f"real, con poblado censado — urbano o aldea) | {len(excluded)} excluidas por falta de dato en el punto exacto "
-        f"| {n_sospechosas} con AVISO QA de cobertura de raster (relleno posible, revisar antes de confiar)")
-    for s in selected:
-        aviso = " ⚠ COBERTURA" if s["cobertura_raster_sospechosa"] else ""
-        log(f"  {s['label']:<20} ({s['comuna']}, {s['region']}) terreno={s['peak_terreno']} "
-            f"gfs={s['peak_gfs']} ecmwf={s['peak_ecmwf']} icon={s.get('peak_icon')} "
-            f"pob_urbana={s['poblacion_urbana']}{aviso}")
-    if excluded:
-        log(f"excluidas: {[e['comuna'] for e in excluded]}")
+    # LISTA A — PELIGRO: dónde el terreno amplifica más la señal climática, sin
+    # importar cuánta gente vive ahí. Es la que existía; sesga a valles rurales.
+    lista_peligro = sorted(pool, key=lambda s: -s["peak_terreno"])[:a.top_n]
+
+    # LISTA B — EXPOSICIÓN: entre las comunas con peligro REALMENTE alto
+    # (umbral), la que tiene más población. El umbral es indispensable: ordenar
+    # por peligro×población sin él pone primero Maipú/Puente Alto/Santiago,
+    # comunas planas que puntúan solo por tamaño. El umbral 0.85 se fijó
+    # mirando el caso La Serena (queda 3a) — es POST-HOC sobre UN evento, y por
+    # eso las dos listas se entregan SEPARADAS en vez de fundirse en un índice:
+    # la B es una segunda mirada explícita, no un reemplazo de la A.
+    umbral = a.umbral_exposicion
+    candidatas_b = [s for s in pool if s["peak_terreno"] >= umbral and s["poblacion_comuna"]]
+    lista_exposicion = sorted(candidatas_b, key=lambda s: -s["poblacion_comuna"])[:a.top_n]
+
+    # Marca de procedencia: en qué lista(s) aparece cada comuna. Lo interesante
+    # operativamente son las que están en UNA sola — la diferencia entre ambas
+    # miradas es informativa, no ruido.
+    en_peligro = {s["name"] for s in lista_peligro}
+    en_exposicion = {s["name"] for s in lista_exposicion}
+    for s in pool:
+        s["en_lista"] = ([("peligro" if s["name"] in en_peligro else None),
+                          ("exposicion" if s["name"] in en_exposicion else None)])
+        s["en_lista"] = [x for x in s["en_lista"] if x]
+
+    solo_exposicion = [s["label"] for s in lista_exposicion if s["name"] not in en_peligro]
+    solo_peligro = [s["label"] for s in lista_peligro if s["name"] not in en_exposicion]
+
+    log(f"pool de {len(pool)} comunas evaluadas | {len(excluded)} sin dato en el punto")
+    log(f"── LISTA PELIGRO (top-{a.top_n} por peak_terreno):")
+    for s in lista_peligro:
+        aviso = " ⚠" if s["cobertura_raster_sospechosa"] else ""
+        log(f"    {s['label']:<20} terreno={s['peak_terreno']} pob={s['poblacion_comuna']}{aviso}")
+    log(f"── LISTA EXPOSICIÓN (top-{a.top_n} por población, con peak_terreno≥{umbral}):")
+    for s in lista_exposicion:
+        aviso = " ⚠" if s["cobertura_raster_sospechosa"] else ""
+        log(f"    {s['label']:<20} terreno={s['peak_terreno']} pob={s['poblacion_comuna']}{aviso}")
+    log(f"── solo en EXPOSICIÓN (las que el criterio viejo perdía): {solo_exposicion}")
+    log(f"── solo en PELIGRO (peligro alto, población baja): {solo_peligro}")
+
+    # `selected` = unión de ambas, para no romper a los consumidores que leen
+    # esa clave (runout/risk_map/reportes). Cada uno trae `en_lista`.
+    union = {s["name"]: s for s in lista_peligro}
+    for s in lista_exposicion:
+        union.setdefault(s["name"], s)
+    selected = list(union.values())
 
     with open(a.out, "w") as f:
-        json.dump({"selected": selected, "excluded": excluded,
-                   "criterio": "top-N por peak_terreno (hazard climático × susceptibilidad real de "
-                              "terreno), restringido a comunas con poblado censado — Limite_Urbano_CPV24 "
-                              "y, si la comuna no tiene área urbana, Aldeas_CPV24 (ver fuente_poblado) — "
-                              "y con dato de susceptibilidad en el punto exacto del poblado"},
+        json.dump({"selected": selected,
+                   "lista_peligro": lista_peligro,
+                   "lista_exposicion": lista_exposicion,
+                   "solo_exposicion": solo_exposicion,
+                   "solo_peligro": solo_peligro,
+                   "excluded": excluded,
+                   "criterio": (
+                       "DOS listas del mismo pool (comunas con poblado censado en "
+                       "Limite_Urbano_CPV24 o, si es rural, Aldeas_CPV24, y con dato de "
+                       "susceptibilidad en el punto). PELIGRO: top-N por peak_terreno "
+                       "(gatillo×susceptibilidad), sesga a valles rurales. EXPOSICIÓN: "
+                       f"top-N por población entre las de peak_terreno≥{umbral} (el umbral "
+                       "evita que comunas planas grandes dominen por tamaño). `selected` es "
+                       "la unión; `en_lista` en cada comuna dice de cuál viene. Motivación: "
+                       "Alto del Carmen (peligro, rural, excluido por construcción) y La Serena "
+                       "(250 mil hab, peligro alto, quedaba 44a) fueron los dos modos de falla "
+                       "de selección del evento de julio 2026.")},
                   f, indent=1, ensure_ascii=False)
-    log(f"lista guardada en {a.out}")
+    log(f"lista guardada en {a.out} ({len(selected)} comunas en la unión)")
 
 
 if __name__ == "__main__":
