@@ -72,4 +72,19 @@ if ! python3 "$HERE/select_watchlist.py" --top-n "$WATCHLIST_TOP_N" >>"$LOG" 2>&
     exit 1
 fi
 
+# 5. Productos por localidad (runout ABM + mapa de riesgo) para cada comuna de
+#    la watchlist. BLANDA por DOS razones: (a) la watchlist ya es la salida
+#    operacional, esto es enriquecimiento; una localidad que falle (sin hazard
+#    en el punto, footprint vacío, costa sin modelo) no debe tumbar el ciclo.
+#    (b) es CARA: ~30 corridas de ABM. LOCALIDADES_ENABLED=0 la apaga sin tocar
+#    el resto; idempotente (salta las que ya son del ciclo vigente, así que
+#    re-correr analysis_all no repite el cómputo).
+if [[ "${LOCALIDADES_ENABLED:-1}" == "1" ]]; then
+    if ! python3 "$HERE/run_localidades.py" --forecast "$FORECAST_WORKDIR/latest" >>"$LOG" 2>&1; then
+        log "analysis_all: WARN run_localidades falló globalmente; watchlist y comunas quedan válidas"
+    fi
+else
+    log "analysis_all: run_localidades DESACTIVADA (LOCALIDADES_ENABLED=0)"
+fi
+
 log "analysis_all: fin"
