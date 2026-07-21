@@ -184,6 +184,16 @@ def main():
         )
     plausible = len(reasons) == 0
 
+    # Mancha de inundación vacía (0% de la ventana bajo agua): gemelo del
+    # `footprint_vacio` de runout_localidad.py. Sin celdas húmedas no hay forma
+    # que evaluar, así que NO es implausible — pero un resultado vacío con
+    # physically_plausible=true se LEE como "seguro" (el label dice "NO usar si
+    # plausible=false"), cuando puede ser que la cabecera no se modeló, que la
+    # forzante local no basta, o que el modelo pluvial 2D no representa el modo
+    # de crecida local. Se rotula explícito para que el consumidor no lo lea
+    # como evidencia de que no hay peligro.
+    inundacion_vacia = result["inundated_fraction"] <= 0 or result["max_depth_m"] <= 0
+
     resumen = {
         "name": a.name, "lon": a.lon, "lat": a.lat, "domain": a.domain,
         "source": a.source,
@@ -204,6 +214,14 @@ def main():
         "relief_m": relief_m,
         "physically_plausible": plausible,
         "implausibility_reasons": reasons,
+        "inundacion_vacia": inundacion_vacia,
+        "inundacion_vacia_note": (
+            "el modelo 2D no dejó celdas bajo agua (≥min-depth) con esta forzante — "
+            "SIN mancha de inundación, NO evidencia de seguridad: puede indicar que "
+            "la cabecera de cuenca no se modeló, que la forzante local no basta, o "
+            "que el modo de crecida local no lo captura el encharcamiento pluvial. "
+            "Interpretar como 'sin producto de inundación', no como 'sin peligro'."
+        ) if inundacion_vacia else None,
         "label": "escenario ilustrativo — Manning n constante, lluvia uniforme en la "
                  "ventana, balance hídrico instantáneo para la cabecera cuando aplica; "
                  "NO es aviso oficial. NO usar si physically_plausible=false.",
@@ -219,6 +237,9 @@ def main():
     print(f"[{a.name}] modo: {modo}")
     print(f"[{a.name}] profundidad máx {result['max_depth_m']:.2f} m | "
           f"{result['inundated_fraction']*100:.1f}% de la ventana inundada")
+    if inundacion_vacia:
+        print(f"[{a.name}] SIN MANCHA — 0% bajo agua (no leer como seguro; "
+              f"cabecera no modelada / forzante local insuficiente / modo no captado)")
     print(f"[{a.name}] agua vs pueblo: distancia mín {prox['min_distance_m']} m | {rings}")
     veredicto = "PLAUSIBLE" if plausible else "NO PLAUSIBLE: " + "; ".join(reasons)
     print(f"[{a.name}] {veredicto}")

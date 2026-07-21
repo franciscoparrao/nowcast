@@ -491,6 +491,19 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
             return f"<span class='chip chip-domain' title=\"{note}\">sin calibrar aquí</span>"
         return ""
 
+    def sinfp_chip(r):
+        """Chip 'sin footprint' — CUARTO estado, distinto de plaus/domain: aquí
+        el ABM no movilizó material (footprint vacío), así que no hay forma NI
+        escala que interpretar. Sin este chip un footprint vacío se lee como
+        'plausible, solo que no alcanza al pueblo' (queda sin NO PLAUSIBLE y con
+        distancia —), cuando en comunas costeras/planas suele significar que el
+        modelo de flujo detrítico no aplica. Ver footprint_vacio en
+        runout_localidad.py. Ausencia del campo (corridas legacy) no marca."""
+        if r.get("footprint_vacio"):
+            note = (r.get("footprint_vacio_note") or "").replace('"', "&quot;")
+            return f"<span class='chip s-none' title=\"{note}\">sin footprint</span>"
+        return ""
+
     col_lista = "<th>Criterio</th>" if dos_listas else ""
     col_lista_grp = "<col>" if dos_listas else ""
     dos_listas_nota = ""
@@ -522,7 +535,7 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
         s, p = r["signal"], r["proximity"]
         celda_lista = f"<td>{lista_chip(en_lista.get(name, []))}</td>" if dos_listas else ""
         tbl_rows += (f"<tr><td><strong>{label}</strong><br><span class='region-tag'>{region}</span></td>"
-                     f"<td><span class='chip {cls}'>{txt}</span> {plaus_chip(r)} {domain_chip(r)}</td>"
+                     f"<td><span class='chip {cls}'>{txt}</span> {plaus_chip(r)} {sinfp_chip(r)} {domain_chip(r)}</td>"
                      f"{celda_lista}"
                      f"<td class='num'>{s['hazard_max_regional']:.2f}</td>"
                      f"<td class='mono'>{fmt_hour(s['first_crossing_fhour'])}</td>"
@@ -536,15 +549,23 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
         e = runout_ensemble.get(name)
         if not e:
             return ""
+        def _estado(m):
+            if m.get("footprint_vacio"):
+                return "sin footprint"
+            return "plausible" if m["physically_plausible"] else "no plausible"
         title = "; ".join(
-            f"{src}: {m['affected_km2']:.1f} km² ({'plausible' if m['physically_plausible'] else 'no plausible'})"
+            f"{src}: {m['affected_km2']:.1f} km² ({_estado(m)})"
             for src, m in e["members"].items()
         )
+        n_vacio = e.get("n_vacio", 0)
+        vacio_row = (f"<div class='stat-row'><span>Sin footprint en</span>"
+                     f"<span>{n_vacio}/{e['n_members']} fuentes</span></div>") if n_vacio else ""
         return (f"<div class='stat-row' title=\"{title}\">"
                 f"<span>Área afectada (rango {e['n_members']} fuentes)</span>"
                 f"<span>{e['affected_km2_min']:.0f}&ndash;{e['affected_km2_max']:.0f} km²</span></div>"
                 f"<div class='stat-row'><span>Plausible en</span>"
-                f"<span>{e['n_plausible']}/{e['n_members']} fuentes</span></div>")
+                f"<span>{e['n_plausible']}/{e['n_members']} fuentes</span></div>"
+                f"{vacio_row}")
 
     loc_cards = ""
     for g, name, r in rows:
@@ -558,6 +579,10 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
         if r.get("physically_plausible") is False:
             implaus = (f"<div class='stat-row implausible'><span>⚠ No plausible</span></div>"
                        f"<div class='implaus-reason'>{'; '.join(r.get('implausibility_reasons', []))}</div>")
+        sinfp_note = ""
+        if r.get("footprint_vacio"):
+            sinfp_note = (f"<div class='stat-row implausible'><span>⚠ Sin footprint</span></div>"
+                          f"<div class='implaus-reason'>{r.get('footprint_vacio_note', '')}</div>")
         domain_note = ""
         if r.get("calibration_domain_warning"):
             domain_note = (f"<div class='stat-row domain-warn'><span>⚠ Sin calibrar aquí</span></div>"
@@ -577,7 +602,7 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
             f"<span>Techo físico agua/sedimento</span>"
             f"<span>{r.get('mass_balance_ratio', 0)*100:.0f}%</span></div>"
             f"{ensemble_row(name)}"
-            f"{implaus}{domain_note}</div></div>")
+            f"{implaus}{sinfp_note}{domain_note}</div></div>")
 
     n_high = sum(1 for g, _, _ in rows if g >= 0.8)
     cycle = forecast["chile-centro-sur"]["cycle"]

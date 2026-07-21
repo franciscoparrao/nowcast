@@ -79,6 +79,11 @@ def main():
                 "affected_km2": s["runout"]["affected_km2"],
                 "window_frac": s["runout"]["window_frac"],
                 "physically_plausible": r["physically_plausible"],
+                # footprint_vacio distingue el miembro que no movilizó nada del que
+                # sí produjo footprint: sin esto un miembro vacío (plausible=true
+                # por construcción) infla n_plausible como si fuera una corrida
+                # afirmativa. Ver footprint_vacio en runout_localidad.py.
+                "footprint_vacio": r.get("footprint_vacio", False),
                 "hazard_max_regional": r["signal"].get("hazard_max_regional"),
             }
         if not members:
@@ -91,7 +96,11 @@ def main():
             "affected_km2_max": max(km2_vals),
             "affected_km2_median": statistics.median(km2_vals),
             "n_members": len(members),
-            "n_plausible": sum(1 for m in members.values() if m["physically_plausible"]),
+            "n_vacio": sum(1 for m in members.values() if m["footprint_vacio"]),
+            # n_plausible cuenta solo miembros CON footprint (un footprint vacío no
+            # es una corrida plausible afirmativa, es ausencia de producto).
+            "n_plausible": sum(1 for m in members.values()
+                               if m["physically_plausible"] and not m["footprint_vacio"]),
         }
 
     out_p = os.path.join(forecast_dir, "runout_ensemble.json")

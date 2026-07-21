@@ -208,12 +208,19 @@ def main():
     reasons = []
     relief_m = stats["dem"]["max_m"] - stats["dem"]["min_m"]
     r = stats["runout"]
-    if r["affected_km2"] <= 0 or r["mean_elev_footprint_m"] is None:
+    footprint_vacio = r["affected_km2"] <= 0 or r["mean_elev_footprint_m"] is None
+    if footprint_vacio:
         # Footprint vacio (el ABM no movilizo nada con esta forzante) -- no hay
-        # forma que evaluar, no es difuso ni canalizado: trivialmente
-        # plausible. Pasa con esta fuente sola en runs de ensemble (ver
-        # run_ensemble_runouts): un footprint vacio es un dato real, no un
-        # error a esconder.
+        # forma que evaluar, no es difuso ni canalizado, asi que NO se marca
+        # implausible. Pero un footprint vacio con physically_plausible=true se
+        # LEE como "plausible, solo que no alcanza al pueblo" (el label dice "NO
+        # usar si plausible=false"): eso es enganoso en comunas costeras/de baja
+        # pendiente (Valparaiso, Casablanca: relieve presente pero footprint
+        # vacio) donde lo que pasa es que este modelo -- abanico aluvial abrupto
+        # de Atacama -- no representa el modo de falla local. Se rotula explicito
+        # con `footprint_vacio` para que el consumidor lo distinga de un
+        # footprint real que no llega, y NO lo lea como evidencia de seguridad.
+        # (En ensemble un miembro vacio sigue siendo un dato real, no un error.)
         pass
     elif relief_m < 150.0:
         reasons.append(
@@ -309,6 +316,15 @@ def main():
                ),
                "physically_plausible": plausible,
                "implausibility_reasons": reasons,
+               "footprint_vacio": footprint_vacio,
+               "footprint_vacio_note": (
+                   "el ABM de flujo detrítico no movilizó material en el punto con "
+                   "esta forzante — SIN producto de footprint, NO evidencia de "
+                   "seguridad. En comunas costeras/de baja pendiente suele indicar "
+                   "que este modelo (calibrado en abanico aluvial abrupto de Atacama) "
+                   "no representa el modo de falla local: interpretar como 'sin "
+                   "modelo de footprint aplicable', no como 'sin peligro'."
+               ) if footprint_vacio else None,
                "cobertura_raster_sospechosa": cobertura["sospechoso"],
                "cobertura_raster_nota": cobertura["nota"],
                "calibration_domain_warning": calib_domain_warning,
@@ -327,7 +343,12 @@ def main():
     rings = " | ".join(f"≤{k}: {v*100:.0f}%" for k, v in prox["rings"].items())
     print(f"[{a.name}] footprint vs pueblo: distancia mín "
           f"{prox['min_distance_m']} m | {rings}")
-    veredicto = "PLAUSIBLE" if plausible else "NO PLAUSIBLE: " + "; ".join(reasons)
+    if footprint_vacio:
+        veredicto = "SIN FOOTPRINT — el ABM no movilizó material (no leer como seguro; probable modelo no aplicable en costa/plano)"
+    elif plausible:
+        veredicto = "PLAUSIBLE"
+    else:
+        veredicto = "NO PLAUSIBLE: " + "; ".join(reasons)
     print(f"[{a.name}] {veredicto}")
     if calib_domain_warning:
         print(f"[{a.name}] AVISO dominio de calibración: sin evento real mapeado "
