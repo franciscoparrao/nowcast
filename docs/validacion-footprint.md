@@ -37,45 +37,56 @@ muertos) — lat −43.4, lon −72.4, **muy al sur del dominio de calibración*
 capa `P03_FLOODRISK01MUDFLOWDAMAGEASS` es el footprint observado, extraído a
 `data/vsl_mudflow_obs.geojson`.
 
-- **Área observada: 4.9 km²**, alargado y canalizado (bbox 5.9 × 7.2 km).
+- **Área observada: 4.9 km²**, alargado y canalizado (cae de 1457 m a 221 m).
 
-### Señal de magnitud (NO es validación todavía)
+## Resultado de la validación (2026-07-21)
 
-Contra los footprints del ABM operacional out-of-domain (252 runouts, **mediana
-16.4 km²**, y los de fondo de valle como Rancagua/Requínoa 80–90 km²), el único
-evento real mapeado fuera de Atacama es **~3× más chico que la mediana** y ~17×
-más chico que los mayores. Es consistente con la sospecha documentada de que los
-footprints out-of-domain están **sobredimensionados**. PERO es solo una señal de
-magnitud, no una validación:
+Reproducible con `scripts/validate_footprint_vsl.py`. Como no hay
+susceptibilidad ML en VSL (fuera de toda cuenca modelada — el ABM operacional ni
+corre ahí: `runout_localidad.py` haría `sys.exit` "SIN COBERTURA"), se fabrica
+una susceptibilidad de **fuente**: un disco de 150 m en el apex del footprint
+observado (su celda más alta sobre el DEM Copernicus GLO-30 que `runout_ondemand`
+baja on-demand). El preset `chanaral_enhanced` (`seeding_power=0.376`) concentra
+los agentes en la fuente; el terreno rutea el resto. Isoterma alta (verano
+austral, toda lluvia líquida). Es un test de **ruteo/escala dado un origen
+conocido**, no de la config operacional susc-driven.
 
-- son eventos distintos con forzantes distintas (no es un IoU controlado);
-- los footprints de 80–90 km² son justo los de fondo de valle que el guard de
-  plausibilidad física ya marca como esparcimiento difuso, no canalización;
-- el ABM se siembra por **susceptibilidad**, y en VSL no existe susceptibilidad
-  ML (está fuera de toda cuenca modelada — de hecho el ABM operacional ni corre
-  ahí: `runout_localidad.py` haría `sys.exit` "SIN COBERTURA").
+| Métrica | ABM (chanaral_enhanced, 6 semillas) | Observado |
+|---|---|---|
+| Área footprint | **3.98 km²** (± 0.00) | 4.93 km² |
+| IoU | **0.181** | — |
+| Precisión | 0.343 | — |
+| Recall | 0.277 | — |
 
-## Validación pendiente (estudio, no script)
+Lectura honesta:
 
-Un IoU real en VSL requiere armar un caso al estilo `data/chanaral/` en
-`swarm-abm/models/debris-flow` (todos los `.f32`: dem/slope/streams/
-susceptibility/rain×3/isotherm/sediment + `ground_truth` + `bbox` + `meta.json`)
-y correr `evaluate_masked` con el preset `chanaral_enhanced`. Piezas:
+- **La ESCALA generaliza fuera de Atacama**: 3.98 vs 4.93 km² (~81 %). Cuando se
+  siembra en la fuente, el footprint NO sale sobredimensionado — al contrario,
+  queda algo por debajo del observado. Desmiente la lectura ingenua de "todo
+  footprint out-of-domain está inflado": los 80-90 km² de Rancagua/Requínoa son
+  el artefacto de **sembrado difuso** (susceptibilidad amplia sobre fondo de
+  valle sin fuente empinada), justo lo que el guard de plausibilidad ya marca —
+  no una propiedad del ruteo.
+- **La UBICACIÓN generaliza peor**: IoU 0.181, nivel Copiapó in-sample (0.171),
+  bien por debajo de Chañaral out-of-sample (0.555). El flujo baja en parte por
+  una vía adyacente a la observada — el ruteo por el DEM Copernicus 30 m no
+  clava el canal real de este evento.
+- **Insensible a la lluvia** (IoU idéntico de 20/40/30 a 60/120/90 mm/día) y
+  **determinista** (T≈0 en el preset): el footprint lo fija la geometría del
+  terreno desde la fuente, no el volumen — así que no depende de reconstruir la
+  lluvia exacta del 2017-12-16.
+- El preset `de` (`seeding_power=0`, sembrado uniforme) da footprint **vacío**
+  con una máscara de fuente rala (casi ningún agente cae en el disco de 79
+  celdas): es interacción de config, no falla del modelo. `chanaral_enhanced`
+  es el preset correcto para sembrado concentrado.
 
-1. **DEM**: `runout_ondemand` ya baja Copernicus DEM 30 m on-demand para
-   cualquier lon/lat (bucket AWS) → resuelto.
-2. **ground_truth**: rasterizar `data/vsl_mudflow_obs.geojson` a la grilla.
-3. **rain**: forzante del evento 2017-12-16 (IMERG/estación) — 3 días peores.
-4. **susceptibility**: EL NUDO. No hay ML en VSL. Opciones: (a) proxy de fuente
-   (máscara alta en el escarpe de inicio del deslizamiento, apex del footprint
-   observado) — prueba la FÍSICA DE RUTEO/escala pero es metodológicamente
-   distinto de los casos Copiapó/Chañaral (que usaron susceptibilidad ML); (b)
-   derivar una susceptibilidad rápida para el AOI. Cualquiera cambia la
-   comparabilidad y hay que declararlo.
-
-Por eso VSL valida el **ruteo/escala** del ABM fuera de Atacama, no la config
-operacional exacta (que en el centro-sur sí usa susceptibilidad ML pero carece
-de evento mapeado). Ambas mitades del problema son reales y distintas.
+Conclusión: primera evidencia out-of-Atacama de que la **escala** del ABM es
+razonable (no inflada) cuando el origen es conocido, con **ubicación** modesta
+(IoU ~0.18) limitada por el ruteo sobre DEM global 30 m. Valida el ruteo/escala,
+no la config operacional susc-driven (que en el centro-sur usa susceptibilidad
+ML pero aún carece de evento mapeado). Es UN evento — no generaliza a todo el
+sur, pero mueve la aguja de "sin verificar fuera de Atacama" a "un punto de
+control real, con número".
 
 ## Honestidad operacional que ya está en pie
 
