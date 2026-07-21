@@ -44,13 +44,32 @@ sistemático hacia "crecida". La alternativa (Melton MÁXIMO entre los cauces
 cercanos) sesga al revés: cualquier cárcava chica empinada da R>0.6 y casi todo
 pasa a "flujo detrítico". Por eso este módulo es DIAGNÓSTICO, NO se cablea como
 rótulo operacional del reporte: un clasificador que llama "crecida" a Alto del
-Carmen sería peor que no rotular. La clasificación por localidad CONFIABLE exige
-la red de cauces por nombre (`cauces.json` de OSM/Overpass) que usa
-`melton_cuencas.py` —elegir la quebrada correcta, no la más cercana— y validarla
-contra los eventos documentados. Lo único robusto que sí sale de aquí es el
+Carmen sería peor que no rotular. Lo único robusto que sí sale de aquí es el
 "indeterminado / sin cauce mapeado cercano" de las localidades costeras
 (Valparaíso, Viña, Concón, Quilpué…), consistente con el hueco "costa sin
 modelo".
+
+HALLAZGO-2 (2026-07-21, validación con red de cauces OSM). Se probó el fix
+"riguroso" —bajar los cauces por nombre de Overpass y elegir la quebrada
+correcta, no la más cercana— sobre los dos sitios de validación, y TAMPOCO
+recupera el aluvión, por una razón más de fondo que la calidad de los datos:
+  • Alto del Carmen: los únicos cauces OSM cercanos son `waterway=river` (Río
+    del Tránsito, Río Huasco, Río del Carmen, 2900-7000 km²). NO hay quebradas
+    (`waterway=stream`) mapeadas cerca; el punto censal cae en la CONFLUENCIA de
+    dos ríos (fondo de valle). Las quebradas del aluvión 2015 no están en OSM.
+  • La Serena: junto al centroide (centro de la ciudad) solo hay streams
+    diminutos (0.2-0.9 km², R≈0.12) o el Elqui principal (9300 km²). La quebrada
+    de Pueblo Islón no está junto al centroide — Pueblo Islón es un SECTOR.
+La causa raíz no son los cauces, es la abstracción de "un punto (centroide
+urbano) por localidad": el punto es el centro/fondo de valle, casi nunca el
+abanico de la quebrada, y un flujo detrítico llega a un SECTOR, no al centroide.
+CONCLUSIÓN: la clasificación aluvión/crecida por localidad-centroide está
+bloqueada aun con red de cauces; requiere representar la comuna como ÁREA / por
+abanicos (varios puntos de fan apex por comuna), no como un punto — lo que
+enlaza con "subir resolución de la forzante/representación" de la cola. El honor
+operacional que sí está en pie (el footprint del ABM en costa/valle debe leerse
+con escepticismo) ya lo cubren el guard de plausibilidad física y `footprint_
+vacio` en runout_localidad.py.
 
 Uso:
     python3 melton_localidad.py --susc <ruta_susc.tif> --lon -70.7 --lat -30.6
