@@ -29,3 +29,6 @@ docs/paper/*.pdf
 
 # Credenciales locales del monitor (token DMC, ntfy topic) — NUNCA versionar
 monitor/config.local.env
+
+# Copernicus EMS raw gdb (22MB) — se usa el polígono extraído en data/vsl_mudflow_obs.geojson
+data/EMSN053_WGS84_V2.gdb_.zip
