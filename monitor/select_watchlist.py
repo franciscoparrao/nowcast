@@ -36,8 +36,19 @@ Criterio de desempate y exclusión:
     Contulmo/Caldera entre otros). Con falsos positivos conocidos en terreno
     plano real — revisar visualmente antes de excluir una localidad por esto.
 
+Robustez del umbral de exposición (2026-07-20): `peak_terreno` = gatillo×
+susceptibilidad ESCALA con la forzante, así que el corte absoluto 0.85 (elegido
+mirando La Serena, no derivado) es frágil —entre ciclos el nº de candidatas
+oscila y dentro de un ciclo la lista es un filo (mover el umbral ±0.02 cambia
+~4-5 de 20 comunas). No se cambia el valor a ciegas; se MIDE y EXPONE la
+fragilidad: cada comuna de la lista lleva `margen_umbral` y `borderline`, y el
+JSON trae `sensibilidad_umbral` con el barrido de estabilidad (Jaccard a ±0.02/
+±0.05). Reproducible cada ciclo. Ajústese con `--umbral-exposicion` /
+`--borderline-delta`.
+
 Uso:
-    python3 select_watchlist.py --top-n 20 [--out watchlist.json]
+    python3 select_watchlist.py --top-n 20 [--umbral-exposicion 0.85]
+        [--borderline-delta 0.05] [--out watchlist.json]
 """
 import argparse
 import json
@@ -102,12 +113,32 @@ def domain_for_region(cod_region):
     return "atacama" if cod_region == 3 else "chile-centro-sur"
 
 
+def exposure_list(pool, umbral, top_n):
+    """Lista de exposición: entre las comunas con peak_terreno≥umbral (peligro
+    realmente alto), las top_n por población. Aislada como función para poder
+    reevaluarla a umbrales perturbados sin duplicar la lógica (barrido de
+    sensibilidad)."""
+    cand = [s for s in pool if s["peak_terreno"] >= umbral and s["poblacion_comuna"]]
+    return sorted(cand, key=lambda s: -s["poblacion_comuna"])[:top_n]
+
+
+def jaccard(a, b):
+    """Similitud de conjunto entre dos listas de comunas (por `name`)."""
+    A = {s["name"] for s in a}
+    B = {s["name"] for s in b}
+    return len(A & B) / len(A | B) if (A | B) else 1.0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--top-n", type=int, default=20)
     ap.add_argument("--umbral-exposicion", type=float, default=0.85,
                     help="peak_terreno mínimo para la lista de exposición; evita que "
                          "comunas planas grandes (Santiago, Maipú) entren por tamaño")
+    ap.add_argument("--borderline-delta", type=float, default=0.05,
+                    help="una comuna de la lista de exposición es 'borderline' si su "
+                         "peak_terreno está a menos de este margen del umbral (cae de la "
+                         "lista con un corte apenas más alto)")
     ap.add_argument("--out", default=os.path.join(FORECAST_DIR, "watchlist.json"))
     a = ap.parse_args()
 
@@ -198,13 +229,55 @@ def main():
     # LISTA B — EXPOSICIÓN: entre las comunas con peligro REALMENTE alto
     # (umbral), la que tiene más población. El umbral es indispensable: ordenar
     # por peligro×población sin él pone primero Maipú/Puente Alto/Santiago,
-    # comunas planas que puntúan solo por tamaño. El umbral 0.85 se fijó
-    # mirando el caso La Serena (queda 3a) — es POST-HOC sobre UN evento, y por
-    # eso las dos listas se entregan SEPARADAS en vez de fundirse en un índice:
-    # la B es una segunda mirada explícita, no un reemplazo de la A.
+    # comunas planas que puntúan solo por tamaño.
+    #
+    # SOBRE EL 0.85: `peak_terreno` = gatillo×susceptibilidad ESCALA con la
+    # forzante, así que un corte absoluto es intrínsecamente frágil —entre
+    # ciclos el nº de candidatas oscila (ciclo seco ~0, ciclo activo decenas) y
+    # DENTRO de un ciclo la lista es un filo: mover el umbral ±0.02 intercambia
+    # ~4-5 de las 20 comunas (barrido del 2026-07-20: Jaccard 0.85→0.83 ≈ 0.67,
+    # 0.85→0.87 ≈ 0.60; ~9/20 comunas quedan a <0.05 del corte). El 0.85 se
+    # eligió mirando La Serena, no derivado. En vez de fingir que es principiado
+    # se MIDE y EXPONE la fragilidad (margen/borderline por comuna + bloque
+    # `sensibilidad_umbral`), y por eso las dos listas van SEPARADAS en vez de
+    # fundirse en un índice: la B es una segunda mirada explícita, con su
+    # incertidumbre a la vista, no un reemplazo de la A.
     umbral = a.umbral_exposicion
-    candidatas_b = [s for s in pool if s["peak_terreno"] >= umbral and s["poblacion_comuna"]]
-    lista_exposicion = sorted(candidatas_b, key=lambda s: -s["poblacion_comuna"])[:a.top_n]
+    lista_exposicion = exposure_list(pool, umbral, a.top_n)
+
+    # Robustez por comuna: margen al umbral y flag borderline (cae de la lista
+    # con un corte apenas más alto). Mismo espíritu que cobertura_raster_
+    # sospechosa: no excluye, avisa.
+    delta = a.borderline_delta
+    for s in lista_exposicion:
+        s["margen_umbral"] = round(s["peak_terreno"] - umbral, 3)
+        s["borderline"] = s["margen_umbral"] < delta
+
+    # Barrido de sensibilidad del umbral: cuánto cambia la lista si el corte se
+    # mueve ±0.02/±0.05. Se guarda en watchlist.json para que el consumidor vea
+    # la estabilidad sin recalcular; reproducible cada ciclo (no un one-off).
+    barrido = []
+    for du in (-0.05, -0.02, 0.0, 0.02, 0.05):
+        u2 = round(umbral + du, 3)
+        L2 = exposure_list(pool, u2, a.top_n)
+        barrido.append({
+            "umbral": u2,
+            "n_candidatas": sum(1 for s in pool if s["peak_terreno"] >= u2 and s["poblacion_comuna"]),
+            "n_lista": len(L2),
+            "jaccard_vs_umbral": round(jaccard(L2, lista_exposicion), 2),
+        })
+    n_borderline = sum(1 for s in lista_exposicion if s["borderline"])
+    sensibilidad_umbral = {
+        "umbral": umbral,
+        "borderline_delta": delta,
+        "n_candidatas": sum(1 for s in pool if s["peak_terreno"] >= umbral and s["poblacion_comuna"]),
+        "n_borderline_en_lista": n_borderline,
+        "nota": ("peak_terreno escala con la forzante, así que el corte absoluto es "
+                 f"frágil: {n_borderline}/{len(lista_exposicion)} comunas de la lista "
+                 f"están a <{delta} del umbral (borderline). `barrido.jaccard_vs_umbral` "
+                 "<1 mide cuánto cambia la lista si el corte se mueve ±0.02/±0.05."),
+        "barrido": barrido,
+    }
 
     # Marca de procedencia: en qué lista(s) aparece cada comuna. Lo interesante
     # operativamente son las que están en UNA sola — la diferencia entre ambas
@@ -227,7 +300,15 @@ def main():
     log(f"── LISTA EXPOSICIÓN (top-{a.top_n} por población, con peak_terreno≥{umbral}):")
     for s in lista_exposicion:
         aviso = " ⚠" if s["cobertura_raster_sospechosa"] else ""
-        log(f"    {s['label']:<20} terreno={s['peak_terreno']} pob={s['poblacion_comuna']}{aviso}")
+        bl = " ⚠borderline" if s["borderline"] else ""
+        log(f"    {s['label']:<20} terreno={s['peak_terreno']} pob={s['poblacion_comuna']} "
+            f"margen={s['margen_umbral']:+.3f}{bl}{aviso}")
+    log(f"── SENSIBILIDAD del umbral {umbral}: {n_borderline}/{len(lista_exposicion)} "
+        f"borderline (<{delta} del corte); estabilidad de la lista:")
+    for b in barrido:
+        marca = "  <<< umbral actual" if abs(b["umbral"] - umbral) < 1e-9 else ""
+        log(f"    umbral={b['umbral']:.2f}  candidatas={b['n_candidatas']:>3}  "
+            f"jaccard={b['jaccard_vs_umbral']:.2f}{marca}")
     log(f"── solo en EXPOSICIÓN (las que el criterio viejo perdía): {solo_exposicion}")
     log(f"── solo en PELIGRO (peligro alto, población baja): {solo_peligro}")
 
@@ -244,6 +325,7 @@ def main():
                    "lista_exposicion": lista_exposicion,
                    "solo_exposicion": solo_exposicion,
                    "solo_peligro": solo_peligro,
+                   "sensibilidad_umbral": sensibilidad_umbral,
                    "excluded": excluded,
                    "criterio": (
                        "DOS listas del mismo pool (comunas con poblado censado en "
