@@ -292,18 +292,28 @@ extensión la fija la física del ruteo.
 cubren 16.8–21.9% del pueblo → flujo detrítico inequívoco.
 
 **Hallazgo — el paso 3 discrimina lo que el paso 2 no puede.** Vallenar tiene UN
-polígono urbano compacto (5×4 km), pero apexes a 3.8, 14.7 y 15.2 km cubren
-~10.5% de forma **casi idéntica**: es la firma de un **footprint difuso de fondo
-de valle** (el mismo problema que el guard de plausibilidad de
-`runout_localidad.py`), no un abanico limpio. El proxy D8 del paso 2 sobre-asoció
-Vallenar ("alcanzable a 3.8 km"); el footprint físico revela que la asociación es
-difusa/débil. **La MAGNITUD de cobertura es el discriminador** que el proxy no
-tenía: Alto del Carmen ~20% (fan real) vs Vallenar ~10% uniforme (valle difuso).
+polígono urbano compacto (5×4 km); los footprints de apexes a 3.8, 14.7 y 15.2 km
+cubren ~10.5% del pueblo → banda **débil**, vs Alto del Carmen ~16–22% → **fuerte**.
+El proxy D8 del paso 2 los igualaba ("alcanzable"); el footprint físico separa el
+abanico que cubre el pueblo de lleno (Alto del Carmen) del que solo roza su borde
+de valle (Vallenar). **La MAGNITUD de cobertura es el discriminador** que el proxy
+no tenía.
 
-Implicación para el rótulo: no basta "asocia / no asocia"; hay que reportar la
-**fracción cubierta** (fuerte ≥~15% / débil ~5–15% / marginal <5%) — como el
-runout-a-alcanzar reemplazó al binario en el paso 2, la cobertura reemplaza al
-touch binario en el paso 3.
+Nota de honestidad — hipótesis falsificada: primero se atribuyó el ~10% de
+Vallenar a un **footprint difuso de valle** (esparcido, no canalizado). Al añadir
+la lectura de `stats.json` (paso 1 del pendiente) resultó **falso**: los footprints
+de Vallenar SÍ concentran cuesta abajo (delta_frac ≥ 0.08, el guard de difuso NO
+dispara). El ~10% no es esparcimiento: es que Vallenar es un pueblo de VALLE
+mayormente **fuera** de los abanicos, cuyos bordes tocan las lenguas de flujo. El
+discriminador correcto es la banda de cobertura, no la difusividad. El flag difuso
+queda como guarda válida (para casos que sí lo sean), aquí no aplicó.
+
+Rótulo del paso 3 (implementado en `abm_apex_footprint.py`): banda de cobertura
+**fuerte ≥15% / débil 5–15% / marginal <5%** + flag **difuso** (delta_frac<0.08,
+mismo criterio que `runout_localidad.py`). Asocia LIMPIO si banda≠marginal Y no
+difuso. Comuna: clase del apex limpio de mayor Melton, con aviso "(cobertura
+débil)" si ninguno es fuerte. Verificado: Alto del Carmen flujo detrítico (fuerte);
+Vallenar debris flood (cobertura débil).
 
 ## Próximo paso
 1. Añadir bandas de cobertura al módulo del paso 3 (fuerte/débil/marginal) y

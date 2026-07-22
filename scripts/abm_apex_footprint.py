@@ -16,11 +16,15 @@ Flujo:
   2. Se simulan los N apexes que alcanzan a menor runout (los más plausibles).
   3. Por apex: disco de fuente en su UTM → runout_ondemand centrado para incluir
      apex y pueblo → footprint.
-  4. Solape con el objetivo (polígono urbano / aldea): fracción del objetivo
-     cubierta + área del footprint. El apex ASOCIA si cubre ≥ `min_cover` del
-     objetivo (o toca, según --touch).
-  5. Comuna: unión de footprints que asocian; clase = del apex asociado de mayor
-     Melton.
+  4. Solape con el objetivo (polígono urbano / aldea): fracción cubierta →
+     banda (fuerte ≥15% / débil 5-15% / marginal <5%). Del stats.json se lee si
+     el footprint es DIFUSO (no concentra cuesta abajo, delta_frac<0.08 — mismo
+     criterio que runout_localidad.py). El apex ASOCIA LIMPIO si la banda no es
+     marginal Y el footprint no es difuso (un footprint difuso que "cubre" el
+     pueblo lo hace por esparcimiento en el valle, no por un abanico real → es
+     el falso positivo que el proxy D8 del paso 2 no puede ver).
+  5. Comuna: clase = del apex asociado limpio de mayor Melton (con aviso si toda
+     la cobertura es débil); si solo hay footprints difusos → crecida/difuso.
 
 Uso:
     python3 scripts/abm_apex_footprint.py --comuna "ALTO DEL CARMEN" \
@@ -44,6 +48,41 @@ from pyproj import Transformer
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "monitor"))
 import fan_apex_localidad as FA  # noqa: E402
+
+# Bandas de cobertura del objetivo poblado por el footprint del ABM.
+COVER_FUERTE = 0.15   # ≥15% del pueblo: abanico que lo alcanza de lleno
+COVER_DEBIL = 0.05    # 5-15%: lo roza
+# <5% = marginal.
+# Difuso: el footprint no concentra cuesta abajo (mismo criterio que el guard de
+# plausibilidad de monitor/runout_localidad.py). Un footprint difuso que "cubre"
+# el pueblo lo hace por esparcimiento sobre el valle, no por un abanico real.
+DIFUSO_DELTA_FRAC = 0.08
+
+
+def cover_band(frac):
+    if frac >= COVER_FUERTE:
+        return "fuerte"
+    if frac >= COVER_DEBIL:
+        return "débil"
+    return "marginal"
+
+
+def read_plausibility(run_dir):
+    """Del stats.json del ABM: ¿el footprint concentra cuesta abajo o es difuso?
+    delta_frac = (elev media del resto de la ventana − elev media del footprint)
+    / relieve. Bajo DIFUSO_DELTA_FRAC → difuso (esparcido, no canalizado)."""
+    p = os.path.join(run_dir, "stats.json")
+    if not os.path.exists(p):
+        return {"delta_frac": None, "window_frac": None, "difuso": None}
+    s = json.load(open(p))
+    dem, r = s.get("dem", {}), s.get("runout", {})
+    relief = (dem.get("max_m", 0) or 0) - (dem.get("min_m", 0) or 0)
+    fe, we = r.get("mean_elev_footprint_m"), r.get("mean_elev_window_rest_m")
+    if relief <= 0 or fe is None or we is None:
+        return {"delta_frac": None, "window_frac": r.get("window_frac"), "difuso": None}
+    delta_frac = (we - fe) / relief
+    return {"delta_frac": round(delta_frac, 3), "window_frac": round(r.get("window_frac", 0), 3),
+            "difuso": delta_frac < DIFUSO_DELTA_FRAC}
 
 
 def utm_epsg(lon, lat):
@@ -113,9 +152,6 @@ def main():
     ap.add_argument("--lon", type=float, required=True)
     ap.add_argument("--lat", type=float, required=True)
     ap.add_argument("--top", type=int, default=3, help="cuántos apexes (menor runout) simular")
-    ap.add_argument("--min-cover", type=float, default=0.01,
-                    help="fracción mínima del objetivo cubierta para ASOCIAR (touch=cualquier solape)")
-    ap.add_argument("--touch", action="store_true", help="asociar con cualquier solape (>0)")
     ap.add_argument("--out")
     a = ap.parse_args()
 
@@ -136,29 +172,42 @@ def main():
         # ventana centrada en el apex, cubre apex→pueblo con margen
         size_km = max(12.0, 2.0 * apx["runout_to_reach_km"] + 6.0)
         susc = os.path.join(work, f"src_{i}.tif")
+        run_dir = os.path.join(work, f"run_{i}")
         build_source_susc(apx["lon"], apx["lat"], size_km, susc, epsg)
         try:
-            fp = run_abm(apx["lon"], apx["lat"], size_km, susc, os.path.join(work, f"run_{i}"))
+            fp = run_abm(apx["lon"], apx["lat"], size_km, susc, run_dir)
             ov = target_overlap(fp, a.comuna)
         except RuntimeError as e:
             print(f"  apex {i} (R{apx['melton']}): ABM falló — {str(e)[:80]}")
             continue
-        assoc = ov["cover_frac"] > 0 if a.touch else ov["cover_frac"] >= a.min_cover
+        pl = read_plausibility(run_dir)
+        band = cover_band(ov["cover_frac"])
+        # asociación LIMPIA = cobertura no marginal Y footprint no difuso (un
+        # footprint difuso que "cubre" el pueblo lo hace por esparcimiento en el
+        # valle, no por un abanico — es el falso positivo que el proxy no ve).
+        assoc = (band != "marginal") and (pl["difuso"] is not True)
         results.append({**{k: apx[k] for k in ("melton", "clase", "area_km2", "lon", "lat",
                                                "runout_to_reach_km")},
-                        **ov, "size_km": size_km, "asocia_abm": assoc})
-        print(f"  apex {i}: R{apx['melton']:.2f} ({apx['clase']}) · proxy-D8 {apx['runout_to_reach_km']:.1f}km "
-              f"· footprint {ov['fp_km2']:.1f} km² · cubre {ov['cover_frac']*100:.1f}% del pueblo "
-              f"→ {'ASOCIA' if assoc else 'no'}")
+                        **ov, "size_km": size_km, "cover_band": band,
+                        "difuso": pl["difuso"], "delta_frac": pl["delta_frac"],
+                        "window_frac": pl["window_frac"], "asocia_abm": assoc})
+        dif = " · DIFUSO (no canaliza)" if pl["difuso"] else ""
+        verdict = "ASOCIA" if assoc else ("difuso→descartado" if pl["difuso"] else "no")
+        print(f"  apex {i}: R{apx['melton']:.2f} ({apx['clase']}) · proxy-D8 "
+              f"{apx['runout_to_reach_km']:.1f}km · footprint {ov['fp_km2']:.1f} km² · cubre "
+              f"{ov['cover_frac']*100:.1f}% ({band}){dif} → {verdict}")
 
     assoc = [r for r in results if r["asocia_abm"]]
     if assoc:
         best = max(assoc, key=lambda r: r["melton"])
-        clase = best["clase"]
+        strong = any(r["cover_band"] == "fuerte" for r in assoc)
+        clase = best["clase"] + ("" if strong else " (cobertura débil)")
+    elif any(r["difuso"] for r in results):
+        clase = "crecida fluvial / footprint difuso (no abanico canalizado)"
     else:
         clase = "crecida fluvial / sin footprint que alcance"
     print(f"\n[{a.comuna}] CLASE (ABM footprint): {clase} · "
-          f"{len(assoc)}/{len(results)} apex asocian por footprint físico")
+          f"{len(assoc)}/{len(results)} apex asocian limpio por footprint físico")
     out = {"comuna": a.comuna, "basin": a.basin, "epsg": epsg,
            "clase_abm": clase, "n_simulados": len(results), "n_asocian": len(assoc),
            "apex": results}
