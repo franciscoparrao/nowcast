@@ -336,19 +336,28 @@ Carmen pasa de ~1.0 km² (2 discos) al polígono real 0.256 km²; la clasificaci
 es ROBUSTA — sigue flujo detrítico, fan más cercano 0.6 km (antes 0.5). El buffer
 no forzaba el resultado.
 
-## BLOQUEADO: path del ABM (paso 3) por surtgis-core 1.0.0
-Al 2026-07-23 `surtgis-core` saltó a **1.0.0** (bump mayor) e `insar-core` aún
-pide `surtgis-core = "^0.18"` → `cargo run -p nowcast-swarm` falla la resolución
-del workspace. Rompe TODO el path del ABM (paso 3 + `runout_localidad.py`
-operacional). Es el baile de versiones de crates hermanos ya conocido (ver
-errores resueltos previos: 0.16→0.17). Fix: verificar qué API de surtgis usa
-insar-core y subir la constraint en insar-rs/crates/core/Cargo.toml — pero 1.0.0
-es breaking, requiere revisar la migración, es trabajo cross-repo de
-surtgis/insar-rs. El paso 2 (proxy, puro Python + surtgis CLI hydrology) NO se
-ve afectado.
+## surtgis-core 1.0.0 — RESUELTO (2026-07-23)
+Al 2026-07-23 `surtgis-core` saltó a **1.0.0** (bump mayor) e `insar-core` pedía
+`^0.18` → `cargo run -p nowcast-swarm` fallaba la resolución del workspace,
+rompiendo TODO el path del ABM (paso 3 + `runout_localidad.py` operacional). Fix
+(mismo baile 0.16→0.17 de antes): insar-core solo usa API estable de surtgis
+(`CRS`, `GeoTransform`, `Raster`, `io::{read_geotiff, write_geotiff}` con args
+`None`), que sobrevivió el bump; se subió la constraint en
+`insar-rs/Cargo.toml` (`surtgis-core` 0.18→1.0). Verificado: insar-core compila +
+159 tests, `nowcast-swarm` compila, y el ABM corre end-to-end. Cross-repo:
+commit en insar-rs (Cargo.toml+lock) + nowcast (Cargo.lock).
+
+Corolario para el paso 3: al restaurar el ABM con el objetivo-polígono real del
+#3, la cobertura de Alto del Carmen es más honesta que con el disco: apex R0.84
+cae de 16.8% (disco sobredimensionado) a 3.9% (marginal), y domina apex R0.57 con
+15.2% (fuerte) → **debris flood** (sigue aluvión, sub-clase distinta). Las cifras
+16.8–21.9% de la tabla del paso 3 eran del disco de 400 m; con el polígono real
+son menores. El paso 2 (proxy) se mantuvo robusto; el paso 3 (físico) sí es
+sensible a la geometría exacta del objetivo — otra razón para preferir el
+polígono real sobre el disco.
 
 ## Próximo paso
-1. Reconciliar surtgis-core 1.0.0 en insar-rs para restaurar el path del ABM
-   (cross-repo; desbloquea paso 3 + monitor operacional).
-2. (Opcional) Persistir la clase fan-apex en el `resumen.json` por comuna para que
+1. (Opcional) Persistir la clase fan-apex en el `resumen.json` por comuna para que
    fluya al registro/reporte del ciclo, no solo a la tabla interactiva.
+2. Re-verificar la tabla del paso 3 (cobertura por comuna) con el objetivo-polígono
+   para el resto de casos (Vallenar/Ovalle) cuando se necesite el número físico.
