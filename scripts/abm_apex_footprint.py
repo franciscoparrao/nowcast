@@ -128,16 +128,10 @@ def target_overlap(fp_path, comuna):
         tr, crs, sh = src.transform, src.crs, fp.shape
         cell_km2 = abs(tr.a * tr.e) / 1e6
     geoms, kind = FA.target_geoms(comuna, crs)
-    gt = rasterize([(g.__geo_interface__, 1) for g in geoms], out_shape=sh,
-                   transform=tr, fill=0, dtype=np.uint8) if kind == "urbano" else None
-    if gt is None:  # aldea: puntos → disco buffer
-        gt = np.zeros(sh, np.uint8)
-        rad = int(FA.ALDEA_BUFFER_M / abs(tr.a))
-        yy, xx = np.mgrid[0:sh[0], 0:sh[1]]
-        for g in geoms:
-            c = int((g.centroid.x - tr.c) / tr.a); r = int((g.centroid.y - tr.f) / tr.e)
-            if 0 <= r < sh[0] and 0 <= c < sh[1]:
-                gt |= (np.hypot(yy - r, xx - c) <= rad).astype(np.uint8)
+    # urbano y aldea son polígonos reales → se rasterizan directo (misma lógica
+    # que fan_apex_localidad.target_mask, sin el disco de buffer aproximado)
+    gt = (rasterize([(g.__geo_interface__, 1) for g in geoms], out_shape=sh,
+                    transform=tr, fill=0, dtype=np.uint8) == 1).astype(np.uint8)
     inter = int(((fp == 1) & (gt == 1)).sum())
     ga = int((gt == 1).sum())
     return dict(cover_frac=(inter / ga if ga else 0.0), fp_km2=int((fp == 1).sum()) * cell_km2,

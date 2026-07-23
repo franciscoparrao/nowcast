@@ -156,21 +156,24 @@ def load_window(basin, lon, lat, window_km, hydro_source="surtgis", threshold=30
 
 
 def target_mask(geoms, kind, dem_shape, transform, res):
-    """Máscara booleana del objetivo poblado en la grilla de la ventana."""
-    if kind == "urbano":
-        shapes = [(g.__geo_interface__, 1) for g in geoms]
-        return rasterize(shapes, out_shape=dem_shape, transform=transform,
-                         fill=0, dtype=np.uint8) == 1
-    # aldea: puntos → discos de ALDEA_BUFFER_M
+    """Máscara booleana del objetivo poblado en la grilla de la ventana.
+    Urbano Y aldea son POLÍGONOS reales (Limite_Urbano_CPV24 / Aldeas_CPV24 son
+    ambos MultiPolygon del extent poblado) → se rasterizan directo. El disco de
+    buffer solo es fallback defensivo si alguna geometría no fuese poligonal."""
+    polys = [g for g in geoms if getattr(g, "geom_type", "").endswith("Polygon")]
+    pts = [g for g in geoms if not getattr(g, "geom_type", "").endswith("Polygon")]
     m = np.zeros(dem_shape, dtype=bool)
-    rad = int(ALDEA_BUFFER_M / res)
-    yy, xx = np.mgrid[0:dem_shape[0], 0:dem_shape[1]]
-    for g in geoms:
-        cx, cy = g.centroid.x, g.centroid.y
-        c = int((cx - transform.c) / transform.a)
-        r = int((cy - transform.f) / transform.e)
-        if 0 <= r < dem_shape[0] and 0 <= c < dem_shape[1]:
-            m |= (np.hypot(yy - r, xx - c) <= rad)
+    if polys:
+        m |= rasterize([(g.__geo_interface__, 1) for g in polys], out_shape=dem_shape,
+                       transform=transform, fill=0, dtype=np.uint8) == 1
+    if pts:  # fallback: geometría de punto → disco de ALDEA_BUFFER_M
+        rad = int(ALDEA_BUFFER_M / res)
+        yy, xx = np.mgrid[0:dem_shape[0], 0:dem_shape[1]]
+        for g in pts:
+            c = int((g.centroid.x - transform.c) / transform.a)
+            r = int((g.centroid.y - transform.f) / transform.e)
+            if 0 <= r < dem_shape[0] and 0 <= c < dem_shape[1]:
+                m |= (np.hypot(yy - r, xx - c) <= rad)
     return m
 
 
