@@ -327,8 +327,28 @@ aparece en vivo y en AMBAS direcciones — Colbún/Ovalle/Santa Bárbara/Rancagu
 Melipilla/Paine suben crecida→aluvión con runout creíble; Ralco BAJA debris flood
 (centroide)→crecida/no-alcanza (fan-apex), señal sana de que no solo sube.
 
+## Rural vs urbano (buffer de aldea) — RESUELTO (2026-07-23)
+`Aldeas_CPV24` resultaron ser **MultiPolygon** del extent poblado (no puntos),
+igual que `Limite_Urbano_CPV24`. El disco de 400 m en el centroide era una
+aproximación innecesaria → `target_mask`/`target_overlap` ahora rasterizan el
+polígono real (400 m queda solo como fallback defensivo). El objetivo de Alto del
+Carmen pasa de ~1.0 km² (2 discos) al polígono real 0.256 km²; la clasificación
+es ROBUSTA — sigue flujo detrítico, fan más cercano 0.6 km (antes 0.5). El buffer
+no forzaba el resultado.
+
+## BLOQUEADO: path del ABM (paso 3) por surtgis-core 1.0.0
+Al 2026-07-23 `surtgis-core` saltó a **1.0.0** (bump mayor) e `insar-core` aún
+pide `surtgis-core = "^0.18"` → `cargo run -p nowcast-swarm` falla la resolución
+del workspace. Rompe TODO el path del ABM (paso 3 + `runout_localidad.py`
+operacional). Es el baile de versiones de crates hermanos ya conocido (ver
+errores resueltos previos: 0.16→0.17). Fix: verificar qué API de surtgis usa
+insar-core y subir la constraint en insar-rs/crates/core/Cargo.toml — pero 1.0.0
+es breaking, requiere revisar la migración, es trabajo cross-repo de
+surtgis/insar-rs. El paso 2 (proxy, puro Python + surtgis CLI hydrology) NO se
+ve afectado.
+
 ## Próximo paso
-1. Rural vs urbano: Alto del Carmen usó objetivo aldea; verificar que el buffer de
-   aldea (400 m) no sub/sobre-asocie vs polígono urbano.
+1. Reconciliar surtgis-core 1.0.0 en insar-rs para restaurar el path del ABM
+   (cross-repo; desbloquea paso 3 + monitor operacional).
 2. (Opcional) Persistir la clase fan-apex en el `resumen.json` por comuna para que
    fluya al registro/reporte del ciclo, no solo a la tabla interactiva.
