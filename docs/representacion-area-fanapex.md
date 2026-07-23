@@ -315,12 +315,20 @@ difuso. Comuna: clase del apex limpio de mayor Melton, con aviso "(cobertura
 débil)" si ninguno es fuerte. Verificado: Alto del Carmen flujo detrítico (fuerte);
 Vallenar debris flood (cobertura débil).
 
+## Cableado diagnóstico — LISTO (2026-07-22)
+`monitor/melton_localidad.py --watchlist --fan-apex` imprime la tabla combinada
+CENTROIDE ‖ FAN-APEX (clase + runout-a-alcanzar + banda), reusando
+`fan_apex_localidad.classify` (proxy paso 2; la cobertura ABM del paso 3 queda
+como profundización per-comuna vía `abm_apex_footprint.py`, no en el barrido por
+su costo on-demand). El header del módulo marca su HALLAZGO-2 como RESUELTO y
+apunta a los módulos fan-apex. `target_geoms` cachea las capas censales (evita
+releer la capa país por comuna). Verificado sobre la watchlist vigente: el fix
+aparece en vivo y en AMBAS direcciones — Colbún/Ovalle/Santa Bárbara/Rancagua/
+Melipilla/Paine suben crecida→aluvión con runout creíble; Ralco BAJA debris flood
+(centroide)→crecida/no-alcanza (fan-apex), señal sana de que no solo sube.
+
 ## Próximo paso
-1. Añadir bandas de cobertura al módulo del paso 3 (fuerte/débil/marginal) y
-   opcional lectura de la plausibilidad (`stats.json`: `window_frac`) para
-   marcar explícito el footprint difuso.
-2. Cablear como enriquecimiento DIAGNÓSTICO en `melton_localidad.py`/
-   `select_watchlist.py` (no operacional aún). Rótulo por comuna: clase fan-apex
-   + runout-a-alcanzar (paso 2, barato) + cobertura ABM (paso 3, físico, on-demand).
-3. Rural vs urbano: Alto del Carmen usó objetivo aldea; verificar que el buffer de
+1. Rural vs urbano: Alto del Carmen usó objetivo aldea; verificar que el buffer de
    aldea (400 m) no sub/sobre-asocie vs polígono urbano.
+2. (Opcional) Persistir la clase fan-apex en el `resumen.json` por comuna para que
+   fluya al registro/reporte del ciclo, no solo a la tabla interactiva.

@@ -71,6 +71,13 @@ operacional que sí está en pie (el footprint del ABM en costa/valle debe leers
 con escepticismo) ya lo cubren el guard de plausibilidad física y `footprint_
 vacio` en runout_localidad.py.
 
+RESOLUCIÓN (2026-07-22): esa representación por abanicos se implementó en
+`fan_apex_localidad.py` (detecta los fan-apexes de la comuna y clasifica por el
+runout-a-alcanzar el área poblada) + `scripts/abm_apex_footprint.py` (asociación
+por footprint físico del ABM). Este módulo queda como el clasificador por
+centroide (DIAGNÓSTICO, con el sesgo documentado); `--watchlist --fan-apex`
+imprime AMBOS lado a lado para ver el fix. Ver docs/representacion-area-fanapex.md.
+
 Uso:
     python3 melton_localidad.py --susc <ruta_susc.tif> --lon -70.7 --lat -30.6
     python3 melton_localidad.py --watchlist ~/nowcast-forecast/latest/watchlist.json
@@ -225,13 +232,28 @@ def main():
     ap.add_argument("--snap-radius-m", type=float, default=SNAP_RADIUS_M)
     ap.add_argument("--watchlist", help="clasifica cada localidad de una watchlist.json "
                                         "(usa su campo susceptibility de los runouts si existe)")
+    ap.add_argument("--fan-apex", action="store_true",
+                    help="ENRIQUECE la tabla con la clasificación por fan-apex "
+                         "(fan_apex_localidad.py): clase + runout-a-alcanzar + banda. "
+                         "Deshace el sesgo del snap-al-cauce-más-cercano de este módulo. "
+                         "Recomputa hidrología con surtgis por comuna (más lento).")
+    ap.add_argument("--hydro-source", choices=["surtgis", "kingston"], default="surtgis",
+                    help="fuente de hidrología para --fan-apex")
     a = ap.parse_args()
 
     if a.watchlist:
         wl = json.load(open(a.watchlist))
         cache = _load_cache()
-        print(f"{'localidad':22s} {'clase':16s} {'Melton':>7s} {'area_km2':>9s} "
-              f"{'relieve':>8s} {'snap_m':>7s}")
+        FA = None
+        if a.fan_apex:
+            sys.path.insert(0, os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "monitor"))
+            import fan_apex_localidad as FA  # noqa: E402
+            print(f"{'localidad':22s} {'CENTROIDE':16s} {'Melton':>7s} {'snap_m':>7s}  ║  "
+                  f"{'FAN-APEX':16s} {'runout':>7s} {'banda'}")
+        else:
+            print(f"{'localidad':22s} {'clase':16s} {'Melton':>7s} {'area_km2':>9s} "
+                  f"{'relieve':>8s} {'snap_m':>7s}")
         for s in wl.get("selected", []):
             # el runout ya eligió la susceptibilidad de la cuenca; si no hay
             # runout todavía, se salta (no se re-elige aquí).
@@ -243,11 +265,35 @@ def main():
             if not susc:
                 continue
             m = classify_point(susc, s["lon"], s["lat"], a.snap_radius_m, cache)
-            print(f"{s['label'][:21]:22s} {m['clase']:16s} "
-                  f"{('%.3f' % m['melton']) if m['melton'] is not None else '—':>7s} "
-                  f"{('%.1f' % m['catchment_area_km2']) if m['catchment_area_km2'] is not None else '—':>9s} "
-                  f"{('%.0f' % m['relief_m']) if m['relief_m'] is not None else '—':>8s} "
-                  f"{('%.0f' % m['snap_dist_m']) if m['snap_dist_m'] is not None else '—':>7s}")
+            if not a.fan_apex:
+                print(f"{s['label'][:21]:22s} {m['clase']:16s} "
+                      f"{('%.3f' % m['melton']) if m['melton'] is not None else '—':>7s} "
+                      f"{('%.1f' % m['catchment_area_km2']) if m['catchment_area_km2'] is not None else '—':>9s} "
+                      f"{('%.0f' % m['relief_m']) if m['relief_m'] is not None else '—':>8s} "
+                      f"{('%.0f' % m['snap_dist_m']) if m['snap_dist_m'] is not None else '—':>7s}")
+                continue
+            # --- enriquecimiento fan-apex ---
+            basin, hydro = _hydro_dir(susc)
+            comuna = s.get("comuna")
+            if hydro is None or not comuna:
+                fa_clase, fa_ro, fa_banda = "sin hidrología" if hydro is None else "sin comuna", "—", ""
+            else:
+                try:
+                    fr = FA.classify(comuna, basin, s["lon"], s["lat"],
+                                     hydro_source=a.hydro_source)
+                    if "error" in fr:
+                        fa_clase, fa_ro, fa_banda = "err", "—", fr["error"][:24]
+                    else:
+                        fa_clase = fr["clase_comuna"].split(" /")[0]
+                        ro = fr.get("runout_a_alcanzar_km")
+                        fa_ro = f"{ro:.1f}km" if ro is not None else "—"
+                        fa_banda = fr.get("banda", "")
+                except Exception as e:  # una comuna no debe abortar la tabla
+                    fa_clase, fa_ro, fa_banda = "err", "—", str(e)[:24]
+            mel = ('%.3f' % m['melton']) if m['melton'] is not None else '—'
+            snp = ('%.0f' % m['snap_dist_m']) if m['snap_dist_m'] is not None else '—'
+            print(f"{s['label'][:21]:22s} {m['clase'][:15]:16s} {mel:>7s} {snp:>7s}  ║  "
+                  f"{fa_clase[:15]:16s} {fa_ro:>7s} {fa_banda}")
         try:
             os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
             json.dump(cache, open(CACHE_PATH, "w"), indent=1, ensure_ascii=False)

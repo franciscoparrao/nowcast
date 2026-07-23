@@ -69,16 +69,25 @@ def runout_band(km):
     return "solo por flujo excepcional"          # lejano
 
 
+_CENSUS_CACHE = {}   # layer → GeoDataFrame (leer la capa país entera es caro; se cachea)
+
+
+def _census_layer(layer):
+    if layer not in _CENSUS_CACHE:
+        import geopandas as gpd
+        cols = ["COMUNA", "geometry"] if layer == "Limite_Urbano_CPV24" else None
+        _CENSUS_CACHE[layer] = gpd.read_file(CENSUS_GPKG, layer=layer, columns=cols)
+    return _CENSUS_CACHE[layer]
+
+
 def target_geoms(comuna, crs):
     """Geometrías-objetivo (población de la comuna) en `crs`. Devuelve
     (geoms, kind): polígonos urbanos, o puntos de aldea (rural), reproyectados."""
-    import geopandas as gpd
-    urb = gpd.read_file(CENSUS_GPKG, layer="Limite_Urbano_CPV24",
-                        columns=["COMUNA", "geometry"])
+    urb = _census_layer("Limite_Urbano_CPV24")
     h = urb[urb["COMUNA"].str.upper() == comuna.upper()]
     if len(h):
         return list(h.to_crs(crs).geometry), "urbano"
-    ald = gpd.read_file(CENSUS_GPKG, layer="Aldeas_CPV24")
+    ald = _census_layer("Aldeas_CPV24")
     col = "COMUNA" if "COMUNA" in ald.columns else None
     if col is None:  # Aldeas puede venir sin COMUNA; se filtra por cercanía luego
         return list(ald.to_crs(crs).geometry), "aldea"

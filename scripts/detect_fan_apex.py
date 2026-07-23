@@ -96,7 +96,8 @@ def load_layers(dem_path, hydro_dir):
 
 def slope_deg(dem, res):
     """Pendiente por gradiente central (grados). NaN-safe en bordes."""
-    gy, gx = np.gradient(np.nan_to_num(dem, nan=np.nanmean(dem)), res, res)
+    fill = np.nanmean(dem) if np.isfinite(dem).any() else 0.0
+    gy, gx = np.gradient(np.nan_to_num(dem, nan=fill), res, res)
     return np.degrees(np.arctan(np.hypot(gx, gy)))
 
 
