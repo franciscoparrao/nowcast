@@ -356,8 +356,63 @@ son menores. El paso 2 (proxy) se mantuvo robusto; el paso 3 (físico) sí es
 sensible a la geometría exacta del objetivo — otra razón para preferir el
 polígono real sobre el disco.
 
+## Persistencia en el ciclo — LISTO (2026-07-26)
+La clase fan-apex vivía solo en tablas INTERACTIVAS (`melton_localidad.py
+--watchlist --fan-apex`, `sweep_fanapex_watchlist.py`): el registro del ciclo y
+el export GIS seguían viendo únicamente la clase por centroide. Ahora
+`monitor/fanapex_localidades.py` (etapa **5b** de `analysis_all.sh`, entre
+`run_localidades` y `build_registro`) la escribe como bloque `fan_apex` dentro
+del `resumen.json` de cada localidad — la estructura que esos consumidores YA
+leen, así que nadie río abajo cambia de fuente.
+
+Por qué un paso aparte y no dentro de `runout_localidad.py` (que es quien
+escribe el resumen): la morfometría es **estática** y se cachea entre ciclos
+(`~/nowcast-forecast/fanapex_cache.json`, clave con los parámetros → cambiar un
+umbral recalcula, no reusa en silencio), mientras el runout se recorre entero
+cada ciclo; el costo real no es el detector sino leer las **capas censales del
+país**, que en un proceso se leen una vez para las ~40 comunas y en 40 procesos
+se leerían 40 veces; y `runout_localidad.py` trabaja por punto, ni recibe
+`--comuna`. El orden 5b es DURO: `run_localidades` reescribe cada `resumen.json`
+de cero, así que un enriquecimiento anterior se perdería.
+
+Barrido sobre la watchlist vigente (ciclo 20260726T12z, 39 comunas): 25 con
+hidrología propia, 14 transfer (quedan `disponible=false` con su motivo — la
+ausencia de fan-apex NO se confunde con "crecida"). **4 corrigen** el centroide
+a aluvión con runout creíble: Colbún (0.0 km), Melipilla (2.2), Ovalle (4.1),
+Rancagua (4.8). Especificidad intacta: Linares, Longaví, Los Ángeles, Parral,
+San Clemente y San Javier quedan correctamente "no alcanza"; Curepto y Empedrado
+BAJAN de debris flood (centroide) a crecida/no-alcanza. Costo: ~15 min el primer
+llenado del cache, **0.3 s** cualquier ciclo posterior.
+
+En el registro: chip de **fenómeno** por localidad —
+`aluvión de abanico` / `crecida, no aluvión`— que es una pregunta DISTINTA de
+los tres chips existentes (esos son sobre la calidad del footprint; este dice si
+el footprint de flujo detrítico es siquiera el modelo correcto del sitio). En la
+ficha, la clase + a qué runout alcanza el abanico más cercano + qué habría dicho
+el centroide, para que la corrección se vea en vez de aplicarse en silencio. Las
+comunas transfer no llevan chip (no son crecida: son no clasificables). En el
+GIS el bloque es plano a propósito → `export_gis.py` lo aplana solo a 20 columnas
+QGIS (`fan_apex_*`), sin tocar ese script.
+
+### Fix de frontera + barrido de hermanas
+`detect_fan_apex.run_hydrology` llamaba `sys.exit` **dentro de una función de
+librería**: `SystemExit` no deriva de `Exception`, así que se colaba por los
+`except Exception` de los lotes blandos y una sola comuna sin hidrología habría
+matado el barrido de las 39. Ahora levanta `RuntimeError` y el CLI lo traduce a
+exit(1). Barrido de hermanas: `footprint_mask` (mismo patrón, mismo módulo);
+los tres call-sites del lote (`fanapex_localidades.py`, `melton_localidad.py
+--fan-apex`, `sweep_fanapex_watchlist.py`) capturan `(Exception, SystemExit)`
+explícito como defensa en profundidad; y `fan_apex_localidad.load_window` ahora
+BORRA sus temporales (cada ventana dejaba un DEM + 3 rásters de hidrología en
+`/tmp` — 110 directorios y 1.1 GB acumulados de las corridas del 21-23 jul).
+Test hostil: `python3 monitor/fanapex_localidades.py --selftest` (12 checks —
+SystemExit/RuntimeError del detector, error propagado como motivo y no como
+clase, transfer sin clase inventada, invalidación de cache por parámetro,
+runout de 14 km que alcanza pero no cuenta como corrección).
+
 ## Próximo paso
-1. (Opcional) Persistir la clase fan-apex en el `resumen.json` por comuna para que
-   fluya al registro/reporte del ciclo, no solo a la tabla interactiva.
-2. Re-verificar la tabla del paso 3 (cobertura por comuna) con el objetivo-polígono
+1. Re-verificar la tabla del paso 3 (cobertura por comuna) con el objetivo-polígono
    para el resto de casos (Vallenar/Ovalle) cuando se necesite el número físico.
+2. (Opcional) Llevar el bloque `fan_apex` también a los reportes por cuenca
+   (`report/build_cuenca_huasco.py` / `_coquimbo.py`), que leen el mismo
+   `resumen.json` pero aún no lo muestran.

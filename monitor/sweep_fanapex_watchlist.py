@@ -64,7 +64,10 @@ def main():
         # fan-apex (propuesta)
         try:
             fa = FA.classify(comuna, basin, lon, lat, hydro_source=a.hydro_source)
-        except Exception as e:
+        except (Exception, SystemExit) as e:
+            # SystemExit explícito por lo mismo que en fanapex_localidades.py y
+            # melton_localidad.py: un sys.exit() de librería río abajo abortaría
+            # el barrido completo en vez de degradar una comuna.
             fa = {"error": str(e)[:60]}
         if "error" in fa:
             fa_clase, ro, banda = f"ERR", None, ""

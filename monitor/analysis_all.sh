@@ -87,6 +87,23 @@ else
     log "analysis_all: run_localidades DESACTIVADA (LOCALIDADES_ENABLED=0)"
 fi
 
+# 5b. Clase FAN-APEX por comuna, escrita DENTRO del resumen.json de cada
+#     localidad (fenómeno: aluvión de abanico vs crecida fluvial). Va DESPUÉS de
+#     la etapa 5 y ANTES de la 6 por una razón dura: run_localidades reescribe
+#     cada resumen.json de cero en su corrida, así que un enriquecimiento
+#     anterior se perdería; y el registro de la etapa 6 lee esos mismos archivos.
+#     BLANDA e idempotente: la morfometría es estática y se cachea entre ciclos
+#     (~40 comunas en segundos tras el primer llenado), una comuna que falle
+#     queda con disponible=false y su motivo. FANAPEX_ENABLED=0 la apaga: el
+#     ciclo queda igual que antes de cablearla, sin chip de fenómeno.
+if [[ "${FANAPEX_ENABLED:-1}" == "1" ]]; then
+    if ! python3 "$HERE/fanapex_localidades.py" --forecast "$FORECAST_WORKDIR/latest" >>"$LOG" 2>&1; then
+        log "analysis_all: WARN fanapex_localidades falló; los resumen.json quedan sin clase fan-apex (el resto del ciclo es válido)"
+    fi
+else
+    log "analysis_all: fanapex_localidades DESACTIVADA (FANAPEX_ENABLED=0)"
+fi
+
 # 6. Registro de constancia (HTML+PDF con hash de integridad: "qué sabía el
 #    sistema en este ciclo"). BLANDA por las mismas dos razones que la etapa 5:
 #    (a) es el informe, no la salida operacional —watchlist/comunas/localidades

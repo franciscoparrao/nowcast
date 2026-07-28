@@ -373,6 +373,11 @@ td.mono { font-family: 'MonoInstr', monospace; font-size: 12.5px; color: var(--i
 .s-low  { background: var(--sev-low-bg);  color: var(--sev-low-fg); }
 .s-none { background: var(--sev-none-bg); color: var(--sev-none-fg); }
 .chip-domain { background: var(--data-soft); color: var(--data); border: 1px dashed var(--data); }
+/* fenómeno (fan-apex): contorno, no relleno — no es un nivel de severidad ni un
+   aviso de calidad, es QUÉ fenómeno es. Usa las variables de tema para que
+   ambos modos (claro/oscuro) queden legibles. */
+.chip-fenom-aluvion { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+.chip-fenom-crecida { background: transparent; color: var(--data); border: 1px solid var(--data); }
 figure.map { margin: 22px 0; } figure.map img { width: 100%; display: block; border: 1px solid var(--rule); border-radius: 3px; }
 figcaption { font-size: 12.5px; color: var(--ink-faint); margin-top: 8px; font-family: 'HerosCn', sans-serif; letter-spacing: .01em; }
 figcaption .cap-num { color: var(--data); font-weight: 700; }
@@ -504,6 +509,28 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
             return f"<span class='chip s-none' title=\"{note}\">sin footprint</span>"
         return ""
 
+    def fenomeno_chip(r):
+        """QUÉ FENÓMENO es (aluvión de abanico vs crecida fluvial), por fan-apex
+        — pregunta distinta de las tres anteriores, que son todas sobre la
+        CALIDAD del footprint. Esta dice si el footprint de flujo detrítico es
+        siquiera el modelo correcto para esta comuna. Viene de
+        fanapex_localidades.py; ausencia del bloque (corridas anteriores a su
+        cableado, o comuna en cuenca transfer) no marca nada."""
+        fa = r.get("fan_apex")
+        if not fa or not fa.get("disponible"):
+            return ""
+        clase, ro = fa.get("clase") or "", fa.get("runout_a_alcanzar_km")
+        base = clase.split(" /")[0]
+        det = (f"fan-apex: {clase}"
+               + (f", el abanico más cercano alcanza el poblado a {ro:.1f} km de "
+                  f"runout ({fa.get('banda')})" if ro is not None else "")
+               + f". Por centroide (sesgado al cauce del valle) sería "
+                 f"'{fa.get('centroide_clase')}'.").replace('"', "&quot;")
+        if base == "crecida fluvial":
+            # el ABM de flujo detrítico probablemente NO es el modelo del sitio
+            return f"<span class='chip chip-fenom-crecida' title=\"{det}\">crecida, no aluvión</span>"
+        return f"<span class='chip chip-fenom-aluvion' title=\"{det}\">aluvión de abanico</span>"
+
     col_lista = "<th>Criterio</th>" if dos_listas else ""
     col_lista_grp = "<col>" if dos_listas else ""
     dos_listas_nota = ""
@@ -535,7 +562,8 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
         s, p = r["signal"], r["proximity"]
         celda_lista = f"<td>{lista_chip(en_lista.get(name, []))}</td>" if dos_listas else ""
         tbl_rows += (f"<tr><td><strong>{label}</strong><br><span class='region-tag'>{region}</span></td>"
-                     f"<td><span class='chip {cls}'>{txt}</span> {plaus_chip(r)} {sinfp_chip(r)} {domain_chip(r)}</td>"
+                     f"<td><span class='chip {cls}'>{txt}</span> {fenomeno_chip(r)} "
+                     f"{plaus_chip(r)} {sinfp_chip(r)} {domain_chip(r)}</td>"
                      f"{celda_lista}"
                      f"<td class='num'>{s['hazard_max_regional']:.2f}</td>"
                      f"<td class='mono'>{fmt_hour(s['first_crossing_fhour'])}</td>"
@@ -587,6 +615,22 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
         if r.get("calibration_domain_warning"):
             domain_note = (f"<div class='stat-row domain-warn'><span>⚠ Sin calibrar aquí</span></div>"
                            f"<div class='implaus-reason'>{r.get('calibration_domain_note', '')}</div>")
+        fenom_row = ""
+        fa = r.get("fan_apex")
+        if fa and fa.get("disponible"):
+            ro = fa.get("runout_a_alcanzar_km")
+            alcance = (f"{ro:.1f} km &middot; {fa.get('banda')}" if ro is not None
+                       else "ningún abanico alcanza")
+            fenom_row = (
+                f"<div class='stat-row' title=\"{fa['nota'].replace(chr(34), '&quot;')}\">"
+                f"<span>Fenómeno (fan-apex)</span><span>{fa.get('clase')}</span></div>"
+                f"<div class='stat-row'><span>Abanico más cercano</span><span>{alcance}</span></div>")
+            if fa.get("cambia_vs_centroide"):
+                # el punto de todo el trabajo de fan-apex: mostrar que el
+                # centroide decía otra cosa, no reemplazarlo en silencio
+                fenom_row += (f"<div class='implaus-reason'>Por centroide urbano habría "
+                              f"quedado como &laquo;{fa.get('centroide_clase')}&raquo; "
+                              f"(enganche al cauce del valle).</div>")
         loc_cards += (
             f"<div class='loc-card'><img src='data:image/png;base64,{loc_images[name]}' "
             f"alt='Footprint simulado de flujo detrítico en {label}' />"
@@ -601,7 +645,7 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
             f"<div class='stat-row' title=\"{(r.get('mass_balance_note') or '').replace(chr(34), '&quot;')}\">"
             f"<span>Techo físico agua/sedimento</span>"
             f"<span>{r.get('mass_balance_ratio', 0)*100:.0f}%</span></div>"
-            f"{ensemble_row(name)}"
+            f"{ensemble_row(name)}{fenom_row}"
             f"{implaus}{sinfp_note}{domain_note}</div></div>")
 
     n_high = sum(1 for g, _, _ in rows if g >= 0.8)
@@ -807,6 +851,7 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
     <div class="sec-head"><span class="sec-num">04</span><h2>Localidades bajo vigilancia</h2></div>
     {dos_listas_nota}
     <p>Localidades seleccionadas <strong>objetivamente</strong> (no a criterio del autor) dentro del barrido III&ndash;XIV, restringidas a las que tienen poblado censado (Censo 2024) con dato de susceptibilidad válido en el punto exacto &mdash; ver <code>select_watchlist.py</code>. Para cada una se corrió una simulación de flujo detrítico por agentes (modelo <code>debris-flow</code> sobre <code>swarm-abm</code>, parámetros de Atacama 2015 — análogo ilustrativo, no predicción calibrada) forzada con la lluvia y la isoterma del ciclo vigente. El ABM está calibrado sobre terreno de abanico aluvial abrupto; en localidades de fondo de valle plano sin frente montañoso real cerca del punto, el footprint puede esparcirse de forma difusa en vez de canalizarse — un guard de plausibilidad física marca esos casos como <span class="chip s-none">NO PLAUSIBLE</span> y no deben leerse con el mismo peso que los canalizados. Aparte de la forma, la <strong>escala</strong> del footprint (km² afectados) tampoco está validada fuera de Atacama: el preset por defecto se ajustó contra el footprint real de Copiapó 2015 con un ajuste flojo (IoU 0.171 en su propio evento) y no existe un evento real mapeado en esta región contra el cual calibrar el tamaño — eventos reales documentados aquí (SERNAGEOMIN, sistema frontal ene-2021, Malloa/San Vicente/Coinco) se localizaron a sectores puntuales, no a la extensión que muestran estos mapas. Esas corridas llevan <span class="chip chip-domain">sin calibrar aquí</span>.</p>
+    <p>Antes de leer un footprint conviene preguntarse si el <strong>fenómeno</strong> es el correcto. La razón de Melton evaluada en el centroide urbano de la comuna sesga sistemáticamente hacia <em>crecida fluvial</em>, porque el centroide cae en el fondo de valle y engancha al río grande, no a la quebrada empinada que produce el aluvión &mdash; con ese criterio, sitios de aluviones mortales (Alto del Carmen 2015) salen clasificados como crecida. Por eso cada comuna se representa además como su <strong>conjunto de abanicos</strong>: se detectan los <em>fan apex</em> (bocas de quebradas empinadas, razón de Melton de su cuenca propia) y se reporta a qué distancia de runout el flujo de cada uno alcanza el área poblada censada. Las comunas donde ese análisis reconoce un abanico que alcanza al poblado llevan <span class="chip chip-fenom-aluvion">aluvión de abanico</span>; aquellas donde ningún abanico alcanza llevan <span class="chip chip-fenom-crecida">crecida, no aluvión</span> &mdash; y ahí el footprint de flujo detrítico de esta sección es probablemente el modelo equivocado, aunque pase los guards de forma y escala. El detector no inventa abanicos donde no los hay (los pueblos de valle y costa planos quedan correctamente sin ellos), pero está validado sobre pocos casos y con una ruta de flujo simplificada: es <strong>diagnóstico</strong>, no un rótulo operacional. Las comunas en cuencas sin modelo hidrológico propio (transferencia) no llevan chip: no es que sean crecida, es que no son clasificables aquí.</p>
     {norte_note}
     <div class="table-wrap"><table>
       <colgroup><col class="c-loc"><col class="c-lvl">{col_lista_grp}<col><col><col><col></colgroup>

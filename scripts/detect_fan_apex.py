@@ -44,6 +44,7 @@ import argparse
 import json
 import math
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -70,13 +71,28 @@ DEDUP_M = 500.0         # dos apexes a menos de esto = el mismo abanico
 
 def run_hydrology(dem_path, threshold=500):
     """Corre `surtgis hydrology all` sobre el DEM → dir temporal con
-    flow_direction_d8 / flow_accumulation / stream_network."""
+    flow_direction_d8 / flow_accumulation / stream_network.
+
+    LEVANTA RuntimeError, no sys.exit: esta es una función de LIBRERÍA y sus
+    llamadores son lotes blandos (`fanapex_localidades.py` enriquece ~40
+    comunas, `sweep_fanapex_watchlist.py`, la tabla `--fan-apex`) donde una
+    comuna que falle NO debe abortar el ciclo. Un `sys.exit` levanta
+    SystemExit, que NO deriva de Exception y se cuela por los `except
+    Exception` de esos lotes matando el proceso entero. El CLI de este módulo
+    lo traduce a exit(1) en main()."""
     work = tempfile.mkdtemp(prefix="fanapex_hydro_")
     cmd = ["surtgis", "hydrology", "all", "--outdir", work,
            "--threshold", str(threshold), "--compress", dem_path]
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True)
+    except OSError as e:   # surtgis no instalado / no ejecutable
+        shutil.rmtree(work, ignore_errors=True)
+        raise RuntimeError(f"no se pudo ejecutar surtgis: {e}") from e
     if r.returncode != 0:
-        sys.exit(f"surtgis hydrology falló:\n{r.stderr[-800:]}")
+        # el dir de salida a medio escribir no le sirve a nadie y en un barrido
+        # de ~40 comunas los fallidos también se acumulan en /tmp
+        shutil.rmtree(work, ignore_errors=True)
+        raise RuntimeError(f"surtgis hydrology falló:\n{r.stderr[-800:]}")
     return work
 
 
@@ -266,7 +282,10 @@ def footprint_mask(dem, transform, crs, *, geojson=None, raster=None):
         with rasterio.open(raster) as s:
             m = s.read(1)
         if m.shape != dem.shape:
-            sys.exit(f"footprint ráster {m.shape} no calza con el DEM {dem.shape}")
+            # hermana de run_hydrology: función de librería, RuntimeError (no
+            # sys.exit) para que un lote blando pueda capturarla.
+            raise RuntimeError(
+                f"footprint ráster {m.shape} no calza con el DEM {dem.shape}")
         return m > 0.5
     import geopandas as gpd
     obs = gpd.read_file(geojson).to_crs(crs)
@@ -361,4 +380,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # las funciones de librería levantan RuntimeError (ver run_hydrology); el
+    # CLI es quien lo traduce a un exit(1) con mensaje, no la librería.
+    try:
+        main()
+    except RuntimeError as e:
+        sys.exit(str(e))

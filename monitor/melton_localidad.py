@@ -76,7 +76,10 @@ RESOLUCIÓN (2026-07-22): esa representación por abanicos se implementó en
 runout-a-alcanzar el área poblada) + `scripts/abm_apex_footprint.py` (asociación
 por footprint físico del ABM). Este módulo queda como el clasificador por
 centroide (DIAGNÓSTICO, con el sesgo documentado); `--watchlist --fan-apex`
-imprime AMBOS lado a lado para ver el fix. Ver docs/representacion-area-fanapex.md.
+imprime AMBOS lado a lado para ver el fix. Desde 2026-07-26 esa clase ya no vive
+solo en esta tabla interactiva: `fanapex_localidades.py` la persiste en el
+`resumen.json` de cada localidad (etapa 5b de analysis_all.sh) y de ahí fluye al
+registro del ciclo y al export GIS. Ver docs/representacion-area-fanapex.md.
 
 Uso:
     python3 melton_localidad.py --susc <ruta_susc.tif> --lon -70.7 --lat -30.6
@@ -288,7 +291,11 @@ def main():
                         ro = fr.get("runout_a_alcanzar_km")
                         fa_ro = f"{ro:.1f}km" if ro is not None else "—"
                         fa_banda = fr.get("banda", "")
-                except Exception as e:  # una comuna no debe abortar la tabla
+                except (Exception, SystemExit) as e:  # una comuna no debe abortar la tabla
+                    # SystemExit explícito: no deriva de Exception, así que una
+                    # librería río abajo que llame sys.exit() (patrón corregido en
+                    # detect_fan_apex.run_hydrology) mataría la tabla entera en la
+                    # primera comuna sin hidrología. Hermana de fanapex_localidades.
                     fa_clase, fa_ro, fa_banda = "err", "—", str(e)[:24]
             mel = ('%.3f' % m['melton']) if m['melton'] is not None else '—'
             snp = ('%.0f' % m['snap_dist_m']) if m['snap_dist_m'] is not None else '—'

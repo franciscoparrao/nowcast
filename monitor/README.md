@@ -128,6 +128,11 @@ SKIP_FETCH=1 CONFIG=/tmp/nowcast-monitor-selftest/config.env monitor/monitor.sh
 # Debe ALERTAR vía fusión (la ráfaga vive en horas que IMERG aún no publica);
 # con GOES_ENABLED=0 el mismo ciclo queda quiet — esa diferencia ES la
 # latencia que la fase A recupera. Incluye fetch_dga.py --selftest (parser).
+
+# Enriquecedor de clase fan-apex (etapa 5b de analysis_all.sh) — entradas
+# hostiles, sin red ni KINGSTON: verifica que ninguna comuna que falle tumbe
+# el lote ni escriba un bloque que afirme una clase que no calculó.
+python3 monitor/fanapex_localidades.py --selftest
 ```
 
 ## Limitaciones conocidas (léelas)

@@ -127,18 +127,29 @@ def load_window(basin, lon, lat, window_km, hydro_source="surtgis", threshold=30
                         compress="deflate")
 
     if hydro_source == "surtgis":
+        import shutil
         import tempfile
+        # Los temporales se BORRAN al salir: en un barrido de toda la watchlist
+        # (~40 comunas) cada ventana deja un DEM + 3 rásters de hidrología, y
+        # acumularlos llenaba /tmp sin que nadie los volviera a leer (las capas
+        # ya quedan en memoria). El finally cubre también el fallo de surtgis.
         work = tempfile.mkdtemp(prefix="fanapex_win_")
-        dem_path = os.path.join(work, "dem.tif")
-        with rasterio.open(dem_path, "w", **dem_prof) as d:
-            d.write(np.nan_to_num(dem, nan=0.0).astype(np.float32), 1)
-        hydro_dir = run_hydrology(dem_path, threshold=threshold)
-        def _rd(name, dt):
-            with rasterio.open(os.path.join(hydro_dir, name)) as s:
-                return s.read(1).astype(dt)
-        fdir = _rd("flow_direction_d8.tif", np.int16)
-        facc = _rd("flow_accumulation.tif", np.float64)
-        stream = _rd("stream_network.tif", np.uint8)
+        hydro_dir = None
+        try:
+            dem_path = os.path.join(work, "dem.tif")
+            with rasterio.open(dem_path, "w", **dem_prof) as d:
+                d.write(np.nan_to_num(dem, nan=0.0).astype(np.float32), 1)
+            hydro_dir = run_hydrology(dem_path, threshold=threshold)
+            def _rd(name, dt):
+                with rasterio.open(os.path.join(hydro_dir, name)) as s:
+                    return s.read(1).astype(dt)
+            fdir = _rd("flow_direction_d8.tif", np.int16)
+            facc = _rd("flow_accumulation.tif", np.float64)
+            stream = _rd("stream_network.tif", np.uint8)
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+            if hydro_dir:
+                shutil.rmtree(hydro_dir, ignore_errors=True)
     else:
         h = _read_kingston_hydro(basin, x, y, half,
                                  {"flow_direction_d8.tif": np.int16,
