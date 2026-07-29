@@ -279,25 +279,37 @@ fuente en cada fan-apex (receta validada del paso 1) y mide qué fracción del
 objetivo poblado cubre el footprint. Fin del cap de runout arbitrario: la
 extensión la fija la física del ruteo.
 
+> ⚠ **Los números de esta sección están SUPERADOS.** Se dejan como registro de
+> cómo se llegó al resultado. Los de Alto del Carmen salen del disco de 400 m
+> (corregido el 23-jul, ver corolario abajo) y TODOS dividen por un objetivo
+> recortado por la ventana (corregido el 29-jul). **Tabla vigente: "Tabla del
+> paso 3, corregida" en la sección de re-verificación, al final del documento.**
+
 | Comuna | Apex (Melton, proxy-D8) | Footprint ABM | Cubre del pueblo |
 |---|---|---|---|
-| **Alto del Carmen** | R0.84 · 0.5 km | 2.9 km² | **16.8%** |
-| | R0.57 · 1.0 km | 4.0 km² | **21.9%** |
-| | R0.85 · 2.0 km | 2.3 km² | **16.8%** |
-| **Vallenar** | R0.35 · 3.8 km | 1.9 km² | 10.6% |
-| | R0.49 · 14.7 km | 5.8 km² | 10.5% |
-| | R0.48 · 15.2 km | 6.3 km² | 10.5% |
+| **Alto del Carmen** | R0.84 · 0.5 km | 2.9 km² | ~~16.8%~~ → 3.9% |
+| | R0.57 · 1.0 km | 4.0 km² | ~~21.9%~~ → 15.1% |
+| | R0.85 · 2.0 km | 2.3 km² | ~~16.8%~~ → 3.9% |
+| **Vallenar** | R0.35 · 3.8 km | 1.9 km² | 10.6% (se sostiene) |
+| | R0.49 · 14.7 km | 5.8 km² | 10.5% (se sostiene) |
+| | R0.48 · 15.2 km | 6.3 km² | 10.5% (se sostiene) |
 
-**Alto del Carmen** queda confirmado FÍSICAMENTE: 3/3 apexes cercanos (0.5–2 km)
-cubren 16.8–21.9% del pueblo → flujo detrítico inequívoco.
+**Alto del Carmen** queda confirmado FÍSICAMENTE como aluvión, pero la lectura de
+2026-07-21 ("3/3 apexes cubren 16.8–21.9% → flujo detrítico inequívoco") era un
+artefacto del disco: con el polígono real es **1/3** apexes (el R0.57, 15.1%) y
+la clase es **debris flood**. Sigue siendo aluvión, no crecida — que es lo que el
+paso 3 vino a decidir — pero con una sub-clase distinta y mucho menos holgura.
 
 **Hallazgo — el paso 3 discrimina lo que el paso 2 no puede.** Vallenar tiene UN
 polígono urbano compacto (5×4 km); los footprints de apexes a 3.8, 14.7 y 15.2 km
-cubren ~10.5% del pueblo → banda **débil**, vs Alto del Carmen ~16–22% → **fuerte**.
-El proxy D8 del paso 2 los igualaba ("alcanzable"); el footprint físico separa el
-abanico que cubre el pueblo de lleno (Alto del Carmen) del que solo roza su borde
-de valle (Vallenar). **La MAGNITUD de cobertura es el discriminador** que el proxy
-no tenía.
+cubren ~10.5% del pueblo → banda **débil**, vs Alto del Carmen **fuerte** (15.1%
+con la métrica corregida; 16–22% era el disco). El proxy D8 del paso 2 los
+igualaba ("alcanzable"); el footprint físico separa el abanico que cubre el pueblo
+de lleno (Alto del Carmen) del que solo roza su borde de valle (Vallenar). **La
+MAGNITUD de cobertura es el discriminador** que el proxy no tenía. El hallazgo
+sobrevive las dos correcciones posteriores, con menos margen del que se creyó
+(15.1 vs 10.6%, no 22 vs 10.5%) — y en 2026-07-29 se le suma un caso más fuerte:
+Ovalle, donde el footprint físico **desmiente** al proxy en vez de solo matizarlo.
 
 Nota de honestidad — hipótesis falsificada: primero se atribuyó el ~10% de
 Vallenar a un **footprint difuso de valle** (esparcido, no canalizado). Al añadir
@@ -312,8 +324,9 @@ Rótulo del paso 3 (implementado en `abm_apex_footprint.py`): banda de cobertura
 **fuerte ≥15% / débil 5–15% / marginal <5%** + flag **difuso** (delta_frac<0.08,
 mismo criterio que `runout_localidad.py`). Asocia LIMPIO si banda≠marginal Y no
 difuso. Comuna: clase del apex limpio de mayor Melton, con aviso "(cobertura
-débil)" si ninguno es fuerte. Verificado: Alto del Carmen flujo detrítico (fuerte);
-Vallenar debris flood (cobertura débil).
+débil)" si ninguno es fuerte. Desde 2026-07-29 la fracción se mide sobre la
+**localidad** mejor cubierta (no sobre el área poblada de toda la comuna) y
+contra su área geométrica completa — ver la re-verificación al final.
 
 ## Cableado diagnóstico — LISTO (2026-07-22)
 `monitor/melton_localidad.py --watchlist --fan-apex` imprime la tabla combinada
@@ -410,9 +423,112 @@ SystemExit/RuntimeError del detector, error propagado como motivo y no como
 clase, transfer sin clase inventada, invalidación de cache por parámetro,
 runout de 14 km que alcanza pero no cuenta como corrección).
 
+## Re-verificación del paso 3 (Vallenar/Ovalle) — LISTA (2026-07-29)
+
+### Lo que se buscaba y lo que apareció
+El pendiente era re-correr la cobertura física con el objetivo-polígono real.
+Primer hallazgo, por inspección antes de gastar corridas: **el fix del polígono
+(#3, 2026-07-23) solo tocó la rama `aldea`** — Vallenar y Ovalle son `urbano`
+(`Limite_Urbano_CPV24`), así que nunca usaron el disco de 400 m. La re-corrida de
+Vallenar lo confirma **bit a bit**: 10.6 / 10.5 / 10.5 %, footprints 1.9 / 5.8 /
+6.3 km², idénticos a la tabla del paso 3. De paso valida que nada derivó con el
+bump a surtgis-core 1.0.0.
+
+Lo que sí apareció es un **defecto de la métrica**, no de esas comunas.
+
+### El denominador estaba recortado por la ventana, en silencio
+`target_overlap` rasterizaba el objetivo **dentro de la ventana del ABM** y
+dividía por las celdas resultantes. Si el objetivo no cabe entero, el
+denominador es un pedazo arbitrario del pueblo y nadie se entera:
+
+| Comuna | apex | ventana | objetivo VISTO | cobertura reportada |
+|---|---|---|---|---|
+| Ovalle | R0.58 | 14 km | **1.8 de 17.8 km² (10 %)** | 0.0 % |
+| Ovalle | R0.51 | 18 km | 2.3 km² (13 %) | 0.0 % |
+| Ovalle | R0.40 | 21 km | 15.1 km² (85 %) | 2.6 % |
+| Vallenar | R0.35 | 14 km | 10.0 km² (99 %) | 10.6 % |
+
+El "cubre 0.0 %" de Ovalle no significaba "el abanico no llega": significaba
+**"la ciudad estaba fuera de cuadro"**. Vallenar se salvó por ser un polígono
+compacto de 5×4 km.
+
+### La raíz: una comuna no es un objetivo compacto
+Ovalle son **6 localidades repartidas sobre 30×10 km** (ciudad 11.9 km² + 5
+satélites) y Alto del Carmen **dos aldeas a 21 km** una de otra. Preguntar "qué
+fracción del área poblada DE LA COMUNA cubre este abanico" (a) mete en el
+denominador localidades que el flujo no puede alcanzar ni en principio, y (b)
+obliga a ventanas de ~50 km para un flujo de 4 km. Es la pregunta equivocada: un
+abanico amenaza **la localidad de su boca**, que es además lo coherente con la
+tesis del paso 2 (la comuna = conjunto de abanicos, cada uno con su objetivo).
+
+### Métrica corregida
+1. `target_pieces()`: el objetivo son **localidades separadas** (una por fila
+   censal), no un blob. La cobertura principal es la de la **localidad mejor
+   cubierta**; se conserva `cover_frac_comuna` (métrica vieja) para comparar.
+2. El denominador de cada localidad es su área **geométrica completa**, no la
+   rasterizada en la ventana → un recorte solo puede **sub**-reportar cobertura,
+   nunca inflarla.
+3. `window_km_for()`: la ventana (centrada en el apex, como exige la receta de
+   siembra) debe contener **enteras** todas las localidades a ≤ `2×runout+5 km`
+   del apex. Las más lejanas quedan fuera y puntúan 0, correctamente.
+4. `target_visible_frac` se reporta **siempre**; el recorte nunca es silencioso.
+
+### Tabla del paso 3, corregida (cobertura de la LOCALIDAD)
+
+| Comuna | Apex (Melton · proxy-D8) | Ventana | Footprint | Cubre de la localidad | Banda |
+|---|---|---|---|---|---|
+| **Alto del Carmen** | R0.84 · 0.6 km | 12 km | 2.9 km² | 3.9 % de 0.26 km² | marginal |
+| | **R0.57 · 1.1 km** | 12 km | 4.0 km² | **15.1 %** | **fuerte** |
+| | R0.85 · 2.1 km | 12 km | 2.3 km² | 3.9 % | marginal |
+| **Vallenar** | R0.35 · 3.8 km | 23 km | 3.8 km² | **10.6 %** de 10.04 km² | débil |
+| | R0.49 · 14.7 km | 41 km | 5.8 km² | 10.5 % | débil |
+| | R0.48 · 15.2 km | 42 km | 6.3 km² | 10.5 % | débil |
+| **Ovalle** | R0.58 · 4.1 km | 40 km | 8.6 km² | 1.7 % de 11.93 km² | marginal |
+| | R0.51 · 6.2 km | 40 km | 8.6 km² | 1.7 % | marginal |
+| | R0.40 · 7.6 km | 40 km | 8.4 km² | 4.7 % de 2.61 km² | marginal |
+
+Clases resultantes: **Alto del Carmen = debris flood** (1/3 asocia limpio, el
+R0.57 con cobertura fuerte) — reproduce el corolario del 23-jul, que resultó
+accidentalmente correcto porque el recorte eliminó justo la aldea que no era el
+objetivo. **Vallenar = debris flood (cobertura débil)**, 3/3 asocian. **Ovalle =
+crecida fluvial / sin footprint que alcance**, 0/3.
+
+### Los dos resultados que importan
+**Ovalle es la contraparte de Vallenar.** El proxy D8 del paso 2 lo daba "debris
+flood, alcanzable a 4.1 km"; el footprint físico lo **baja** a crecida: los
+abanicos existen y sus footprints son de 8.4–8.6 km², pero **rozan la ciudad
+(1.7 %), no la cubren**. El paso 3 no solo separa fuerte de débil (Alto del
+Carmen vs Vallenar): también **desmiente** al proxy. Es la primera vez que la
+física contradice al proxy en dirección conservadora, y es exactamente el
+control que hacía falta para no rotular aluvión de más.
+
+**La medida es robusta donde el objetivo es compacto.** Vallenar mantuvo
+10.6 / 10.5 / 10.5 % con ventanas casi el doble de grandes (14→23, 35→41,
+36→42 km) y con el footprint del apex 1 duplicándose (1.9→3.8 km²). Que la
+cobertura del pueblo no se moviera mientras el footprint cambiaba es la
+evidencia de que se está midiendo el solape real y no un artefacto de encuadre.
+
+### Caveat honesto que el fix deja al descubierto
+El flag **difuso** (`delta_frac`, elevación media del footprint vs. la del resto
+de la ventana) **depende del tamaño de la ventana**: al agrandarla entra más
+terreno alto y `delta_frac` se mueve (Ovalle 0.32/0.35/0.27 → 0.22/0.24/0.24;
+Vallenar +0.02). Aquí ninguno se acerca al umbral de 0.08, así que no cambia
+ningún veredicto, pero ahora que la ventana la fija la extensión del objetivo y
+no el runout, el guard difuso ya no es comparable entre corridas de distinto
+encuadre. Queda anotado, no resuelto.
+
+### Barrido de hermanas (recorte silencioso de objetivo)
+`fan_apex_localidad.classify` (paso 2) rasteriza el objetivo en **su** ventana de
+hidrología (26 km) y tenía el mismo recorte mudo. Ahora reporta
+`n_localidades` / `target_km2` / `target_visible_frac`, que `fanapex_localidades.py`
+persiste en el bloque `fan_apex` (cache **v2**). La asimetría es benigna y hay
+que decirla: `distance_transform_edt` mide a la celda-objetivo **visible** más
+cercana, así que un recorte solo puede **agrandar** el runout reportado —puede
+perder un abanico, nunca inventarlo. Medido sobre datos reales: Ovalle 97 % del
+objetivo visible, Vallenar 100 %. Tests hostiles añadidos al
+`--selftest` (14 checks).
+
 ## Próximo paso
-1. Re-verificar la tabla del paso 3 (cobertura por comuna) con el objetivo-polígono
-   para el resto de casos (Vallenar/Ovalle) cuando se necesite el número físico.
-2. (Opcional) Llevar el bloque `fan_apex` también a los reportes por cuenca
+1. (Opcional) Llevar el bloque `fan_apex` también a los reportes por cuenca
    (`report/build_cuenca_huasco.py` / `_coquimbo.py`), que leen el mismo
    `resumen.json` pero aún no lo muestran.

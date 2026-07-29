@@ -224,6 +224,17 @@ def classify(comuna, basin, lon, lat, *, window_km=WINDOW_KM, fan_buffer_m=FAN_B
     if mask.sum() == 0:
         return {"comuna": comuna, "basin": basin, "error":
                 "objetivo poblado sin celdas en la ventana (¿comuna/cuenca mal pareadas?)"}
+    # Qué fracción del objetivo cabe en la ventana de hidrología. Se REPORTA
+    # siempre (nunca un recorte silencioso): comunas dispersas no caben en la
+    # ventana —Ovalle son 6 localidades sobre 30×10 km con WINDOW_KM=26— y su
+    # runout-a-alcanzar se mide contra la parte visible. La asimetría es
+    # benigna y hay que decirla: distance_transform_edt da la distancia a la
+    # celda-objetivo VISIBLE más cercana, así que un recorte solo puede
+    # AGRANDAR el runout reportado (o hacer que un apex no alcance), nunca
+    # acortarlo → puede perder un abanico, no inventarlo.
+    area_total_km2 = sum(g.area for g in geoms) / 1e6
+    area_vista_km2 = float(mask.sum()) * (res * res) / 1e6
+    visible_frac = round(min(1.0, area_vista_km2 / area_total_km2), 3) if area_total_km2 else 0.0
     dist_to_target = distance_transform_edt(~mask) * res   # metros al objetivo
 
     apex, _ = detect(dem, fdir, facc, stream, res, area_min=0.5, area_max=100.0,
@@ -266,6 +277,8 @@ def classify(comuna, basin, lon, lat, *, window_km=WINDOW_KM, fan_buffer_m=FAN_B
             "n_apex_alcanzan": len(reaching),
             "clase_comuna": comuna_clase,
             "runout_a_alcanzar_km": min_runout_km, "banda": banda,
+            "n_localidades": len(geoms), "target_km2": round(area_total_km2, 3),
+            "target_visible_frac": visible_frac,
             "apex_que_alcanzan": reaching}
 
 

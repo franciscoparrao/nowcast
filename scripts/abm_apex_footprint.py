@@ -14,10 +14,13 @@ física del ruteo por terreno, no un umbral de distancia.
 Flujo:
   1. fan_apex_localidad.classify() → fan-apexes con lon/lat + runout-a-alcanzar.
   2. Se simulan los N apexes que alcanzan a menor runout (los más plausibles).
-  3. Por apex: disco de fuente en su UTM → runout_ondemand centrado para incluir
-     apex y pueblo → footprint.
-  4. Solape con el objetivo (polígono urbano / aldea): fracción cubierta →
-     banda (fuerte ≥15% / débil 5-15% / marginal <5%). Del stats.json se lee si
+  3. Por apex: disco de fuente en su UTM → runout_ondemand centrado en el apex,
+     con la ventana dimensionada para contener ENTERAS las localidades que el
+     abanico podría alcanzar (window_km_for) → footprint.
+  4. Solape con el objetivo, POR LOCALIDAD (una comuna no es un blob compacto:
+     Ovalle son 6 localidades sobre 30×10 km): fracción de la localidad mejor
+     cubierta, contra su área geométrica COMPLETA → banda (fuerte ≥15% / débil
+     5-15% / marginal <5%). Del stats.json se lee si
      el footprint es DIFUSO (no concentra cuesta abajo, delta_frac<0.08 — mismo
      criterio que runout_localidad.py). El apex ASOCIA LIMPIO si la banda no es
      marginal Y el footprint no es difuso (un footprint difuso que "cubre" el
@@ -43,6 +46,7 @@ import numpy as np
 import rasterio
 from rasterio.features import rasterize
 from rasterio.transform import from_origin
+from shapely.geometry import Point
 from pyproj import Transformer
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -57,6 +61,11 @@ COVER_DEBIL = 0.05    # 5-15%: lo roza
 # plausibilidad de monitor/runout_localidad.py). Un footprint difuso que "cubre"
 # el pueblo lo hace por esparcimiento sobre el valle, no por un abanico real.
 DIFUSO_DELTA_FRAC = 0.08
+# Margen sobre 2×runout-proxy para decidir qué localidades deben caber ENTERAS en
+# la ventana del ABM. No es un cap físico del flujo (la extensión la fija el
+# ruteo): es la cota de "qué hay que mirar para no medir contra un objetivo
+# recortado". Ver window_km_for.
+REACH_MARGIN_KM = 5.0
 
 
 def cover_band(frac):
@@ -121,21 +130,94 @@ def run_abm(lon, lat, size_km, susc_path, out_dir, rain="40,80,60", preset="chan
     return os.path.join(out_dir, "runout_footprint.tif")
 
 
+def target_pieces(comuna, crs):
+    """Localidades pobladas de la comuna como piezas SEPARADAS (una por fila
+    censal), no como un solo blob.
+
+    Una comuna NO es un objetivo compacto: Ovalle son 6 localidades repartidas
+    sobre 30×10 km y Alto del Carmen dos aldeas a 21 km una de otra. Preguntar
+    "qué fracción del área poblada DE LA COMUNA cubre este abanico" mete en el
+    denominador localidades que el flujo no puede alcanzar ni en principio, y
+    diluye la señal hasta volverla incomparable entre comunas. Un abanico
+    amenaza LA localidad que está en su boca — esa es la fracción que significa
+    algo, y es la coherente con la tesis del paso 2 (la comuna = conjunto de
+    abanicos, cada uno con su objetivo)."""
+    geoms, kind = FA.target_geoms(comuna, crs)
+    return [{"geom": g, "area_km2": g.area / 1e6} for g in geoms], kind
+
+
+def window_km_for(ax, ay, pieces, runout_km):
+    """Ventana (centrada en el apex, como exige la receta de siembra) que
+    contiene al apex Y ENTERAS a todas las localidades que el abanico podría
+    alcanzar físicamente.
+
+    Sin esto el objetivo queda RECORTADO por el borde de la ventana y la
+    cobertura se calcula contra un denominador parcial, en silencio: Ovalle
+    apex 1 veía el 10% de su objetivo (la ciudad estaba fuera de cuadro) y
+    reportaba 'cubre 0.0%', que se lee como 'el abanico no llega' cuando en
+    realidad es 'no se miró'.
+
+    Alcanzable = a menos de `2×runout_proxy + REACH_MARGIN_KM` del apex: cota
+    generosa sobre cuánto puede correr el flujo, no un cap físico (la extensión
+    real la fija el ruteo). Una localidad más lejana que eso no se mete en la
+    ventana —ampliarla a toda la comuna daría ventanas de 50 km para un flujo
+    de 4 km— y como el denominador de cada localidad es su área COMPLETA, la
+    que quede fuera puntúa 0 sin inflar nada. Si ninguna cae dentro de la cota,
+    se usa la más cercana para no devolver una ventana ciega.
+    Devuelve (size_km, localidades_en_cuadro)."""
+    here = Point(ax, ay)
+    bound_m = (2.0 * runout_km + REACH_MARGIN_KM) * 1000.0
+    dentro = [p for p in pieces if p["geom"].distance(here) <= bound_m]
+    if not dentro:
+        dentro = [min(pieces, key=lambda p: p["geom"].distance(here))]
+    dmax = 0.0
+    for p in dentro:
+        b = p["geom"].bounds
+        dmax = max(dmax, max(math.hypot(cx - ax, cy - ay)
+                             for cx in (b[0], b[2]) for cy in (b[1], b[3])))
+    return max(12.0, 2.0 * runout_km + 6.0, 2.0 * dmax / 1000.0 + 4.0), dentro
+
+
 def target_overlap(fp_path, comuna):
-    """Fracción del objetivo poblado cubierta por el footprint + áreas (km²)."""
+    """Cobertura del footprint sobre el objetivo poblado, POR LOCALIDAD.
+
+    El denominador de cada localidad es su área GEOMÉTRICA completa, no la
+    rasterizada dentro de la ventana: así un recorte de ventana solo puede
+    SUB-reportar cobertura (conservador y honesto), nunca inflarla. Se reporta
+    además `target_visible_frac` para que el recorte jamás sea silencioso."""
     with rasterio.open(fp_path) as src:
         fp = (src.read(1) == 1).astype(np.uint8)
         tr, crs, sh = src.transform, src.crs, fp.shape
         cell_km2 = abs(tr.a * tr.e) / 1e6
-    geoms, kind = FA.target_geoms(comuna, crs)
+    pieces, kind = target_pieces(comuna, crs)
     # urbano y aldea son polígonos reales → se rasterizan directo (misma lógica
     # que fan_apex_localidad.target_mask, sin el disco de buffer aproximado)
-    gt = (rasterize([(g.__geo_interface__, 1) for g in geoms], out_shape=sh,
-                    transform=tr, fill=0, dtype=np.uint8) == 1).astype(np.uint8)
-    inter = int(((fp == 1) & (gt == 1)).sum())
-    ga = int((gt == 1).sum())
-    return dict(cover_frac=(inter / ga if ga else 0.0), fp_km2=int((fp == 1).sum()) * cell_km2,
-                target_cells=ga, inter_cells=inter)
+    det, inter_tot_km2, vis_tot_km2 = [], 0.0, 0.0
+    for p in pieces:
+        m = rasterize([(p["geom"].__geo_interface__, 1)], out_shape=sh,
+                      transform=tr, fill=0, dtype=np.uint8) == 1
+        vis = int(m.sum()) * cell_km2
+        inter = int(((fp == 1) & m).sum()) * cell_km2
+        inter_tot_km2 += inter
+        vis_tot_km2 += vis
+        det.append({"area_km2": round(p["area_km2"], 3),
+                    "visible_frac": round(vis / p["area_km2"], 3) if p["area_km2"] else 0.0,
+                    "inter_km2": round(inter, 3),
+                    "cover_frac": (inter / p["area_km2"]) if p["area_km2"] else 0.0})
+    total_km2 = sum(p["area_km2"] for p in pieces)
+    best = max(det, key=lambda d: d["cover_frac"]) if det else {"cover_frac": 0.0, "area_km2": 0.0,
+                                                                "visible_frac": 0.0}
+    return dict(
+        # métrica PRINCIPAL: la localidad mejor cubierta (la que el abanico amenaza)
+        cover_frac=best["cover_frac"],
+        localidad_km2=best["area_km2"], localidad_visible_frac=best["visible_frac"],
+        # métrica antigua (fracción del área poblada de TODA la comuna), conservada
+        # para poder comparar con la tabla previa — diluida en comunas dispersas
+        cover_frac_comuna=(inter_tot_km2 / total_km2) if total_km2 else 0.0,
+        target_km2=round(total_km2, 3),
+        target_visible_frac=round(vis_tot_km2 / total_km2, 3) if total_km2 else 0.0,
+        n_localidades=len(pieces),
+        fp_km2=int((fp == 1).sum()) * cell_km2)
 
 
 def main():
@@ -160,11 +242,20 @@ def main():
     epsg = utm_epsg(a.lon, a.lat)
     print(f"[{a.comuna}] simulando ABM en {len(reaching)} apex (UTM {epsg})…")
 
+    # piezas del objetivo en la MISMA proyección que usará el ABM, para poder
+    # dimensionar la ventana de modo que contenga la localidad entera
+    pieces, kind = target_pieces(a.comuna, f"EPSG:{epsg}")
+    to_utm = Transformer.from_crs("EPSG:4326", epsg, always_xy=True)
+    print(f"[{a.comuna}] objetivo {kind}: {len(pieces)} localidad(es), "
+          f"{sum(p['area_km2'] for p in pieces):.2f} km² en total")
+
     results = []
     work = tempfile.mkdtemp(prefix="abm_apex_")
     for i, apx in enumerate(reaching, 1):
-        # ventana centrada en el apex, cubre apex→pueblo con margen
-        size_km = max(12.0, 2.0 * apx["runout_to_reach_km"] + 6.0)
+        # ventana centrada en el apex que contiene apex + localidad más cercana
+        # ENTERA (ver window_km_for: recortarla falsea el denominador en silencio)
+        ax, ay = to_utm.transform(apx["lon"], apx["lat"])
+        size_km, dentro = window_km_for(ax, ay, pieces, apx["runout_to_reach_km"])
         susc = os.path.join(work, f"src_{i}.tif")
         run_dir = os.path.join(work, f"run_{i}")
         build_source_susc(apx["lon"], apx["lat"], size_km, susc, epsg)
@@ -187,9 +278,14 @@ def main():
                         "window_frac": pl["window_frac"], "asocia_abm": assoc})
         dif = " · DIFUSO (no canaliza)" if pl["difuso"] else ""
         verdict = "ASOCIA" if assoc else ("difuso→descartado" if pl["difuso"] else "no")
+        # el recorte se declara SIEMPRE: una cobertura medida sobre una localidad
+        # parcialmente fuera de cuadro no es comparable con una medida entera
+        rec = ("" if ov["localidad_visible_frac"] >= 0.999
+               else f" · ⚠ localidad {ov['localidad_visible_frac']*100:.0f}% en cuadro")
         print(f"  apex {i}: R{apx['melton']:.2f} ({apx['clase']}) · proxy-D8 "
-              f"{apx['runout_to_reach_km']:.1f}km · footprint {ov['fp_km2']:.1f} km² · cubre "
-              f"{ov['cover_frac']*100:.1f}% ({band}){dif} → {verdict}")
+              f"{apx['runout_to_reach_km']:.1f}km · ventana {size_km:.0f}km · footprint "
+              f"{ov['fp_km2']:.1f} km² · cubre {ov['cover_frac']*100:.1f}% de la localidad "
+              f"({ov['localidad_km2']:.2f} km²) ({band}){dif}{rec} → {verdict}")
 
     assoc = [r for r in results if r["asocia_abm"]]
     if assoc:

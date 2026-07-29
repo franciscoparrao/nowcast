@@ -52,7 +52,10 @@ RUNOUTS = os.path.expanduser("~/nowcast-forecast/runouts")
 CACHE_PATH = os.path.expanduser("~/nowcast-forecast/fanapex_cache.json")
 # Sube cuando cambie el ALGORITMO (no los parámetros, que ya van en la clave):
 # invalida el cache sin borrarlo a mano.
-CACHE_VERSION = 1
+#   v2 (2026-07-29): classify() reporta n_localidades/target_km2/
+#   target_visible_frac — el objetivo de una comuna dispersa no cabe entero en
+#   la ventana de hidrología y eso ya no puede quedar silencioso.
+CACHE_VERSION = 2
 
 # Umbral de runout bajo el cual se considera que el fan-apex CORRIGE al
 # centroide con un alcance creíble — mismo criterio que sweep_fanapex_watchlist.
@@ -133,6 +136,13 @@ def bloque(fa, centroide, params):
         "n_apex_detectados": fa.get("n_apex_detectados"),
         "n_apex_alcanzan": fa.get("n_apex_alcanzan"),
         "target_kind": fa.get("target_kind"),
+        # cuántas localidades pobladas tiene la comuna y qué fracción de ellas
+        # cabe en la ventana de hidrología: una comuna dispersa (Ovalle, 6
+        # localidades sobre 30 km) se mide contra la parte visible, y eso debe
+        # verse. El recorte solo puede AGRANDAR el runout, nunca acortarlo.
+        "n_localidades": fa.get("n_localidades"),
+        "target_km2": fa.get("target_km2"),
+        "target_visible_frac": fa.get("target_visible_frac"),
         "hydro_source": fa.get("hydro_source"),
         "apex_cercano_melton": cerca.get("melton"),
         "apex_cercano_area_km2": cerca.get("area_km2"),
@@ -300,6 +310,19 @@ def selftest():
         b = bloque(fa_lejos, {"clase": "crecida fluvial", "melton": 0.02}, params)
         check(f"runout de 14.4 km (> {RUNOUT_CREIBLE_KM:.0f}) no se rotula como corrección",
               b["cambia_vs_centroide"] is True and b["corrige_a_aluvion"] is False)
+
+        # 9. objetivo RECORTADO por la ventana: el bloque debe declararlo, no
+        #    callarlo (comuna dispersa cuyo objetivo no cabe en la hidrología)
+        fa_recortado = dict(fa_lejos, n_localidades=6, target_km2=17.816,
+                            target_visible_frac=0.62)
+        b = bloque(fa_recortado, {"clase": "crecida fluvial", "melton": 0.02}, params)
+        check("un objetivo parcialmente fuera de la ventana queda declarado en el bloque",
+              b["target_visible_frac"] == 0.62 and b["n_localidades"] == 6)
+        # y un fan-apex de comuna compacta no debe arrastrar el aviso
+        b = bloque(dict(fa_lejos, n_localidades=1, target_km2=10.04,
+                        target_visible_frac=1.0),
+                   {"clase": "crecida fluvial", "melton": 0.02}, params)
+        check("comuna compacta reporta objetivo 100% visible", b["target_visible_frac"] == 1.0)
     finally:
         FA.classify = orig_classify
         g["_hydro_dir"] = orig_hydro
