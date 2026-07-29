@@ -83,15 +83,28 @@ Principios heredados de las auditorías:
 # 1. Compilar el binario (en el orquestador; el nodo no necesita toolchain):
 cargo build --release -p nowcast-cli
 
+# 1b. Generar la susceptibilidad de terreno EN EL ORQUESTADOR — no en el nodo:
+#     lee los modelos por cuenca de 30 m del disco KINGSTON, que el nodo no
+#     tiene montado. Es terreno: se genera UNA vez, no por ciclo. Imprime el
+#     ALERT_LEVEL coherente con el ráster que acaba de escribir; hay que
+#     copiarlo a config.env (ver paso 3) o el umbral y la susceptibilidad
+#     quedan descoordinados y se pierden los eventos marginales.
+python3 monitor/make_susc_grid.py --out /tmp/susc_0p1.tif   # BBOX del config.env
+
 # 2. Copiar al nodo (ej: sentinel):
 ssh sentinel "mkdir -p ~/nowcast-monitor/bin ~/nowcast-monitor/monitor"
 scp target/release/nowcast sentinel:~/nowcast-monitor/bin/
+scp /tmp/susc_0p1.tif sentinel:~/nowcast-monitor/          # $WORK_DIR/susc_0p1.tif
 scp monitor/{config.env,fetch_imerg_early.py,fetch_goes_qpe.py,fetch_dga.py,prepare_fusion.py,monitor.sh} \
     sentinel:~/nowcast-monitor/monitor/
 ssh sentinel "chmod +x ~/nowcast-monitor/monitor/monitor.sh && ls -la ~/nowcast-monitor/bin"  # verificar bytes
 
 # 3. Configurar: editar ~/nowcast-monitor/monitor/config.env en el nodo
-#    (BBOX, NTFY_TOPIC — crear un topic privado en ntfy.sh, NOWCAST_BIN).
+#    (BBOX, NTFY_TOPIC — crear un topic privado en ntfy.sh, NOWCAST_BIN, y el
+#    ALERT_LEVEL que imprimió el paso 1b si cambiaste BBOX o el ráster).
+#    monitor.sh ABORTA si SUSC_TIF apunta a un ráster que no está: no cae a
+#    uniforme 1.0 en silencio, porque el ALERT_LEVEL del config está derivado
+#    PARA la susceptibilidad y sin ella alertaría de más.
 #    Fase A: GOES no necesita credenciales (bucket público). Para el feed
 #    in-situ, registrarse GRATIS en
 #    https://climatologia.meteochile.gob.cl/application/usuario/registroUsuario
@@ -133,6 +146,12 @@ SKIP_FETCH=1 CONFIG=/tmp/nowcast-monitor-selftest/config.env monitor/monitor.sh
 # hostiles, sin red ni KINGSTON: verifica que ninguna comuna que falle tumbe
 # el lote ni escriba un bloque que afirme una clase que no calculó.
 python3 monitor/fanapex_localidades.py --selftest
+
+# Acople SUSC_TIF <-> ALERT_LEVEL sobre un evento MARGINAL (12 mm/h, apenas
+# sobre Caine), que es donde vive la diferencia: uniforme+0.5 alerta, susc
+# real+0.5 PIERDE el evento, susc real+0.272 lo recupera. Un evento extremo
+# no distingue los tres casos — satura el gatillo y alerta igual.
+python3 monitor/selftest.py --susc
 ```
 
 ## Limitaciones conocidas (léelas)

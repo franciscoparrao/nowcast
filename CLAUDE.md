@@ -224,10 +224,18 @@ fetcher incremental de **IMERG Early NRT** (GPM_3IMERGHHE v07 vía earthaccess,
 rodante de 48 h con `nowcast run --format json` — legítimo porque batch≡live es
 bit-idéntico; dead-man switch del feed, notificación ntfy con histéresis de
 cruces) y units systemd (timer :12/:42). Piloto default: cordillera RM/Cajón
-del Maipo, susceptibilidad uniforme (monitor de TIMING hasta regenerar el RF —
-R3-M11). Autotest sin red: `python3 monitor/selftest.py`. Es monitor de
-eventos, NO alerta temprana; requiere temporada en modo sombra antes de
-confiar.
+del Maipo con **susceptibilidad REAL** desde 2026-07-29 (`make_susc_grid.py`
+agrega el RandomForest del Maipo 30 m → grilla 0.1° del monitor con **p90** por
+celda; mean aplana el filo de las laderas y max satura con un píxel). El raster
+nunca se perdió (R3-M11 resuelto el 13-jul, vive en KINGSTON): faltaba
+agregarlo. **`SUSC_TIF` y `ALERT_LEVEL` van ATADOS**: con uniforme 1.0 el 0.5
+significaba "alerta al cruzar Caine", con un campo <1 el mismo 0.5 sube el
+listón en silencio y pierde eventos marginales (medido: 12 mm/h se pierde
+entero) → `make_susc_grid.py` deriva e imprime el coherente (mediana×0.5 =
+0.272 en el piloto) y `monitor.sh` ABORTA si `SUSC_TIF` no existe en vez de
+caer a uniforme. Autotest sin red: `python3 monitor/selftest.py`
+(`--fusion`, `--susc`). Es monitor de eventos, NO alerta temprana; requiere
+temporada en modo sombra antes de confiar.
 
 **Fase A del plan EWS (2026-07-11) LISTA**: fusión multi-forzante de punta a
 punta. (1) CLI: `nowcast run --fuse-rasters <stack>` repetible + `--combine

@@ -108,6 +108,63 @@ WRITE_HAZARD_TIFS=0
     return nowcast_bin
 
 
+def susc_selftest():
+    """El acople SUSC_TIF ↔ ALERT_LEVEL, sobre un evento MARGINAL.
+
+    No prueba la generación del ráster (eso necesita KINGSTON montado): prueba
+    lo que puede regresionar en silencio — que el umbral y la susceptibilidad
+    van atados. Se fabrica un campo con la estadística real del piloto
+    (mediana ~0.544, rango 0.285–0.634) y una ráfaga de 12 mm/h, apenas sobre
+    la curva de Caine, que es donde vive la diferencia:
+
+      - uniforme 1.0 + 0.5   → ALERTA (comportamiento de hoy)
+      - susc real + 0.5      → QUIET: el evento se PIERDE (el fallo silencioso)
+      - susc real + 0.272    → ALERTA, antes y solo en las celdas susceptibles
+
+    Un evento extremo (50 mm/h) NO distingue los tres casos: satura el gatillo
+    y alerta igual. Por eso el escenario es marginal a propósito."""
+    import subprocess
+
+    rng = np.random.default_rng(20260729)
+    susc = rng.uniform(0.285, 0.634, size=(11, 11)).astype("float32")
+    susc[5, 5] = 0.544                      # ancla la mediana del piloto
+    susc_p = os.path.join(BASE, "susc_selftest.tif")
+
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now -= timedelta(minutes=now.minute % 30)
+    write_steps(os.path.join(BASE, "steps"), now, 96, burst_last=6, burst_mm=6.0)  # 12 mm/h
+    write_status(os.path.join(BASE, "status.json"), now, 96)
+    shutil.rmtree(os.path.join(BASE, "feeds"), ignore_errors=True)
+    write_config(fusion=False)
+    with rasterio.open(susc_p, "w", **PROFILE) as dst:
+        dst.write(susc, 1)
+
+    base_cfg = open(os.path.join(BASE, "config.env")).read()
+    casos = [("uniforme 1.0 + 0.5 (hoy)", "", 0.5, True),
+             ("susc real + 0.5 (SIN re-derivar)", susc_p, 0.5, False),
+             ("susc real + 0.272 (coherente)", susc_p, 0.272, True)]
+    fallos = []
+    for nombre, tif, nivel, debe_alertar in casos:
+        cfg = os.path.join(BASE, "config_susc.env")
+        with open(cfg, "w") as f:
+            f.write(base_cfg + f'\nSUSC_TIF="{tif}"\nALERT_LEVEL={nivel}\n')
+        shutil.rmtree(os.path.join(BASE, "state"), ignore_errors=True)
+        subprocess.run([os.path.join(REPO, "monitor", "monitor.sh")],
+                       env={**os.environ, "SKIP_FETCH": "1", "CONFIG": cfg},
+                       capture_output=True, timeout=1800)
+        d = json.load(open(os.path.join(BASE, "out", "last_run.json")))
+        alerta = d["n_alerts"] > 0
+        ok = alerta == debe_alertar
+        print(f"  {'ok  ' if ok else 'FALLA'} {nombre:34s} "
+              f"{'ALERTA' if alerta else 'quiet':6s} ({d['n_alerts']} pasos, "
+              f"pico {max(s['max_probability'] for s in d['steps']):.3f}) "
+              f"— esperado {'ALERTA' if debe_alertar else 'quiet'}")
+        if not ok:
+            fallos.append(nombre)
+    print(f"\n[selftest susc] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 def main(fusion=False):
     shutil.rmtree(os.path.join(BASE, "state"), ignore_errors=True)
     shutil.rmtree(os.path.join(BASE, "out"), ignore_errors=True)
@@ -152,4 +209,6 @@ def main(fusion=False):
 
 
 if __name__ == "__main__":
+    if "--susc" in sys.argv:
+        sys.exit(susc_selftest())
     main(fusion="--fusion" in sys.argv)

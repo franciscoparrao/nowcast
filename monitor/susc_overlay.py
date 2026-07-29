@@ -9,8 +9,11 @@ grilla 0.1° del dominio. El producto responde "¿dónde preocuparse de verdad?"
 lluvia gatillante sobre ladera que puede fallar.
 
 ROTULADO HONESTO: es una capa de ANÁLISIS para GIS, no el índice operacional
-del monitor (que corre con susceptibilidad uniforme durante el evento — no se
-cambia la semántica del umbral en caliente). La agregación 30 m → 0.1° se
+del monitor. Desde 2026-07-29 el monitor TAMBIÉN cruza terreno, pero por otra
+vía y a propósito: `make_susc_grid.py` produce un ráster estático en la grilla
+del monitor (p90 por celda, con su ALERT_LEVEL derivado) que se genera UNA vez
+por nodo — la semántica del umbral no se cambia en caliente. La agregación
+30 m → 0.1° se
 entrega en dos sabores porque ninguno es inocente: MEAN diluye el filo de las
 laderas (hallazgo documentado del backtest distribuido) y MAX sobre-pesa el
 píxel peor. Donde el dominio no tiene cuenca modelada queda NaN (desconocido),

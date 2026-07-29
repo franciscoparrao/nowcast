@@ -205,7 +205,23 @@ EOF
 log "fusión (${#FUSE_LISTS[@]} feed(s) secundario(s), ${COMBINE:-noisy-or}): $FUSE_SUMMARY"
 
 SUSC_ARGS=(--uniform-susc 1.0)
-[[ -n "${SUSC_TIF:-}" ]] && SUSC_ARGS=(--susc "$SUSC_TIF")
+if [[ -n "${SUSC_TIF:-}" ]]; then
+    # DURO a propósito: si la config pide susceptibilidad real y el ráster no
+    # está, NO se cae a uniforme 1.0. Ese fallback silencioso convertiría el
+    # monitor en uno de timing puro mientras el ALERT_LEVEL sigue siendo el
+    # derivado PARA la susceptibilidad (0.272 vs 0.5) — es decir, alertaría de
+    # más creyendo que cruza terreno susceptible. Mejor no correr el ciclo.
+    if [[ ! -f "$SUSC_TIF" ]]; then
+        log "FATAL: SUSC_TIF=$SUSC_TIF no existe. Generarlo una vez en este nodo:"
+        log "  python3 $HERE/make_susc_grid.py --out \"$SUSC_TIF\""
+        log "  (o vaciar SUSC_TIF y volver a ALERT_LEVEL=0.5 para el monitor de timing)"
+        notify "nowcast-monitor: CONFIG INVÁLIDA" \
+               "SUSC_TIF apunta a un ráster inexistente ($SUSC_TIF); el ciclo no corrió." \
+               high config_invalida.hyst 6
+        exit 1
+    fi
+    SUSC_ARGS=(--susc "$SUSC_TIF")
+fi
 OUT_ARGS=()
 [[ "${WRITE_HAZARD_TIFS:-0}" == "1" ]] && OUT_ARGS=(--out-dir "$WORK_DIR/out/hazard")
 CAL_ARGS=()
