@@ -840,3 +840,98 @@ verbos; inventario headerless conserva sus 2 eventos; sweep con 0/nan/10¹¹
 corridas falla rápido en vez de colgar). Regresión de equivalencia: `run` y
 `watch` sobre el GeoTIFF real producen JSON **bit-idéntico al pre-fix**, y la
 paridad triple run↔watch↔Python sigue exacta.
+
+## Ronda 4 — auditoría del código operacional Python/shell (2026-08-01)
+
+**Alcance y método.** Las rondas 1-3 cubrieron el workspace Rust; esta ronda audita
+lo que nunca había sido auditado: el código operacional agregado desde el 21-jul
+(cadena fan-apex, susceptibilidad del monitor, retención, fusión). Protocolo de las
+rondas previas: cada hallazgo REPRODUCIDO en ejecución (sondas hostiles P1-P10,
+árbol sintético para la retención, monitor.sh corrido contra configs corruptas),
+no solo leído. Ejecutada inline (sin subagentes), sin modificar código y sin
+commitear — lección de la ronda 3.
+
+**Gate Rust re-verificado tras los cambios de deps (surtgis-core 1.0.0, swarm-abm):**
+19 suites, 106 tests, clippy `-D warnings`: todo verde. Selftests operacionales:
+fanapex 14/14, monitor base/fusión/susc todos OK.
+
+### HIGH (operacionales, encontrados en el evento real de Coelemu y confirmados en código)
+
+- **R4-H1 · monitor.sh: el dead-man switch se evalúa ANTES de la fusión.** El guard
+  de staleness/MIN_STEPS (líneas ~108-124) mira SOLO el status del feed primario;
+  `prepare_fusion.py` corre ~70 líneas después. Reproducido con datos reales
+  (evento Coelemu 31-jul): IMERG atrasado 499 min y GOES sano (107 pasos, 0 huecos,
+  33 min de latencia) → el ciclo se niega a correr. Anula la ganancia de la Fase A
+  exactamente en el escenario para el que se construyó (primario rezagado, secundario
+  cubriendo). El selftest --fusion no lo detecta porque ahí IMERG trae sus 96 pasos.
+  Decisión pendiente (semántica, no fix mecánico): evaluar el guard sobre la ventana
+  FUSIONADA vs permitir sustitución explícita por secundario sano.
+
+- **R4-H2 · comuna_impact: top_alto truncado a 60 sin decirlo.** En el evento hubo
+  209-220 comunas en nivel ALTO por ciclo y el JSON/reporte muestra 60: 149-160
+  ocultas. Coelemu (deslizamientos reales el 31-jul) cayó en la parte oculta en 3 de
+  7 ciclos, haciendo parecer que el sistema la perdió cuando estuvo en ALTO los 7.
+  Viola el principio "no silent caps" que el resto del proyecto aplica.
+
+- **R4-H3 · select_watchlist: las dos listas no pueden capturar comuna rural chica en
+  evento generalizado.** El índice peligro×terreno SATURA (131 comunas ≥0.95; 0.004
+  separan el rank 20 del 42 — a esa resolución el ranking sortea, no ordena) y la
+  lista de exposición corta por población (corte del evento: 118.696 hab). Coelemu
+  (15.895 hab, rank 64), Mulchén (42) y Collipulli (40) — las tres comunas del evento
+  — quedaron fuera por construcción. Es el caso simétrico del que motivó las dos
+  listas (La Serena): aquélla era ciudad grande invisible por peligro puro; ésta es
+  comuna chica invisible por población. Falta un tercer criterio o un índice que no
+  sature (p.ej. percentil del gatillo local vs su climatología).
+
+### MEDIUM
+
+- **R4-M1 · monitor.sh: el guard de SUSC_TIF corre DESPUÉS del exit-0 de "datos
+  insuficientes".** Reproducido: 50 pasos + SUSC_TIF inexistente → exit 0 sin
+  mención del error de config. Como el arranque en frío SIEMPRE pasa por "datos
+  insuficientes" (~48 h hasta llenar la ventana), un despliegue con SUSC_TIF mal
+  apuntado no se entera del error de config hasta 2 días después. Mover la
+  validación de config antes de los guards de datos (fail-fast).
+
+- **R4-M2 · make_susc_grid: el abort-si-muda solo cuenta celdas CON dato.** Las
+  celdas nodata (océano, pero también huecos interiores de cuenca/transfer) las lee
+  el motor como susc=0 → mudas permanentes; el abort itera solo los valores finitos
+  y el caso queda en un print informativo. Para el piloto y centro-sur es océano
+  (correcto), pero un bbox con hueco interior de modelo pasaría sin abortar.
+
+### LOW
+
+- R4-L1 · make_susc_grid:184 `np.nan_to_num(susc_nu, nan=np.nan)` es un no-op
+  confuso (reemplaza NaN por NaN); el clip hace el trabajo real.
+- R4-L2 · fanapex_cache.json acumula claves muertas entre bumps de versión (52 de
+  98 son v1, nunca se releen); purgar claves de versión vieja al guardar.
+- R4-L3 · abm_apex_footprint.window_km_for con pieces=[] revienta con ValueError
+  sin mensaje (inalcanzable desde main(), que valida antes; endurecer si se vuelve
+  librería).
+- R4-L4 · fan_apex_localidad: en el fallback defensivo de objetivo-punto (área
+  geométrica 0), target_visible_frac reporta 0.0 aunque el disco tenga celdas.
+- R4-L5 · fanapex_localidades escribe resumen.json con encoding del locale
+  (open sin encoding=); en esta máquina es UTF-8, pero es dependencia implícita.
+- R4-L6 · prune_forecast: el chequeo INTOCABLES sobre basename de ciclos es código
+  muerto (informes/runouts quedan fuera por construcción del glob 2026*) — la
+  protección real es estructural, el chequeo sugiere otra cosa.
+
+### Confirmado sólido (evidencia de ejecución)
+
+- Motor CLI: susc con grilla equivocada falla FUERTE y claro (exit 1, "grid does
+  not match forcing grid") — sin degradación silenciosa (P10).
+- prune_forecast sobre árbol sintético hostil: poda lo viejo, `--keep 20260731`
+  protege también los sufijos `_ecmwf`, informes/ y runouts/ intactos (P4).
+- fanapex_localidades: centroide "indeterminado" produce cambia=True /
+  corrige=False (no inventa correcciones); borde runout==8.0 inclusivo y
+  documentado; claves de cache invalidan por parámetro y por versión (P1-P3).
+- Los 4 modos de selftest verdes el mismo día de la auditoría.
+- El dead-man switch del feed (la parte que SÍ mira el primario) funcionó en el
+  evento real: se negó a correr sobre 15% de huecos en vez de reportar calma.
+
+### Plan sugerido (sin ejecutar)
+
+1. R4-M1 es fix mecánico y chico: subir la validación de SUSC_TIF arriba de los
+   guards de datos. 2. R4-H2 es una línea de honestidad en el JSON/reporte
+   ("60 mostradas de N en ALTO") + decidir si el cap sube. 3. R4-H1 y R4-H3 son
+   decisiones de diseño del usuario (semántica del guard con fusión; tercer
+   criterio de watchlist). 4. LOWs en la próxima pasada de mantención.
