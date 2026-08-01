@@ -72,6 +72,11 @@ KINGSTON = "/mnt/kingston/proyectos/postdoc/papers/paper1_susceptibilidad/factor
 RES = 0.1
 SUB = 400          # subceldas por celda 0.1° → ~28 m, la resolución nativa
 MIN_COVERAGE = 0.05  # bajo esto la celda no tiene terreno suficiente para hablar
+# Techo de píxeles de la grilla fina. Un dominio regional (Maule+Ñuble-Biobío,
+# 24×30 celdas) a SUB=400 son 115M px y ~4 copias en memoria; el muestreo se
+# baja automáticamente hasta caber, y se INFORMA (el p90 es estable al
+# submuestreo —verificado— pero el número usado no puede quedar oculto).
+MAX_FINE_PX = 40_000_000
 
 
 def source_rasters(basins):
@@ -88,12 +93,12 @@ def source_rasters(basins):
     return out
 
 
-def fine_mosaic(paths, lons, lats):
+def fine_mosaic(paths, lons, lats, sub):
     """Mosaico a resolución nativa sobre el bbox destino. Donde dos cuencas se
     solapan gana el MÁXIMO (mismo criterio que susc_overlay.aggregate: el borde
     de una cuenca no debe borrar el dato de la vecina)."""
-    fine_res = RES / SUB
-    W, H = len(lons) * SUB, len(lats) * SUB
+    fine_res = RES / sub
+    W, H = len(lons) * sub, len(lats) * sub
     tr = from_origin(lons[0] - RES / 2, lats[-1] + RES / 2, fine_res, fine_res)
     acc = np.full((H, W), np.nan, dtype="float32")
     for p in paths:
@@ -112,10 +117,10 @@ def fine_mosaic(paths, lons, lats):
     return acc, tr
 
 
-def aggregate(fine, nlat, nlon, stat):
+def aggregate(fine, nlat, nlon, stat, sub):
     """Bloques SUB×SUB → un valor por celda 0.1°, con el estadístico pedido
     calculado SOLO sobre los píxeles válidos del bloque."""
-    b = fine.reshape(nlat, SUB, nlon, SUB).transpose(0, 2, 1, 3).reshape(nlat, nlon, SUB * SUB)
+    b = fine.reshape(nlat, sub, nlon, sub).transpose(0, 2, 1, 3).reshape(nlat, nlon, sub * sub)
     valid = np.isfinite(b)
     cov = valid.mean(axis=2)
     fn = {"mean": np.mean, "max": np.max,
@@ -140,6 +145,9 @@ def main():
     ap.add_argument("--stat", choices=["p90", "p95", "mean", "max"], default="p90",
                     help="agregación 30 m → 0.1° (ver docstring: p90 por defecto)")
     ap.add_argument("--out", default=os.path.expanduser("~/nowcast-monitor/susc_0p1.tif"))
+    ap.add_argument("--sub", type=int, default=SUB,
+                    help=f"subceldas por lado y celda 0.1° (default {SUB} ≈ 28 m). Se baja "
+                         f"automáticamente si la grilla fina no cabe en memoria.")
     ap.add_argument("--trigger-k", type=float, default=float(os.environ.get("K", 4.0)),
                     help="k del TriggerModel, para derivar el ALERT_LEVEL coherente")
     ap.add_argument("--allow-mute", action="store_true",
@@ -155,8 +163,14 @@ def main():
     for p in paths:
         print(f"[susc]   origen: {os.path.relpath(p, KINGSTON)}")
 
-    fine, _ = fine_mosaic(paths, lons, lats)
-    susc, cov = aggregate(fine, len(lats), len(lons), a.stat)
+    sub = a.sub
+    while sub > 25 and len(lons) * sub * len(lats) * sub > MAX_FINE_PX:
+        sub //= 2
+    if sub != a.sub:
+        print(f"[susc] submuestreo bajado {a.sub}→{sub} (~{RES/sub*111000:.0f} m, "
+              f"{sub*sub} muestras/celda) para caber en {MAX_FINE_PX/1e6:.0f}M px de grilla fina")
+    fine, _ = fine_mosaic(paths, lons, lats, sub)
+    susc, cov = aggregate(fine, len(lats), len(lons), a.stat, sub)
 
     # el ráster se escribe north-up, igual que los feeds (lats vienen S→N)
     susc_nu = susc[::-1, :]

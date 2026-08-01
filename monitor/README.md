@@ -154,6 +154,31 @@ python3 monitor/fanapex_localidades.py --selftest
 python3 monitor/selftest.py --susc
 ```
 
+## Retención de ciclos (el disco NO se poda solo)
+
+`forecast_all.sh` + `analysis_all.sh` corren 4×/día y dejan ~9 directorios de
+ciclo diarios de ~1.1 GB. Nada los borraba: medido el 2026-08-01, en 19 días
+`~/nowcast-forecast` llegó a 80 GB y el disco de la máquina a 100%.
+
+```bash
+python3 monitor/prune_forecast.py                    # informe, NO borra
+python3 monitor/prune_forecast.py --apply            # retención 7 d / 10 d
+python3 monitor/prune_forecast.py --keep 20260731 --apply   # protege un evento
+```
+
+Qué borra y por qué se puede: el 98% del volumen son los cruces
+`hazard_x_susc_30m_*`, que son **caché, no dato** — `susc_overlay.py:319` los
+calcula como `hazard_0.1° × susceptibilidad_KINGSTON`, y ambos insumos
+sobreviven (el hazard 0.1° pesa 0.23 MB por dominio y se conserva; la
+susceptibilidad vive en KINGSTON). Regenerar un ciclo: `python3
+susc_overlay.py --forecast <ciclo>`, minutos y sin red. El crudo grib2/bz2 sí
+es irrecuperable pasados ~10 días en NOMADS, pero ya produjo el hazard 0.1°
+que se conserva; solo haría falta para re-derivar con otro umbral I-D.
+
+NUNCA toca `informes/` (el registro de constancia con su hash), `runouts/`,
+los `.json` ni los rásters de 0.1°. Marcha en seco por defecto: borrar exige
+`--apply` explícito.
+
 ## Limitaciones conocidas (léelas)
 
 1. **Latencia**: ~15-60 min con la fusión de fase A operando (GOES/DGA); ~5 h
