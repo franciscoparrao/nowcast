@@ -196,6 +196,18 @@ def main():
         "por_region": por_region,
         "top_alto": alto[["CUT", "COMUNA", "REGION", "peak_gfs", "peak_ecmwf", "peak_icon", "peak_worst",
                           "peak_terreno", "poblacion"]].head(60).to_dict("records"),
+        # R4-H2: top_alto es una MUESTRA, no la lista de ALTO — en un evento
+        # generalizado hubo 209-220 comunas en ALTO y este JSON mostraba 60 sin
+        # decirlo; Coelemu (deslizamientos reales el 31-jul-2026) quedó fuera de
+        # la muestra en 3 de 7 ciclos y pareció "perdida" cuando estuvo en ALTO
+        # los 7. La truncación ahora se declara donde vive el dato, no solo en
+        # el HTML. La lista COMPLETA con niveles está en comuna_impact.geojson.
+        "top_alto_es_muestra": len(alto) > 60,
+        "top_alto_nota": (
+            f"primeras {min(60, len(alto))} de {len(alto)} comunas en ALTO, "
+            f"ordenadas por peak_worst — la lista completa está en "
+            f"comuna_impact.geojson (campo nivel)"
+        ),
         "label": "cruce administrativo grueso (max 0.1° dentro del polígono comunal) — "
                  "NO es un mapa de exposición fina ni un aviso oficial. Población = "
                  "total censal 2024 de la comuna, cota superior, no expuestos reales.",
@@ -210,6 +222,9 @@ def main():
 
     log(f"{len(gdf)} comunas evaluadas | ALTO {len(alto)} (pob. {pob_alto:,}) | "
         f"MEDIO {len(medio)} (pob. {pob_medio:,}) | total barrido pob. {pob_total_barrido:,}")
+    if len(alto) > 60:
+        log(f"AVISO: top_alto del JSON es una MUESTRA (60 de {len(alto)} en ALTO) — "
+            f"lista completa en el geojson (R4-H2)")
     log("top 10 ALTO (peor de los 3 modelos):")
     for _, r in alto.head(10).iterrows():
         d = f"{r['divergencia_abs']:.2f}" if np.isfinite(r["divergencia_abs"]) else "n/a"

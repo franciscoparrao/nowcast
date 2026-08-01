@@ -181,7 +181,9 @@ def main():
                 nodata=np.nan, compress="deflate")
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     with rasterio.open(a.out, "w", **prof) as dst:
-        dst.write(np.clip(np.nan_to_num(susc_nu, nan=np.nan), 0.0, 1.0), 1)
+        # clip preserva NaN (nodata) y acota el estadístico a [0,1] (R4-L1:
+        # antes había un nan_to_num(nan=np.nan) no-op que confundía)
+        dst.write(np.clip(susc_nu, 0.0, 1.0), 1)
 
     v = susc_nu[np.isfinite(susc_nu)]
     sin_dato = int((~np.isfinite(susc_nu)).sum())

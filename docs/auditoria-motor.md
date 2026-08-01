@@ -935,3 +935,23 @@ fanapex 14/14, monitor base/fusión/susc todos OK.
    ("60 mostradas de N en ALTO") + decidir si el cap sube. 3. R4-H1 y R4-H3 son
    decisiones de diseño del usuario (semántica del guard con fusión; tercer
    criterio de watchlist). 4. LOWs en la próxima pasada de mantención.
+
+### Ronda 4 — cierre parcial (2026-08-01, mismo día)
+
+Aplicados y verificados en ejecución: **R4-M1** (bloque 0 de validación de config
+en monitor.sh, antes de todo fetch/guard — reproducida la sonda P8: ahora exit 1
+nombrando SUSC_TIF donde antes había exit 0 mudo; barrido de hermanas:
+NOWCAST_BIN y CALIBRATOR validados en el mismo bloque, ambos probados contra
+rutas inexistentes), **R4-H2** (comuna_impact.json declara `top_alto_es_muestra`
++ `top_alto_nota` con el N real, y loguea el AVISO al generar; el HTML ya era
+honesto — la superficie muda era el JSON), **R4-L1/L2/L3/L5/L6** (no-op fuera;
+purga de claves de versión vieja al guardar — 98→46 en vivo; ValueError con
+causa en window_km_for; encoding utf-8 explícito; aserción del invariante en
+prune). Selftests post-fix: fanapex 14/14, monitor base y --susc verdes.
+
+Quedan abiertos, por diseño (decisión del usuario, no fix mecánico): **R4-H1**
+(semántica del guard con fusión), **R4-H3** (criterio de watchlist que no sature
+ni corte por población), **R4-M2** (distinguir nodata océano vs interior exige
+máscara de tierra), **R4-L4** (ruta defensiva de objetivo-punto). H2 queda
+verificado en sintaxis y claves aditivas; lo ejercita el próximo ciclo real del
+timer.

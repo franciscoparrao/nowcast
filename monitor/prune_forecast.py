@@ -72,8 +72,10 @@ def borrables(base, corte_30m, corte_crudo, protegidos):
         nombre = os.path.basename(d)
         if any(nombre.startswith(p) for p in protegidos):
             continue
-        if os.path.basename(d) in INTOCABLES:
-            continue
+        # R4-L6: la protección de informes/runouts es ESTRUCTURAL (el glob
+        # 2026* no los matchea); esta aserción la vuelve verificable en vez de
+        # aparentar un chequeo por nombre que nunca disparaba.
+        assert os.path.basename(d) not in INTOCABLES, f"glob rompió el invariante: {d}"
         if fecha < corte_30m:
             for p in glob.glob(os.path.join(d, "*", "hazard_x_susc_30m_*.tif")):
                 yield p, os.path.getsize(p), "cruce 30 m (regenerable)"

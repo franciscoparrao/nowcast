@@ -165,6 +165,11 @@ def window_km_for(ax, ay, pieces, runout_km):
     que quede fuera puntúa 0 sin inflar nada. Si ninguna cae dentro de la cota,
     se usa la más cercana para no devolver una ventana ciega.
     Devuelve (size_km, localidades_en_cuadro)."""
+    if not pieces:
+        # R4-L3: inalcanzable desde main() (que valida el objetivo antes), pero
+        # como función de librería debe fallar con la causa, no con el min()
+        raise ValueError("window_km_for: sin localidades objetivo (pieces vacío) — "
+                         "¿target_pieces no encontró la comuna en el censo?")
     here = Point(ax, ay)
     bound_m = (2.0 * runout_km + REACH_MARGIN_KM) * 1000.0
     dentro = [p for p in pieces if p["geom"].distance(here) <= bound_m]

@@ -53,6 +53,28 @@ notify() {
     fi
 }
 
+# --- 0. Validación de config (ANTES de todo fetch y guard de datos) ----------
+# R4-M1: el guard de SUSC_TIF vivía después del exit-0 de "datos insuficientes",
+# y como el arranque en frío SIEMPRE pasa por ahí (~48 h hasta llenar la
+# ventana), una config rota no avisaba en 2 días. Ninguna cantidad de datos
+# arregla una config mala → fail-fast, antes incluso de gastar red en el fetch.
+# Barrido de hermanas: SUSC_TIF, NOWCAST_BIN y CALIBRATOR son las tres rutas de
+# config que se consumían tarde (223, 241 y 228 respectivamente).
+CONFIG_ERR=""
+if [[ -n "${SUSC_TIF:-}" && ! -f "$SUSC_TIF" ]]; then
+    CONFIG_ERR="SUSC_TIF apunta a un ráster inexistente ($SUSC_TIF). Generarlo una vez en este nodo: python3 $HERE/make_susc_grid.py --out \"$SUSC_TIF\" — o vaciar SUSC_TIF y volver a ALERT_LEVEL=0.5 (monitor de timing). NO se cae a uniforme 1.0: el ALERT_LEVEL del config está derivado PARA la susceptibilidad y sin ella alertaría de más."
+elif [[ ! -x "$NOWCAST_BIN" ]]; then
+    CONFIG_ERR="NOWCAST_BIN no existe o no es ejecutable ($NOWCAST_BIN). Compilar con: cargo build --release -p nowcast-cli"
+elif [[ -n "${CALIBRATOR:-}" && ! -f "$CALIBRATOR" ]]; then
+    CONFIG_ERR="CALIBRATOR apunta a un JSON inexistente ($CALIBRATOR). Generarlo con 'nowcast calibrate' o vaciar la variable."
+fi
+if [[ -n "$CONFIG_ERR" ]]; then
+    log "FATAL config: $CONFIG_ERR"
+    notify "nowcast-monitor: CONFIG INVÁLIDA" "$CONFIG_ERR El ciclo no corrió." \
+        high config_invalida.hyst 6
+    exit 1
+fi
+
 # --- 1. Ingesta --------------------------------------------------------------
 # IMERG es el feed primario: si su ingesta falla, el ciclo aborta (como
 # siempre). Los feeds de fase A (GOES, DGA) son secundarios: su falla degrada
@@ -205,23 +227,10 @@ EOF
 log "fusión (${#FUSE_LISTS[@]} feed(s) secundario(s), ${COMBINE:-noisy-or}): $FUSE_SUMMARY"
 
 SUSC_ARGS=(--uniform-susc 1.0)
-if [[ -n "${SUSC_TIF:-}" ]]; then
-    # DURO a propósito: si la config pide susceptibilidad real y el ráster no
-    # está, NO se cae a uniforme 1.0. Ese fallback silencioso convertiría el
-    # monitor en uno de timing puro mientras el ALERT_LEVEL sigue siendo el
-    # derivado PARA la susceptibilidad (0.272 vs 0.5) — es decir, alertaría de
-    # más creyendo que cruza terreno susceptible. Mejor no correr el ciclo.
-    if [[ ! -f "$SUSC_TIF" ]]; then
-        log "FATAL: SUSC_TIF=$SUSC_TIF no existe. Generarlo una vez en este nodo:"
-        log "  python3 $HERE/make_susc_grid.py --out \"$SUSC_TIF\""
-        log "  (o vaciar SUSC_TIF y volver a ALERT_LEVEL=0.5 para el monitor de timing)"
-        notify "nowcast-monitor: CONFIG INVÁLIDA" \
-               "SUSC_TIF apunta a un ráster inexistente ($SUSC_TIF); el ciclo no corrió." \
-               high config_invalida.hyst 6
-        exit 1
-    fi
-    SUSC_ARGS=(--susc "$SUSC_TIF")
-fi
+# La existencia del ráster ya se validó en el bloque 0 (fail-fast, R4-M1); si
+# llegamos aquí con SUSC_TIF no vacío, el archivo existe. El "no caer a
+# uniforme 1.0 en silencio" vive allá arriba, con su razón.
+[[ -n "${SUSC_TIF:-}" ]] && SUSC_ARGS=(--susc "$SUSC_TIF")
 OUT_ARGS=()
 [[ "${WRITE_HAZARD_TIFS:-0}" == "1" ]] && OUT_ARGS=(--out-dir "$WORK_DIR/out/hazard")
 CAL_ARGS=()

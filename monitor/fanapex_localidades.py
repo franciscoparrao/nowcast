@@ -96,9 +96,15 @@ def load_cache():
 
 
 def save_cache(cache):
+    # R4-L2: al guardar se purgan las claves de versiones viejas — tras un bump
+    # de CACHE_VERSION jamás se releen (la clave nueva no matchea) y solo
+    # engordan el archivo (52 de 98 eran v1 muertas al momento del hallazgo).
+    vpre = f"v{CACHE_VERSION}|"
+    vivas = {k: v for k, v in cache.items() if k.startswith(vpre)}
     try:
         os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True)
-        json.dump(cache, open(CACHE_PATH, "w"), indent=1, ensure_ascii=False)
+        json.dump(vivas, open(CACHE_PATH, "w", encoding="utf-8"),
+                  indent=1, ensure_ascii=False)
     except OSError:
         pass
 
@@ -399,7 +405,7 @@ def main():
             res = json.load(open(rp))
             res["fan_apex"] = b
             tmp = rp + ".tmp"
-            with open(tmp, "w") as f:
+            with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(res, f, indent=1, ensure_ascii=False)
             os.replace(tmp, rp)   # atómico: nunca dejar un resumen.json truncado
             escritos += 1
