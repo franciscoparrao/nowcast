@@ -127,21 +127,30 @@ print(stale, degraded, int(min(stale_min, 9e6)), int(round(gap * 100)),
 EOF
 ) || { log "ERROR: no pude leer $STATUS"; exit 1; }
 
+# R4-H1: perder el feed primario (el calibrado) sigue siendo noticia URGENTE,
+# pero ya no implica "sin vigilancia": esa pregunta se responde sobre la UNIÓN
+# de feeds, después de la fusión. El guard bloqueante (MIN_STEPS/DEGRADED)
+# vive allá abajo — aquí solo se avisa la salud del primario.
+HAY_SECUNDARIOS=0
+[[ "${GOES_ENABLED:-0}" == "1" || "${DGA_ENABLED:-0}" == "1" ]] && HAY_SECUNDARIOS=1
 if (( STALE_FLAG )); then
-    notify "nowcast-monitor: FEED CAÍDO" \
-        "Último paso IMERG real: $NEWEST (hace $STALE_MIN_INT min > ${STALE_HOURS} h). Silencio ≠ calma: sin datos NO hay vigilancia." \
-        urgent stale "${RESTALE_HOURS:-12}"
+    if (( HAY_SECUNDARIOS )); then
+        notify "nowcast-monitor: feed PRIMARIO atrasado" \
+            "Último paso IMERG real: $NEWEST (hace $STALE_MIN_INT min > ${STALE_HOURS} h). La vigilancia sigue SI la fusión (GOES/DGA) cubre la ventana — el guard de datos decide sobre la unión; se pierde mientras tanto la forzante calibrada del umbral I-D." \
+            urgent stale "${RESTALE_HOURS:-12}"
+    else
+        notify "nowcast-monitor: FEED CAÍDO" \
+            "Último paso IMERG real: $NEWEST (hace $STALE_MIN_INT min > ${STALE_HOURS} h). Silencio ≠ calma: sin datos NO hay vigilancia." \
+            urgent stale "${RESTALE_HOURS:-12}"
+    fi
 fi
 
-DEGRADED=""
-if (( DEGRADED_FLAG )); then
-    DEGRADED=" [DEGRADADO: ${GAP_PCT_INT}% de pasos son huecos rellenados con 0]"
-    log "WARN: corrida degradada (${GAP_PCT_INT}% de huecos)"
-fi
-
-if (( N_STEPS < ${MIN_STEPS:-96} )); then
+# Arranque en frío absoluto: sin NINGÚN paso del primario no hay eje temporal
+# que fusionar (prepare_fusion necesita su ráster de referencia) — se mantiene
+# la salida amable de siempre en vez del error duro de prepare_fusion.
+if ! compgen -G "$WORK_DIR/steps/step_*.tif" > /dev/null; then
     notify "nowcast-monitor: datos insuficientes" \
-        "Solo $N_STEPS pasos en la ventana (mínimo ${MIN_STEPS:-96}). No se corre el motor todavía (arranque en frío o feed muy atrasado)." \
+        "El feed primario aún no tiene ningún paso (arranque en frío). No se corre el motor todavía." \
         default coldstart 24
     exit 0
 fi
@@ -226,6 +235,33 @@ EOF
 )
 log "fusión (${#FUSE_LISTS[@]} feed(s) secundario(s), ${COMBINE:-noisy-or}): $FUSE_SUMMARY"
 
+# --- 3b. Dead-man switch sobre la UNIÓN (R4-H1) --------------------------------
+# La pregunta del guard es "¿hay vigilancia posible?", y la respuesta correcta
+# es la unión de feeds: un paso cuenta si AL MENOS un feed trae dato real. Con
+# un solo feed la unión ES el primario → semántica de siempre, bit a bit. Con
+# fase A, un GOES sano cubre la cola que IMERG no publicó y el ciclo corre
+# (medido en Coelemu 31-jul: primario 78 pasos reales, unión 108). Silencio ≠
+# calma se conserva donde corresponde: si NINGÚN feed cubre, no se corre.
+read -r UNION_N UNION_GAP_PCT UNION_NEWEST < <(python3 - "$FUSION_JSON" <<'EOF'
+import json, sys
+u = json.load(open(sys.argv[1]))["union"]
+print(u["real"], int(round(u["gap_fraction"] * 100)), u["newest_real"] or "none")
+EOF
+) || { log "ERROR: fusion.json sin bloque union"; exit 1; }
+
+if (( UNION_N < ${MIN_STEPS:-96} )); then
+    notify "nowcast-monitor: datos insuficientes" \
+        "Solo $UNION_N pasos con dato real en la UNIÓN de feeds (mínimo ${MIN_STEPS:-96}; primario $N_STEPS). No se corre el motor todavía (arranque en frío o todos los feeds atrasados)." \
+        default coldstart 24
+    exit 0
+fi
+
+DEGRADED=""
+if (( UNION_GAP_PCT > $(python3 -c "print(int(float('${MAX_GAP_FRACTION:-0.10}')*100))") )); then
+    DEGRADED=" [DEGRADADO: ${UNION_GAP_PCT}% de la ventana sin dato real en NINGÚN feed]"
+    log "WARN: corrida degradada (${UNION_GAP_PCT}% de huecos en la unión)"
+fi
+
 SUSC_ARGS=(--uniform-susc 1.0)
 # La existencia del ráster ya se validó en el bloque 0 (fail-fast, R4-M1); si
 # llegamos aquí con SUSC_TIF no vacío, el archivo existe. El "no caer a
@@ -266,7 +302,7 @@ case $RC in
     # Al volver a quiet, resetear la histéresis para que la PRÓXIMA alerta
     # notifique de inmediato (notificamos cruces, no estados).
     rm -f "$WORK_DIR/state/alert"
-    log "quiet — $N_STEPS pasos, último dato $NEWEST$DEGRADED"
+    log "quiet — $UNION_N pasos reales en la unión (primario $N_STEPS, último $NEWEST; unión hasta $UNION_NEWEST)$DEGRADED"
     ;;
 2)
     DETAIL=$(python3 - "$RUN_JSON" 2>>"$LOG" <<'EOF'

@@ -955,3 +955,30 @@ ni corte por población), **R4-M2** (distinguir nodata océano vs interior exige
 máscara de tierra), **R4-L4** (ruta defensiva de objetivo-punto). H2 queda
 verificado en sintaxis y claves aditivas; lo ejercita el próximo ciclo real del
 timer.
+
+### R4-H1 — CERRADO (2026-08-06)
+
+Decisión de semántica: el dead-man switch pregunta "¿hay vigilancia posible?" y
+esa pregunta se responde sobre la **UNIÓN de feeds**, no sobre el primario; la
+salud de cada feed (¿perdimos la forzante calibrada?) se notifica POR FEED,
+como hasta ahora. Se descartó la alternativa de "sustitución de primario"
+porque el noisy-OR de la fusión ya es ese mecanismo — duplicarlo agregaba
+complejidad sin semántica nueva.
+
+Implementación: `prepare_fusion.py` emite el bloque `union` (pasos con dato
+real en ≥1 feed, gap de la unión, paso más fresco entre feeds); `monitor.sh`
+mueve MIN_STEPS y DEGRADED a esas métricas (con un solo feed la unión ES el
+primario → semántica anterior bit a bit), agrega el guard amable de arranque
+en frío absoluto (0 pasos del primario → exit 0, no el error duro de
+prepare_fusion), y el aviso de primario atrasado dice la verdad nueva: con
+secundarios habilitados la vigilancia sigue si la fusión cubre; sin ellos,
+"silencio ≠ calma" como siempre.
+
+Verificación: (1) replay del ciclo REAL que se negó el 01-ago (Coelemu):
+primario 78 pasos reales / unión 108 → el ciclo corre, 56 pasos en alerta,
+notificación urgente con el detalle — el mismo dato que antes producía
+"datos insuficientes". (2) `selftest.py --rescue` fija el caso que faltaba
+(primario 60<96 + GOES sano → ALERTA; sin GOES → no corre, exit 0): ese hueco
+del selftest --fusion (IMERG siempre traía 96 pasos) es lo que dejó vivir el
+bug. (3) Regresión completa: base, base-quiet, fusión, susc, fanapex y
+arranque-en-frío, todos verdes.

@@ -165,6 +165,67 @@ def susc_selftest():
     return 0 if not fallos else 1
 
 
+def rescue_selftest():
+    """R4-H1: el dead-man switch decide sobre la UNIÓN de feeds, no el primario.
+
+    Es el caso que el selftest --fusion NO cubría y que dejó vivir el bug: ahí
+    IMERG traía sus 96 pasos y el guard de MIN_STEPS nunca se ejercitaba con el
+    primario corto. Escenario medido en el evento real de Coelemu (31-jul):
+    primario BAJO el mínimo (60 pasos, llovizna) + GOES sano cubriendo la
+    ventana completa con la ráfaga en las horas que el primario no publicó.
+
+      - con GOES:  la unión tiene 96 pasos reales → el ciclo CORRE y ALERTA
+      - sin GOES:  la unión ES el primario (60 < 96) → 'datos insuficientes',
+        exit 0, sin last_run.json — la semántica de siempre, intacta
+    """
+    import subprocess
+
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now -= timedelta(minutes=now.minute % 30)
+    # primario corto y RECIENTE en llovizna (5 h de atraso: bajo el umbral
+    # stale de 6 h, para no mezclar este test con el aviso de feed caído)
+    imerg_end = now - timedelta(hours=5)
+    write_steps(os.path.join(BASE, "steps"), imerg_end, 60, burst_last=0)
+    write_status(os.path.join(BASE, "status.json"), imerg_end, 60)
+    shutil.rmtree(os.path.join(BASE, "feeds"), ignore_errors=True)
+    goes_dir = os.path.join(BASE, "feeds", "goes")
+    write_steps(os.path.join(goes_dir, "steps"), now, 96, burst_last=4)
+    write_status(os.path.join(goes_dir, "status.json"), now, 96,
+                 {"feed": "goes-qpe:selftest"})
+    write_config(fusion=True)
+
+    base_cfg = open(os.path.join(BASE, "config.env")).read()
+    casos = [("primario corto + GOES sano (rescate)", "GOES_ENABLED=1\nDGA_ENABLED=0", True),
+             ("primario corto, sin GOES (control)", "GOES_ENABLED=0\nDGA_ENABLED=0", False)]
+    fallos = []
+    for nombre, override, debe_correr in casos:
+        cfg = os.path.join(BASE, "config_rescue.env")
+        with open(cfg, "w") as f:
+            f.write(base_cfg + "\n" + override + "\n")
+        shutil.rmtree(os.path.join(BASE, "state"), ignore_errors=True)
+        rj = os.path.join(BASE, "out", "last_run.json")
+        if os.path.exists(rj):
+            os.remove(rj)
+        r = subprocess.run([os.path.join(REPO, "monitor", "monitor.sh")],
+                           env={**os.environ, "SKIP_FETCH": "1", "CONFIG": cfg},
+                           capture_output=True, text=True, timeout=1800)
+        corrio = os.path.exists(rj)
+        alerto = False
+        if corrio:
+            d = json.load(open(rj))
+            alerto = d["n_alerts"] > 0
+        ok = (corrio == debe_correr) and (alerto if debe_correr else r.returncode == 0) \
+            and (debe_correr or "datos insuficientes" in r.stdout + r.stderr
+                 or os.path.exists(os.path.join(BASE, "state", "coldstart")))
+        print(f"  {'ok  ' if ok else 'FALLA'} {nombre:38s} "
+              f"{'corrió y ALERTÓ' if alerto else ('corrió sin alerta' if corrio else 'no corrió')}"
+              f" — esperado {'ALERTA' if debe_correr else 'no correr (exit 0)'}")
+        if not ok:
+            fallos.append(nombre)
+    print(f"\n[selftest rescue] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 def main(fusion=False):
     shutil.rmtree(os.path.join(BASE, "state"), ignore_errors=True)
     shutil.rmtree(os.path.join(BASE, "out"), ignore_errors=True)
@@ -211,4 +272,6 @@ def main(fusion=False):
 if __name__ == "__main__":
     if "--susc" in sys.argv:
         sys.exit(susc_selftest())
+    if "--rescue" in sys.argv:
+        sys.exit(rescue_selftest())
     main(fusion="--fusion" in sys.argv)

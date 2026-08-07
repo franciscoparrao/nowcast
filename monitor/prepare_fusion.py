@@ -21,6 +21,17 @@ Salida (stdout, JSON): span, n_steps, y por feed la lista de rasters (en orden
 cronológico, separados por coma), pasos reales, huecos marcados del propio
 feed, y pasos cero-rellenados aquí (desglosando la cola de latencia).
 Exit 3 si el feed primario no tiene ningún paso real.
+
+Además emite el bloque `union` (R4-H1): pasos con dato REAL en al menos un
+feed, su fracción de huecos y el paso real más fresco entre todos. Es la
+superficie correcta para el dead-man switch del monitor: "¿hay vigilancia
+posible?" se responde con la unión (si GOES cubre la cola que IMERG aún no
+publica, la hay), mientras que "¿perdimos el feed primario calibrado?" sigue
+siendo una pregunta POR FEED que se notifica aparte. Antes el guard de
+MIN_STEPS miraba solo el primario y un GOES sano no podía rescatar el ciclo —
+exactamente el escenario para el que la fase A se construyó (medido en el
+evento de Coelemu, 31-jul-2026: IMERG atrasado 499 min, GOES con 0 huecos y
+33 min de latencia, ciclo negándose a correr).
 """
 
 import glob
@@ -106,6 +117,20 @@ def main():
             "zerofill_trailing_latency": trailing,
             "newest_real": newest_real,
         }
+
+    # Unión: un paso "tiene dato" si AL MENOS un feed lo trae real (no gapmark).
+    # Con un solo feed la unión ES el primario → los guards del monitor
+    # conservan la semántica de siempre en ese caso, bit a bit.
+    def real_in(k):
+        return any(k in steps and k not in marks for steps, marks in feeds.values())
+
+    union_real = sum(1 for k in axis if real_in(k))
+    out["union"] = {
+        "real": union_real,
+        "gap_fraction": round(1.0 - union_real / len(axis), 4) if axis else 1.0,
+        "newest_real": max((f["newest_real"] for f in out["feeds"].values()
+                            if f["newest_real"]), default=None),
+    }
     print(json.dumps(out))
 
 
