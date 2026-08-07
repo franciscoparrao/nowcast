@@ -119,4 +119,37 @@ else
     log "analysis_all: build_registro DESACTIVADO (REGISTRO_ENABLED=0)"
 fi
 
+# 7. Retención de ciclos. El disco NO se poda solo: 4 corridas/día × ~9 ciclos
+#    de ~1.1 GB llenaron 80 GB en 19 días y dejaron la máquina al 100% (medido
+#    2026-08-01). Va al FINAL a propósito: nunca debe poder tocar los productos
+#    del ciclo que se acaba de generar.
+#
+#    PRUNE_MODE gobierna la etapa y su default es DELIBERADO:
+#      report (default) — NO borra; solo dice cuánto liberaría. Así el problema
+#                         es visible en cada log en vez de acumularse callado,
+#                         y activarlo es cambiar una palabra.
+#      apply            — poda de verdad (retención 7 d rásters 30 m / 10 d crudo)
+#      off              — ni siquiera reporta
+#    Borrar datos del usuario en automático es una decisión suya, no un default
+#    que herede de un fix: por eso 'report' y no 'apply'.
+case "${PRUNE_MODE:-report}" in
+    apply)
+        if ! python3 "$HERE/prune_forecast.py" --base "$FORECAST_WORKDIR" \
+                --dias-30m "${PRUNE_DIAS_30M:-7}" --dias-crudo "${PRUNE_DIAS_CRUDO:-10}" \
+                --apply >>"$LOG" 2>&1; then
+            log "analysis_all: WARN prune_forecast falló; el ciclo queda válido, el disco no se podó"
+        fi
+        ;;
+    report)
+        python3 "$HERE/prune_forecast.py" --base "$FORECAST_WORKDIR" \
+            --dias-30m "${PRUNE_DIAS_30M:-7}" --dias-crudo "${PRUNE_DIAS_CRUDO:-10}" \
+            >>"$LOG" 2>&1 \
+            || log "analysis_all: WARN prune_forecast (modo report) falló"
+        log "analysis_all: retención en modo REPORT (no borra) — PRUNE_MODE=apply para podar"
+        ;;
+    *)
+        log "analysis_all: retención DESACTIVADA (PRUNE_MODE=${PRUNE_MODE})"
+        ;;
+esac
+
 log "analysis_all: fin"

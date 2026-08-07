@@ -179,6 +179,19 @@ NUNCA toca `informes/` (el registro de constancia con su hash), `runouts/`,
 los `.json` ni los rásters de 0.1°. Marcha en seco por defecto: borrar exige
 `--apply` explícito.
 
+Está **cableado como etapa 7 de `analysis_all.sh`**, al final (no puede tocar
+los productos del ciclo recién generado), y gobernado por `PRUNE_MODE`:
+
+| `PRUNE_MODE` | efecto |
+|---|---|
+| `report` (default) | no borra; loguea cuánto liberaría — el problema queda visible cada ciclo |
+| `apply` | poda de verdad (retención `PRUNE_DIAS_30M`=7 / `PRUNE_DIAS_CRUDO`=10) |
+| `off` | ni siquiera reporta |
+
+El default es `report` a propósito: borrar datos en automático es decisión del
+operador, no algo que se herede de un fix. Ritmo medido: ~10 GB/día, así que en
+modo `report` el log dirá cuánto se está acumulando hasta que decidas.
+
 ## Limitaciones conocidas (léelas)
 
 1. **Latencia**: ~15-60 min con la fusión de fase A operando (GOES/DGA); ~5 h

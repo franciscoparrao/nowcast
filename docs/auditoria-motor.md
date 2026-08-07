@@ -1016,3 +1016,24 @@ hubiera descargado ahí, el monitor no habría podido verlo.
 Pendiente derivado: decidir si se consigue/genera susceptibilidad para esa
 franja, o si el bbox operacional se recorta para no prometer cobertura que no
 existe. Mientras tanto el abort impide desplegar esa grilla sin saberlo.
+
+### R4-L4 y retención cableada — CERRADOS (2026-08-07)
+
+R4-L4: en la ruta defensiva de objetivo-PUNTO, `target_visible_frac` dividía
+por un área geométrica de 0 y reportaba 0.0 ("no veo nada del objetivo") cuando
+`target_mask` sí dibuja el disco de ALDEA_BUFFER_M y se ve entero. Ahora el
+denominador es el disco: verificado 0.95 (discretización) en vez de 0.00, con
+la ruta de polígono sin cambios.
+
+Retención cableada como etapa 7 de `analysis_all.sh`, al final del pipeline
+(no puede tocar los productos del ciclo recién generado), con `PRUNE_MODE`:
+`report` (default, no borra pero loguea cuánto liberaría), `apply`, `off`. El
+default NO borra a propósito: automatizar el borrado de datos del usuario es
+decisión suya, no algo heredado de un fix; en `report` el problema queda
+visible en cada log. Medición al cablearlo: **29 GB ya reacumulados en 6 días**
+desde la limpieza del 01-ago — el ritmo de ~10 GB/día está confirmado.
+
+**Estado de la ronda 4:** cerrados R4-H1, R4-H2, R4-M1, R4-M2, R4-L1…L6.
+Abiertos: **R4-H3** (watchlist saturada — decisión de diseño científico) y
+**R4-N1** (agujero de modelo sobre el Gran Concepción — decisión de datos:
+conseguir susceptibilidad para esa franja o recortar el bbox operacional).

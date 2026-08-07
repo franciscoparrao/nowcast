@@ -232,7 +232,15 @@ def classify(comuna, basin, lon, lat, *, window_km=WINDOW_KM, fan_buffer_m=FAN_B
     # celda-objetivo VISIBLE más cercana, así que un recorte solo puede
     # AGRANDAR el runout reportado (o hacer que un apex no alcance), nunca
     # acortarlo → puede perder un abanico, no inventarlo.
+    # R4-L4: en la ruta defensiva de objetivo-PUNTO (geometría no poligonal), el
+    # área geométrica es 0 pero target_mask sí dibuja un disco de ALDEA_BUFFER_M
+    # → el denominador correcto es ese disco, no 0. Reportar 0.0 ahí decía "no
+    # veo nada del objetivo" cuando en realidad se ve entero.
     area_total_km2 = sum(g.area for g in geoms) / 1e6
+    if area_total_km2 <= 0 and any(
+            not getattr(g, "geom_type", "").endswith("Polygon") for g in geoms):
+        n_pts = sum(1 for g in geoms if not getattr(g, "geom_type", "").endswith("Polygon"))
+        area_total_km2 = n_pts * math.pi * (ALDEA_BUFFER_M / 1000.0) ** 2
     area_vista_km2 = float(mask.sum()) * (res * res) / 1e6
     visible_frac = round(min(1.0, area_vista_km2 / area_total_km2), 3) if area_total_km2 else 0.0
     dist_to_target = distance_transform_edt(~mask) * res   # metros al objetivo
