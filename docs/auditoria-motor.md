@@ -982,3 +982,37 @@ notificación urgente con el detalle — el mismo dato que antes producía
 del selftest --fusion (IMERG siempre traía 96 pasos) es lo que dejó vivir el
 bug. (3) Regresión completa: base, base-quiet, fusión, susc, fanapex y
 arranque-en-frío, todos verdes.
+
+### R4-M2 — CERRADO, y destapa un HALLAZGO NUEVO (2026-08-07)
+
+`make_susc_grid.py` gana máscara de tierra (`Comunal_CPV24`, la misma fuente
+que comuna_impact) y separa las celdas mudas en tres clases con remedios
+distintos: **mar** (benigno — no hay laderas), **sin modelo** (cobertura 0: no
+existe ráster de susceptibilidad ahí) y **bajo MIN_COVERAGE** (hay modelo, pero
+la celda es casi toda mar). Las dos últimas abortan salvo `--allow-mute`; antes
+el abort solo miraba celdas CON dato, así que un hueco en tierra pasaba con un
+print. Degrada con aviso si la cartografía censal no está en la máquina, en vez
+de reventar o de afirmar una limpieza no verificada.
+
+**R4-N1 (HIGH, nuevo) — la grilla centro-sur tiene un agujero de modelo sobre
+el Gran Concepción y Arauco.** De las 63 celdas sin dato del dominio usado en
+la prueba de Coelemu, solo **3 son mar**: 56 son tierra SIN MODELO y 4 caen
+bajo MIN_COVERAGE. Las 56 tocan **21 comunas**, entre ellas Concepción,
+Hualpén, Chiguayante, Coronel, Lota, Arauco, Cañete, Curanilahue, Angol,
+Nacimiento y Los Sauces — varias de ellas EN LA WATCHLIST del evento. En esas
+celdas el motor lee susceptibilidad 0 → no pueden alertar jamás. Causa: los
+rásters `17_costa_transfer/*` tienen bounds rectangulares amplios pero nodata
+sobre esa franja costera, y `12_rio_biobio` empieza en lat −36.68, al sur del
+Gran Concepción. Es un hueco de los DATOS de paper1, no del código.
+
+Corrige una afirmación de la sesión del evento: se dijo que las 63 celdas eran
+"el océano, que es correcto", inferido de que se concentraban en las columnas
+más occidentales. La máscara de tierra lo desmiente: 60 de 63 son tierra. Con
+eso, la lectura del test de Coelemu se mantiene (Coelemu tiene susc 0.748 y su
+celda alertó; el denominador de "33-53% del dominio" ya excluía las mudas),
+pero **el dominio tenía un punto ciego sobre el Gran Concepción**: si el evento
+hubiera descargado ahí, el monitor no habría podido verlo.
+
+Pendiente derivado: decidir si se consigue/genera susceptibilidad para esa
+franja, o si el bbox operacional se recorta para no prometer cobertura que no
+existe. Mientras tanto el abort impide desplegar esa grilla sin saberlo.

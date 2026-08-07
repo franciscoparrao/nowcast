@@ -69,6 +69,11 @@ sys.path.insert(0, HERE)
 from fetch_goes_qpe import target_grid  # noqa: E402  (convenio de grilla IMERG)
 
 KINGSTON = "/mnt/kingston/proyectos/postdoc/papers/paper1_susceptibilidad/factors"
+# Límite comunal oficial — misma fuente que comuna_impact.py; sirve de máscara
+# de tierra para distinguir "nodata porque es mar" de "nodata porque falta el
+# modelo" (R4-M2).
+CENSUS_GPKG = os.path.expanduser(
+    "~/proyectos/censo-2024/Cartografia_censo2024_Pais/Cartografia_censo2024_Pais.gpkg")
 RES = 0.1
 SUB = 400          # subceldas por celda 0.1° → ~28 m, la resolución nativa
 MIN_COVERAGE = 0.05  # bajo esto la celda no tiene terreno suficiente para hablar
@@ -135,6 +140,38 @@ def aggregate(fine, nlat, nlon, stat, sub):
     return out, cov
 
 
+def land_mask(lons, lats):
+    """Máscara de TIERRA en la grilla destino, desde el límite comunal oficial
+    (Comunal_CPV24 del Censo 2024, la misma fuente que comuna_impact.py).
+
+    R4-M2: sin esto, `nodata` mezcla dos cosas que no se parecen. El motor lee
+    nodata como susceptibilidad 0 → celda MUDA para siempre, y eso es correcto
+    en el mar (no hay laderas que fallar) y una FALLA en tierra (hueco del
+    modelo: cuenca transfer sin ráster, borde mal cubierto). El abort solo
+    miraba las celdas con dato, así que un hueco interior pasaba con un print.
+
+    Devuelve None si la cartografía no está en esta máquina (nodo de despliegue
+    sin el censo): el llamador degrada a la comprobación vieja y lo dice, en
+    vez de reventar o de afirmar una limpieza que no verificó."""
+    if not os.path.exists(CENSUS_GPKG):
+        return None
+    try:
+        import geopandas as gpd
+        from rasterio.features import rasterize
+    except ImportError:
+        return None
+    gdf = gpd.read_file(CENSUS_GPKG, layer="Comunal_CPV24", columns=["geometry"])
+    if gdf.crs is not None and gdf.crs.to_epsg() != 4326:
+        gdf = gdf.to_crs("EPSG:4326")
+    tr = from_origin(lons[0] - RES / 2, lats[-1] + RES / 2, RES, RES)
+    # all_touched: una celda de 11 km que roza la costa TIENE laderas dentro;
+    # exigir que el centroide caiga en tierra descartaría comunas costeras
+    # enteras, que es justo donde el hueco de modelo es más probable.
+    return rasterize([(g, 1) for g in gdf.geometry if g is not None],
+                     out_shape=(len(lats), len(lons)), transform=tr,
+                     fill=0, dtype=np.uint8, all_touched=True) == 1
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -186,11 +223,49 @@ def main():
         dst.write(np.clip(susc_nu, 0.0, 1.0), 1)
 
     v = susc_nu[np.isfinite(susc_nu)]
-    sin_dato = int((~np.isfinite(susc_nu)).sum())
+    nodata = ~np.isfinite(susc_nu)
+    sin_dato = int(nodata.sum())
     print(f"[susc] {a.stat}: min {v.min():.3f} · mediana {np.median(v):.3f} · max {v.max():.3f}")
     print(f"[susc] cobertura de terreno por celda: {cov_nu.min()*100:.0f}%..{cov_nu.max()*100:.0f}%"
           + (f" · {sin_dato} celda(s) SIN DATO (el motor las lee como 0 → mudas)" if sin_dato else ""))
     print(f"[susc] → {a.out}")
+
+    # --- R4-M2: ¿esas celdas mudas son mar (benigno) o tierra (hueco de modelo)?
+    tierra = land_mask(lons, lats)
+    huecos_tierra = 0
+    if tierra is None:
+        print("[susc] AVISO: sin cartografía comunal en esta máquina — no puedo "
+              "distinguir nodata de mar vs hueco de modelo (R4-M2 sin verificar)")
+    else:
+        # land_mask ya rasteriza con el MISMO transform north-up del ráster de
+        # salida, así que comparte orientación con susc_nu: no se voltea.
+        huecos = nodata & tierra
+        huecos_tierra = int(huecos.sum())
+        mar = int((nodata & ~tierra).sum())
+        # Dos causas distintas con remedios distintos: sin modelo (cobertura 0 →
+        # falta el ráster de esa zona) vs bajo el umbral de cobertura (hay
+        # modelo, pero la celda es casi toda mar/fuera y MIN_COVERAGE la calla).
+        sin_modelo = huecos & (cov_nu == 0)
+        bajo_umbral = huecos & (cov_nu > 0)
+        n_sin, n_bajo = int(sin_modelo.sum()), int(bajo_umbral.sum())
+        print(f"[susc] de las {sin_dato} celdas sin dato: {mar} en el mar (correcto, "
+              f"no hay laderas) · {huecos_tierra} en TIERRA")
+        if huecos_tierra:
+            latsr = lats[::-1]
+            for nombre, m, n, remedio in (
+                    ("SIN MODELO (cobertura 0)", sin_modelo, n_sin,
+                     "falta el ráster de susceptibilidad de esa zona: añadir su cuenca "
+                     "a --basins, o recortar el bbox para no prometer cobertura que no hay"),
+                    (f"bajo MIN_COVERAGE ({MIN_COVERAGE:.0%})", bajo_umbral, n_bajo,
+                     "hay modelo pero la celda es casi toda mar/fuera; bajar MIN_COVERAGE "
+                     "si esa franja costera importa")):
+                if not n:
+                    continue
+                ys, xs = np.where(m)
+                muestra = ", ".join(f"({lons[x]:.2f},{latsr[y]:.2f})"
+                                    for y, x in list(zip(ys, xs))[:5])
+                print(f"[susc]   {n} {nombre} → {muestra}" + (" …" if n > 5 else ""))
+                print(f"[susc]     remedio: {remedio}")
 
     # --- umbral coherente (ver docstring) ------------------------------------
     med = float(np.median(v))
@@ -213,10 +288,21 @@ def main():
           + (f"alerta en E={e_hi:.2f} ({(e_hi-1)*100:+.0f}%)" if e_hi else "NUNCA alerta"))
     print(f"[susc] Con el ALERT_LEVEL actual (0.5) en cambio, la celda típica exigiría "
           f"T>={0.5/med:.2f}" + (" — IMPOSIBLE, monitor mudo" if 0.5 / med >= 1 else ""))
-    if mudas and not a.allow_mute:
-        sys.exit(f"[susc] ABORTA: {len(mudas)} celda(s) quedarían permanentemente mudas "
-                 f"(su peligro máximo no alcanza {alert} ni con lluvia infinita). "
-                 f"Usar otro --stat o --allow-mute si es deliberado.")
+    # Las dos formas de quedar muda son distintas y ambas abortan (R4-M2): por
+    # umbral (tiene dato, pero su peligro máximo no alcanza ALERT_LEVEL) o por
+    # nodata EN TIERRA (el motor la lee como 0). El mar no cuenta: ahí la mudez
+    # es la respuesta correcta.
+    if (mudas or huecos_tierra) and not a.allow_mute:
+        motivos = []
+        if mudas:
+            motivos.append(f"{len(mudas)} por umbral (su peligro máximo no alcanza "
+                           f"{alert} ni con lluvia infinita) — probar otro --stat")
+        if huecos_tierra:
+            motivos.append(f"{huecos_tierra} por falta de modelo en tierra (nodata → "
+                           f"el motor las lee como 0) — añadir la cuenca que cubre esa "
+                           f"zona a --basins, o achicar el bbox")
+        sys.exit(f"[susc] ABORTA: celdas permanentemente mudas → " + "; ".join(motivos)
+                 + ". Usar --allow-mute si es deliberado.")
     print(f"\n[susc] En config.env:\n  SUSC_TIF=\"{a.out}\"\n  ALERT_LEVEL={alert}")
 
 
