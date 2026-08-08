@@ -14,17 +14,22 @@ home cluster (p. ej. `sentinel`).
 - **ES** un monitor de *eventos en curso*: la fase A (GOES + DGA fusionados)
   baja la latencia efectiva de ~5 h a **~15-60 minutos** — detecta que una
   tormenta cruzó el umbral I-D mientras aún está ocurriendo.
-- **Sigue sin ser** alerta temprana en sentido estricto: el lead time solo se
-  vuelve positivo con forzante *pronosticada* (fase B: ensemble pySTEPS sobre
-  GOES QPE → `ensemble_hazard`; la maquinaria ya existe en el core).
+- **Sigue sin ser** alerta temprana en sentido estricto. La fase B está
+  construida (`qpf_ensemble.py`, pySTEPS sobre GOES) y tiene +22% de skill
+  sobre persistencia, pero NO da lead time todavía: GOES QPE solo nunca cruza
+  el umbral I-D en lluvia orográfica templada (medido en el evento de Coelemu),
+  y un QPF por extrapolación hereda ese sesgo. Falta ajuste de QPE contra
+  IMERG/pluviómetros antes de extrapolar. Ver "Fase B" abajo.
 - La fusión corre sobre la **unión** de ventanas: donde un feed no tiene dato
   (la cola rezagada de IMERG, el arranque en frío de DGA) entra como cero y
   no aporta al noisy-OR; los feeds rápidos cubren esas horas. Todo relleno
   queda contado y logueado (`prepare_fusion.py`). Un feed secundario caído
   degrada la fusión y se avisa; nunca detiene el ciclo.
-- Con `SUSC_TIF` vacío corre con susceptibilidad uniforme 1.0: es un monitor
-  de **timing** (¿cuándo cruzó la lluvia el umbral?), no de **dónde** es más
-  peligroso. El raster RF regenerado se enchufa por config cuando exista.
+- Corre con **susceptibilidad real** de terreno (`make_susc_grid.py`), así que
+  discrimina *dónde*, no solo *cuándo*. `SUSC_TIF` y `ALERT_LEVEL` van ATADOS:
+  cambiar uno sin re-derivar el otro pierde eventos marginales en silencio.
+  Con `SUSC_TIF` vacío vuelve a ser monitor de **timing** (uniforme 1.0) y hay
+  que restaurar `ALERT_LEVEL=0.5`.
 - Antes de creerle a una sola notificación: **una temporada en modo sombra**,
   comparando el log contra reportes SERNAGEOMIN. Un monitor que nadie ha
   visto fallar es una demo.
