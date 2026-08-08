@@ -1037,3 +1037,62 @@ desde la limpieza del 01-ago — el ritmo de ~10 GB/día está confirmado.
 Abiertos: **R4-H3** (watchlist saturada — decisión de diseño científico) y
 **R4-N1** (agujero de modelo sobre el Gran Concepción — decisión de datos:
 conseguir susceptibilidad para esa franja o recortar el bbox operacional).
+
+### R4-H3 — INVESTIGADO; el candidato propuesto se DESCARTA con evidencia (2026-08-08)
+
+Se prototipó y midió el índice que yo mismo había propuesto (percentil del
+gatillo local contra su climatología) más tres alternativas distribucionales.
+Protocolo: medir la propiedad ESTRUCTURAL (¿satura?) sobre las 275 comunas del
+ciclo 20260731T06z, y usar el evento de Coelemu solo como cordura — no como
+objetivo a ajustar, que con n=1 sería sobreajuste. Sonda reproducible en
+`scripts/h3_climatology_probe.py` (climatología CR2MET v2.5, inviernos MJJAS
+1991-2020, 4586 acumulados de 5 días por comuna).
+
+**Primera hipótesis (que la culpa era el `max` de `zonal_peak`): FALSA.**
+Ningún estadístico distribucional rompe la saturación, porque el campo
+subyacente ya está saturado:
+
+| índice | separación rank 20→42 | comunas a ≥95% del máx |
+|---|---|---|
+| peak×terreno (actual) | 0.0096 | 130 |
+| media del peligro | 0.0196 | 55 |
+| p75 | 0.0088 | 77 |
+| fracción de área ≥0.8 | **0.0000** (empate total) | 92 |
+| percentil climatológico | 0.0122 | 72 |
+| periodo de retorno | 0.0784 | 2 |
+
+**Segunda hipótesis (percentil climatológico): TAMBIÉN FALSA.** Satura casi
+igual que el actual (72 comunas indistinguibles, rango comprimido a
+[0.42, 0.99]) y además rankea PEOR a las comunas del evento: Coelemu 35,
+Mulchén 78, **Collipulli 139** (el actual la pone 53).
+
+**La razón de fondo, y es el hallazgo real: el evento no fue climatológicamente
+inusual en ninguna parte.** Ninguna de las 245 comunas con climatología alcanzó
+un periodo de retorno > 1 temporada; el máximo del dominio fue 0.57. Coelemu
+recibió 97 mm en 5 días — percentil 96.6 de su propia serie, pero **igualado o
+superado 156 veces en 30 inviernos** (≈5 veces por invierno), y muy por debajo
+de su p99 (135 mm) y de su máximo histórico (225 mm).
+
+Consecuencia: **ningún índice basado en anomalía de lluvia podía singularizar a
+Coelemu, porque la lluvia allí no fue anómala.** El deslizamiento ocurrió con
+una lluvia que ese lugar ve varias veces por temporada. La información que
+distingue este caso NO está en el campo de precipitación acumulada ni en el
+peligro I-D a 0.1°.
+
+**Qué queda como camino real** (ninguno es un reordenamiento del ranking):
+1. **Humedad antecedente** — el core YA tiene `AntecedentTrigger` (Bogaard-Greco,
+   −48% de falsas alarmas a igual POD según la ronda 1) y NO está cableado a
+   `comuna_impact`. Es la hipótesis más plausible para "por qué esta vez sí".
+   No se pudo probar aquí: CR2MET termina en 2021 y la ventana IMERG del
+   monitor (54 h) es demasiado corta para caracterizar antecedente.
+2. **Resolución** — es la tesis del propio paper; a 0.1° la celda de Coelemu
+   mezcla 121 km² de laderas y valle.
+3. **Aceptar que el ranking de peligro no discrimina en evento generalizado** y
+   cambiar la pregunta operacional: en vez de "las 20 peores comunas", entregar
+   la lista completa de ALTO con un segundo eje (exposición, vulnerabilidad,
+   antecedente) para filtrar — que es lo que R4-H2 ya destapó al mostrar que se
+   ocultaban 150 comunas.
+
+No se implementó nada: el candidato que yo propuse no sobrevivió su propia
+medición, y shipear un índice que se ve plausible pero no discrimina habría
+sido peor que dejar el problema declarado.
