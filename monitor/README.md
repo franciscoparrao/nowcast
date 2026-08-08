@@ -221,3 +221,36 @@ modo `report` el log dirá cuánto se está acumulando hasta que decidas.
 5. IMERG Early sub-captura convección corta bajo el radar de 0.1°/30 min;
    los tres eventos de validación sí lo resolvieron, pero es un límite físico
    del producto, no del motor.
+
+## Fase B — QPF por ensemble (pySTEPS)
+
+`qpf_ensemble.py` extrapola los últimos cuadros del feed rápido y produce N
+miembros × K pasos futuros, que entran al motor por el mismo trait `Forcing`.
+Es la pieza que daría **lead time positivo** (hoy el mejor caso es latencia
+cero, porque toda la forzante es observada).
+
+Necesita un venv propio — pysteps choca con el matplotlib del sistema:
+
+```bash
+python3 -m venv ~/.venvs/nowcast-qpf
+~/.venvs/nowcast-qpf/bin/pip install "numpy<2" pysteps rasterio opencv-python-headless
+
+~/.venvs/nowcast-qpf/bin/python monitor/qpf_ensemble.py \
+    --steps ~/nowcast-monitor/feeds/goes/steps --out ~/nowcast-monitor/qpf \
+    --members 12 --leadsteps 6
+# --as-of YYYYmmddTHHMM corre como si fuera ese instante (replay honesto)
+```
+
+**Estado medido (evento Coelemu, 2026-08-08): la maquinaria funciona, el
+insumo no alcanza.** El QPF tiene **+22% de skill sobre persistencia** a 3 h
+(MAE 0.787 vs 1.007 mm/30min), con dispersión que crece con el horizonte, pero
+subestima la intensidad (2.25 vs 3.68 mm observados en el primer paso) y decae
+a cero demasiado rápido. El problema de fondo es otro: **GOES QPE solo NUNCA
+cruza el umbral I-D** en ese evento — 0 pasos en alerta en todo el dominio,
+pico global 0.214 < 0.315, y en la celda de Coelemu pico 0.035 contra 0.596 que
+dio IMERG. Es el sesgo geoestacionario en lluvia orográfica templada, ya
+documentado en las limitaciones, y un QPF lo hereda entero.
+
+Consecuencia: Fase B sobre GOES crudo NO da lead time para frontales de
+invierno en la zona centro-sur. El camino es corregir el sesgo de GOES contra
+IMERG/pluviómetros donde se solapan (ajuste de QPE) ANTES de extrapolar.
