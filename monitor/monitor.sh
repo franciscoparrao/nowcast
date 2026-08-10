@@ -21,6 +21,22 @@ LOCAL_CONFIG="${LOCAL_CONFIG:-$(dirname "$CONFIG")/config.local.env}"
 export BBOX WORK_DIR WINDOW_HOURS STALE_HOURS
 
 mkdir -p "$WORK_DIR/out" "$WORK_DIR/state"
+
+# Un solo ciclo por WORK_DIR a la vez. Sin esto, dos corridas concurrentes
+# escriben los mismos steps/ y status.json: medido el 2026-08-10, un fetcher
+# manual y el del timer sobre el mismo dominio terminaron en SEGFAULT del
+# proceso GOES. Pasa de verdad porque el arranque en frío (~30-40 min bajando
+# la ventana completa) es MÁS LARGO que el intervalo del timer (30 min), así
+# que el ciclo siguiente entra encima del anterior. systemd `Type=oneshot`
+# protege de dos instancias de la misma unidad, pero no de una corrida manual.
+# No-bloqueante a propósito: si ya hay un ciclo corriendo, este se salta — no
+# se encolan, porque el ciclo es sin estado y el siguiente tick reintenta.
+exec 9>"$WORK_DIR/state/monitor.lock"
+if ! flock -n 9; then
+    echo "[$(date -u +%FT%TZ)] ciclo omitido: ya hay uno corriendo sobre $WORK_DIR" \
+        | tee -a "$WORK_DIR/monitor.log"
+    exit 0
+fi
 LOG="$WORK_DIR/monitor.log"
 # Rotación simple: sobre 5 MB, conservar la mitad más reciente (nodo chico;
 # el log es fuente de verdad operacional pero no archivo histórico infinito).
