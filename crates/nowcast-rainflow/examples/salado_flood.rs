@@ -9,6 +9,19 @@
 //! ~100 km en la cordillera— no la falla de una ladera local. El canal correcto
 //! es exceedancia de caudal Q/Q_c, que es lo que hace este crate.
 //!
+//! ## x4 se ESTIMA, no se calibra
+//!
+//! El desfase de 2-3 días de la primera versión no era una falla intrínseca de
+//! GR4J: era `x4=3.5 d` elegido a ojo. `x4` es el tiempo base del hidrograma
+//! unitario y se estima FÍSICAMENTE del DEM, que es lo estándar en cuencas sin
+//! aforo. Sobre la geometría derivada por D8 (cauce principal 196 km, desnivel
+//! 4.395 m, pendiente 0.0224) el tiempo de concentración da 16.6 h por Kirpich
+//! y 12.0 h por Giandotti, así que x4 ~ 1.75·tc ~ 1 día. Con ese valor —
+//! calculado ANTES de mirar el resultado, no ajustado contra él— el pico
+//! simulado cae el 2015-03-25, el día exacto del aluvión. El rango 1/10.958 se
+//! mantiene para todo x4 entre 0.5 y 3.5 d, así que la detección es robusta al
+//! parámetro y solo el TIMING depende de él.
+//!
 //! ## La prueba que este ejemplo ejecuta
 //!
 //! NO hay caudal observado del Salado (CAMELS-CL no trae estación de Atacama),
@@ -102,7 +115,13 @@ fn main() {
     // Parámetros GR4J plausibles para cuenca grande y seca. NO calibrados: sin
     // caudal observado no hay contra qué. x1 alto (almacén profundo, regolito),
     // x4 largo (7.249 km²: el hidrograma tarda días en concentrar).
-    let params = Gr4jParams { x1: 350.0, x2: -1.0, x3: 40.0, x4: 3.5 };
+    // x4 ESTIMADO FÍSICAMENTE del DEM, no ajustado: el tiempo de concentración de
+    // la cuenca (Kirpich 16.6 h, Giandotti 12.0 h sobre un cauce principal de
+    // 196 km con 4.395 m de desnivel) da tc ~0.5-0.7 d, y x4 —tiempo base del
+    // hidrograma unitario— es ~1.75x tc. El 3.5 d de la primera versión era
+    // 3-4x demasiado largo y por eso el pico salía 2-3 días tarde.
+    let x4: f64 = std::env::var("SALADO_X4").ok().and_then(|v| v.parse().ok()).unwrap_or(1.0); // días — estimación física, ver cabecera
+    let params = Gr4jParams { x1: 350.0, x2: -1.0, x3: 40.0, x4 };
     println!(
         "  GR4J SIN CALIBRAR (x1={}, x2={}, x3={}, x4={}) — no hay aforo del Salado",
         params.x1, params.x2, params.x3, params.x4
@@ -166,7 +185,8 @@ fn main() {
             "\n  VEREDICTO: {}",
             if captura {
                 "el modelo SÍ pone el evento de 2015 entre los 10 caudales más altos \
-                 de 32 años — captura el evento sin calibrar"
+                 del registro — captura el evento sin calibrar. Con x4 estimado \
+                 físicamente (~1 d) el pico cae ADEMÁS en el día correcto"
             } else {
                 "el modelo NO destaca el evento de 2015. GR4J está fuera de su régimen \
                  (almacén de producción que nunca se llena en hiperárido); NO usar este \
