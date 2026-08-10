@@ -47,7 +47,7 @@
 //!   cargo run -p nowcast-rainflow --example salado_flood
 
 use nowcast_core::{GridDims, SusceptibilityMap, TriggerModel};
-use nowcast_rainflow::{FloodNowcast, FloodThreshold, RainflowForcing};
+use nowcast_rainflow::{FloodNowcast, FloodThreshold, HortonianParams, RainflowForcing, LAMBDA_ARIDO};
 use rainflow_core::Gr4jParams;
 use std::path::PathBuf;
 
@@ -143,8 +143,19 @@ fn main() {
     );
 
     let dims = GridDims::new(1, 1);
-    let forcing = RainflowForcing::gr4j(dims, 1.0, params, &pr, &pet)
-        .expect("GR4J falló sobre la forzante del Salado");
+    // SALADO_MODELO=hortoniano cambia la capa de PRODUCCIÓN (SCS-CN + UH
+    // triangular) manteniendo todo lo demás igual: misma forzante, mismo
+    // criterio de umbral, misma validación. Es la comparación controlada.
+    let modelo = std::env::var("SALADO_MODELO").unwrap_or_else(|_| "gr4j".to_string());
+    let forcing = if modelo == "hortoniano" {
+        let cn: f64 = std::env::var("SALADO_CN").ok().and_then(|v| v.parse().ok()).unwrap_or(88.0);
+        let tc_h: f64 = std::env::var("SALADO_TC_H").ok().and_then(|v| v.parse().ok()).unwrap_or(13.0);
+        println!("  HORTONIANO (SCS-CN cn={cn}, tc={tc_h} h, lambda={LAMBDA_ARIDO}) — todo estimado, nada ajustado");
+        let hp = HortonianParams { cn, tc_horas: tc_h, lambda: LAMBDA_ARIDO };
+        RainflowForcing::hortoniana(dims, 1.0, hp, &pr).expect("producción Hortoniana falló")
+    } else {
+        RainflowForcing::gr4j(dims, 1.0, params, &pr, &pet).expect("GR4J falló")
+    };
     let q_bruto = forcing.discharge().to_vec();
 
     // GR4J arranca con los almacenes en un estado por defecto, así que los

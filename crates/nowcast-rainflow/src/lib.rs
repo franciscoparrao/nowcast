@@ -26,6 +26,9 @@
 //! broadcast over the grid) so a hydrograph can compose with anything that
 //! expects a forcing.
 
+pub mod hortonian;
+pub use hortonian::{HortonianParams, LAMBDA_ARIDO, LAMBDA_CLASICO};
+
 use nowcast_core::{
     Alert, Driver, Forcing, GridDims, HazardField, SusceptibilityMap, TriggerModel,
 };
