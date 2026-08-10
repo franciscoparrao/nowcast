@@ -22,6 +22,29 @@
 //! mantiene para todo x4 entre 0.5 y 3.5 d, así que la detección es robusta al
 //! parámetro y solo el TIMING depende de él.
 //!
+//! ## Caso Huasco marzo 2015: por qué GR4J falla ahí
+//!
+//! Los dos paths de producción discrepan en ese caso —GR4J lo deja en el rango
+//! 1238/10958 (percentil 88.7) y el Hortoniano en el 27 (99.75)— y la duda era
+//! cuál acierta. Se resolvió con antecedentes publicados, no con criterio:
+//!
+//!   * Garcés et al. (SOCHID XXIV, AMTC U. de Chile), citando la modelación de
+//!     Gómez et al. (2017): los valles de Atacama "se caracterizan por tener
+//!     cauces con caudales de unos pocos m3/s", y durante el 25M el río El
+//!     Carmen, antes de la confluencia con El Tránsito, alcanzó un caudal
+//!     máximo de **63 m3/s** — un orden de magnitud sobre lo normal.
+//!   * El mismo trabajo describe el mecanismo como ACOPLADO: ondas de crecida
+//!     con alta carga de sedimento, más aportes de las quebradas laterales que
+//!     TAPONAN y avulsionan el cauce principal, inundando aguas arriba.
+//!
+//! Es decir, la dicotomía que yo había planteado —"fue quebrada, no crecida de
+//! main-stem, así que el path de crecidas correctamente no se dispara"— era
+//! FALSA: ocurrieron las dos cosas y estaban acopladas. La respuesta ruteada de
+//! la cuenca SÍ fue extrema, así que el rango 27 del Hortoniano es señal y el
+//! 1238 de GR4J era un falso negativo. La lección de método: no cerrar un caso
+//! ambiguo con la explicación que favorece al modelo propio; ir a buscar el
+//! antecedente.
+//!
 //! ## La prueba que este ejemplo ejecuta
 //!
 //! NO hay caudal observado del Salado (CAMELS-CL no trae estación de Atacama),
@@ -223,9 +246,10 @@ fn main() {
                     "el modelo pone el evento entre los 10 caudales más altos del \
                      registro — lo captura sin calibrar"
                 } else {
-                    "el modelo NO destaca el evento en el registro. O el mecanismo no es \
-                     de crecida de main-stem (p. ej. flujo detrítico de quebrada, que este \
-                     path no modela), o GR4J está fuera de su régimen"
+                    "el modelo NO destaca el evento en el registro. Antes de concluir que \
+                     el mecanismo no era de crecida, hay que VERIFICARLO con antecedentes: \
+                     en el Huasco 2015 la dicotomía 'quebrada vs main-stem' resultó FALSA \
+                     (ver cabecera) y el falso negativo era del modelo, no del mecanismo"
                 }
             );
         } else {
