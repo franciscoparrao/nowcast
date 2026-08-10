@@ -949,7 +949,7 @@ dependencies = [
  "roxmltree",
  "serde",
  "serde_json",
- "surtgis-core 1.0.0",
+ "surtgis-core 1.2.2",
  "thiserror",
 ]
 
@@ -1147,7 +1147,7 @@ dependencies = [
  "nowcast-core",
  "nowcast-surtgis",
  "serde_json",
- "surtgis-core 1.0.0",
+ "surtgis-core 1.2.2",
 ]
 
 [[package]]
@@ -1180,7 +1180,7 @@ dependencies = [
  "serde_json",
  "surtgis-algorithms",
  "surtgis-cloud",
- "surtgis-core 1.0.0",
+ "surtgis-core 1.2.2",
 ]
 
 [[package]]
@@ -1234,7 +1234,7 @@ version = "0.1.0"
 dependencies = [
  "ndarray",
  "nowcast-core",
- "surtgis-core 1.0.0",
+ "surtgis-core 1.2.2",
  "thiserror",
 ]
 
@@ -1250,7 +1250,7 @@ dependencies = [
  "serde_json",
  "surtgis-algorithms",
  "surtgis-cloud",
- "surtgis-core 1.0.0",
+ "surtgis-core 1.2.2",
  "swarm-abm",
 ]
 
@@ -1921,7 +1921,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "surtgis-algorithms"
-version = "1.0.0"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "csv",
@@ -1933,14 +1933,14 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
- "surtgis-core 1.0.0",
+ "surtgis-core 1.2.2",
  "surtgis-parallel",
  "thiserror",
 ]
 
 [[package]]
 name = "surtgis-cloud"
-version = "1.0.0"
+version = "1.2.2"
 dependencies = [
  "byteorder",
  "flate2",
@@ -1951,7 +1951,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "surtgis-core 1.0.0",
+ "surtgis-core 1.2.2",
  "thiserror",
  "tokio",
  "weezl",
@@ -1971,12 +1971,12 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tiff",
+ "tiff 0.10.3",
 ]
 
 [[package]]
 name = "surtgis-core"
-version = "1.0.0"
+version = "1.2.2"
 dependencies = [
  "anyhow",
  "flate2",
@@ -1989,17 +1989,17 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tiff",
+ "tiff 0.11.3",
 ]
 
 [[package]]
 name = "surtgis-parallel"
-version = "1.0.0"
+version = "1.2.2"
 dependencies = [
  "crossbeam",
  "ndarray",
  "rayon",
- "surtgis-core 1.0.0",
+ "surtgis-core 1.2.2",
  "thiserror",
 ]
 
@@ -2090,7 +2090,21 @@ dependencies = [
  "half",
  "quick-error",
  "weezl",
- "zune-jpeg",
+ "zune-jpeg 0.4.21",
+]
+
+[[package]]
+name = "tiff"
+version = "0.11.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b63feaf3343d35b6ca4d50483f94843803b0f51634937cc2ec519fc32232bc52"
+dependencies = [
+ "fax",
+ "flate2",
+ "half",
+ "quick-error",
+ "weezl",
+ "zune-jpeg 0.5.15",
 ]
 
 [[package]]
@@ -2613,10 +2627,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f423a2c17029964870cfaabb1f13dfab7d092a62a29a89264f4d36990ca414a"
 
 [[package]]
+name = "zune-core"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d56377fd46368984a170bc5aac5567e52ca5da874caa60bea39fcbca78fb658b"
+
+[[package]]
 name = "zune-jpeg"
 version = "0.4.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29ce2c8a9384ad323cf564b67da86e21d3cfdff87908bc1223ed5c99bc792713"
 dependencies = [
- "zune-core",
+ "zune-core 0.4.12",
+]
+
+[[package]]
+name = "zune-jpeg"
+version = "0.5.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27bc9d5b815bc103f142aa054f561d9187d191692ec7c2d1e2b4737f8dbd7296"
+dependencies = [
+ "zune-core 0.5.3",
 ]
