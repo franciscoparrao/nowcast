@@ -51,16 +51,19 @@ use nowcast_rainflow::{FloodNowcast, FloodThreshold, RainflowForcing};
 use rainflow_core::Gr4jParams;
 use std::path::PathBuf;
 
-const FORZANTE: &str = "~/nowcast-monitor-atacama/salado_flood_forzante.json";
+// Parametrizable para poder repetir el método en otra cuenca sin duplicar el
+// ejemplo: SALADO_FORZANTE / SALADO_EVENTO / SALADO_X4.
+const FORZANTE_DEFAULT: &str = "~/nowcast-monitor-atacama/salado_flood_forzante.json";
 const QUANTILE: f64 = 0.995; // Q_c = cuantil de la serie SIMULADA
 const ALERT_LEVEL: f64 = 0.5;
-const EVENTO: &str = "2015-03"; // aluvión de Chañaral, 25-26 mar 2015
+const EVENTO_DEFAULT: &str = "2015-03"; // aluvión de Chañaral, 25-26 mar 2015
 
 /// Lee el JSON que produce `monitor/flood_salado.py` sin dependencias extra:
 /// son tres arreglos planos y un par de escalares, no vale la pena serde_json
 /// en un ejemplo.
 fn leer_forzante() -> (Vec<String>, Vec<f64>, Vec<f64>, f64) {
-    let path = PathBuf::from(FORZANTE.replacen('~', env!("HOME"), 1));
+    let forzante = std::env::var("SALADO_FORZANTE").unwrap_or_else(|_| FORZANTE_DEFAULT.to_string());
+    let path = PathBuf::from(forzante.replacen('~', env!("HOME"), 1));
     let text = std::fs::read_to_string(&path).unwrap_or_else(|e| {
         panic!(
             "no pude leer {} ({e}).\nCorrer primero: python3 monitor/flood_salado.py --anios 1990 2021",
@@ -97,20 +100,32 @@ fn leer_forzante() -> (Vec<String>, Vec<f64>, Vec<f64>, f64) {
 }
 
 fn main() {
+    let evento = std::env::var("SALADO_EVENTO").unwrap_or_else(|_| EVENTO_DEFAULT.to_string());
     let (fechas, pr, pet, area) = leer_forzante();
     println!(
-        "Río Salado en Chañaral — cuenca {area:.0} km², {} días ({}..{})",
+        "cuenca {area:.0} km² — {} días ({}..{})",
         pr.len(),
         fechas.first().unwrap(),
         fechas.last().unwrap()
     );
     let mm_anual = pr.iter().sum::<f64>() / (pr.len() as f64) * 365.0;
     let pet_anual = pet.iter().sum::<f64>() / (pet.len() as f64) * 365.0;
-    println!(
-        "  clima: {mm_anual:.0} mm/año de lluvia contra {pet_anual:.0} de PET \
-         (índice de aridez {:.3}) — HIPERÁRIDO",
-        mm_anual / pet_anual
-    );
+    // El índice de aridez solo tiene sentido sobre varios años completos:
+    // anualizar una ventana de dos meses de invierno da un número absurdo.
+    if pr.len() >= 3 * 365 {
+        println!(
+            "  clima: {mm_anual:.0} mm/año de lluvia contra {pet_anual:.0} de PET \
+             (índice de aridez {:.3})",
+            mm_anual / pet_anual
+        );
+    } else {
+        println!(
+            "  ventana corta ({} días): lluvia total {:.0} mm — sin índice de aridez \
+             (necesita años completos)",
+            pr.len(),
+            pr.iter().sum::<f64>()
+        );
+    }
 
     // Parámetros GR4J plausibles para cuenca grande y seca. NO calibrados: sin
     // caudal observado no hay contra qué. x1 alto (almacén profundo, regolito),
@@ -136,11 +151,16 @@ fn main() {
     // primeros meses son transitorio de spin-up, no hidrología. Sin descartarlo
     // el "máximo de la serie" cae en el día 1 —lo que pasó en la primera
     // corrida de este ejemplo— y contamina cualquier ranking del evento.
-    const SPINUP_DIAS: usize = 730; // 2 años
-    let fechas: Vec<String> = fechas[SPINUP_DIAS..].to_vec();
-    let q: Vec<f64> = q_bruto[SPINUP_DIAS..].to_vec();
+    // Parametrizable y acotado: con una ventana corta (p. ej. dos meses de
+    // IMERG para un evento reciente) no se pueden descartar 2 años. Nunca más
+    // de un tercio de la serie, para no quedarse sin registro que rankear.
+    let spinup_pedido: usize = std::env::var("SALADO_SPINUP")
+        .ok().and_then(|v| v.parse().ok()).unwrap_or(730);
+    let spinup = spinup_pedido.min(fechas.len() / 3);
+    let fechas: Vec<String> = fechas[spinup..].to_vec();
+    let q: Vec<f64> = q_bruto[spinup..].to_vec();
     println!(
-        "  descartados {SPINUP_DIAS} días de spin-up (arranca en {}); quedan {} días",
+        "  descartados {spinup} días de spin-up (arranca en {}); quedan {} días",
         fechas.first().unwrap(),
         q.len()
     );
@@ -168,7 +188,7 @@ fn main() {
     let mut q_evento: Vec<(String, f64)> = fechas
         .iter()
         .zip(q.iter())
-        .filter(|(f, _)| f.starts_with(EVENTO))
+        .filter(|(f, _)| f.starts_with(evento.as_str()))
         .map(|(f, &v)| (f.clone(), v))
         .collect();
     q_evento.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
@@ -176,23 +196,35 @@ fn main() {
         let rango = q.iter().filter(|&&x| x > *valor).count() + 1;
         let pct = 100.0 * (1.0 - rango as f64 / q.len() as f64);
         println!(
-            "  máximo de {EVENTO} (aluvión de Chañaral): {valor:.3} mm/día el {fecha} \
+            "  máximo de {evento} (evento conocido): {valor:.3} mm/día el {fecha} \
              → rango {rango} de {} (percentil {pct:.2})",
             q.len()
         );
+        // El test de RANGO solo significa algo con un registro largo: sobre una
+        // ventana de pocas semanas que contiene el evento, "rango 1" es trivial.
+        let registro_util = q.len() >= 3 * 365;
         let captura = rango <= 10;
-        println!(
-            "\n  VEREDICTO: {}",
-            if captura {
-                "el modelo SÍ pone el evento de 2015 entre los 10 caudales más altos \
-                 del registro — captura el evento sin calibrar. Con x4 estimado \
-                 físicamente (~1 d) el pico cae ADEMÁS en el día correcto"
-            } else {
-                "el modelo NO destaca el evento de 2015. GR4J está fuera de su régimen \
-                 (almacén de producción que nunca se llena en hiperárido); NO usar este \
-                 path como vigilancia para el Salado sin un modelo de exceso de infiltración"
-            }
-        );
+        if registro_util {
+            println!(
+                "\n  VEREDICTO (rango, registro de {:.0} años): {}",
+                q.len() as f64 / 365.0,
+                if captura {
+                    "el modelo pone el evento entre los 10 caudales más altos del \
+                     registro — lo captura sin calibrar"
+                } else {
+                    "el modelo NO destaca el evento en el registro. O el mecanismo no es \
+                     de crecida de main-stem (p. ej. flujo detrítico de quebrada, que este \
+                     path no modela), o GR4J está fuera de su régimen"
+                }
+            );
+        } else {
+            println!(
+                "\n  VEREDICTO: registro de solo {} días — el rango NO es informativo \
+                 (con una ventana que contiene el evento, rango 1 es trivial). \
+                 Lo que este caso prueba es el TIMING: pico simulado el {fecha}.",
+                q.len()
+            );
+        }
     }
 
     // --- El path completo, para dejarlo instanciado --------------------------

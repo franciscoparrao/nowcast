@@ -64,29 +64,31 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 KINGSTON = "/mnt/kingston/proyectos/postdoc/papers/paper1_susceptibilidad/factors"
-BASIN = "04_rio_salado"
+BASIN = "04_rio_salado"          # default; --basin lo cambia
 CR2 = "/mnt/kingston/proyectos/Agentes/CR2MET_pr_v2.5_day_1960-2021_005deg/pr"
 # Desembocadura del Salado, junto a Chañaral. El outlet se ENGANCHA al cauce
 # mapeado más cercano: el punto de la costa no cae exacto sobre la celda de
 # mayor acumulación.
-OUTLET_LON, OUTLET_LAT = -70.62, -26.35
+OUTLET_LON, OUTLET_LAT = -70.62, -26.35   # default; --outlet lo cambia
 EVENTO_2015 = ("2015-03-24", "2015-03-27")   # aluvión de Chañaral
 
 
-def delinear(snap_km=8.0):
+def delinear(snap_km=8.0, basin=None, outlet=None):
     """Cuenca aportante al Salado en Chañaral, por retroceso D8 sobre la
     hidrología de KINGSTON. Devuelve (máscara, transform, crs, área_km2)."""
     import rasterio
     from pyproj import Transformer
     from melton_cuencas import cuenca_aguas_arriba
 
-    h = os.path.join(KINGSTON, BASIN, "hydrology")
+    basin = basin or BASIN
+    olon, olat = outlet or (OUTLET_LON, OUTLET_LAT)
+    h = os.path.join(KINGSTON, basin, "hydrology")
     with rasterio.open(os.path.join(h, "flow_accumulation.tif")) as s:
         facc, crs, tr, res = s.read(1), s.crs, s.transform, s.res[0]
     with rasterio.open(os.path.join(h, "flow_direction_d8.tif")) as s:
         fdir = s.read(1)
 
-    x, y = Transformer.from_crs("EPSG:4326", crs, always_xy=True).transform(OUTLET_LON, OUTLET_LAT)
+    x, y = Transformer.from_crs("EPSG:4326", crs, always_xy=True).transform(olon, olat)
     r0, c0 = rasterio.transform.rowcol(tr, x, y)
     # Enganche: dentro del radio, la celda de MAYOR área aportante (el
     # main-stem). Sin esto el outlet cae en una ladera costera y la cuenca sale
@@ -100,6 +102,49 @@ def delinear(snap_km=8.0):
     mask = cuenca_aguas_arriba(fdir, rs, cs)
     area = float(mask.sum()) * (res * res) / 1e6
     return mask, tr, crs, area, (rs, cs), float(facc[rs, cs]) * (res * res) / 1e6
+
+
+def tiempo_concentracion(mask, basin, res):
+    """Tiempo de concentración por Kirpich y Giandotti sobre la geometría REAL
+    de la cuenca (cauce principal por retroceso D8 desde la salida, siguiendo
+    siempre el afluente de mayor área aportante). Es lo que fija x4 sin ajustar
+    nada: x4 ~ 1.75 x tc. Devuelve (area_km2, L_km, H_m, tc_kirpich_h,
+    tc_giandotti_h)."""
+    import rasterio
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE), "scripts"))
+    from detect_fan_apex import D8_OFFSETS
+    h = os.path.join(KINGSTON, basin, "hydrology")
+    with rasterio.open(os.path.join(h, "flow_accumulation.tif")) as s_:
+        facc = s_.read(1)
+    with rasterio.open(os.path.join(h, "flow_direction_d8.tif")) as s_:
+        fdir = s_.read(1)
+    with rasterio.open(os.path.join(KINGSTON, basin, "dem_30m.tif")) as s_:
+        dem = s_.read(1).astype(float)
+    dem[dem <= 0] = np.nan
+    ys, xs = np.where(mask)
+    # salida = celda de la cuenca con MAYOR acumulación
+    k = int(np.argmax(facc[ys, xs]))
+    r, c = int(ys[k]), int(xs[k])
+    L, zs = 0.0, []
+    for _ in range(400000):
+        if np.isfinite(dem[r, c]):
+            zs.append(dem[r, c])
+        best = None
+        for code, (dy, dx) in enumerate(D8_OFFSETS, start=1):
+            rr, cc = r - dy, c - dx
+            if (0 <= rr < fdir.shape[0] and 0 <= cc < fdir.shape[1]
+                    and mask[rr, cc] and int(fdir[rr, cc]) == code):
+                if best is None or facc[rr, cc] > facc[best[0], best[1]]:
+                    best = (rr, cc)
+        if best is None:
+            break
+        L += res * (math.sqrt(2) if (best[0] != r and best[1] != c) else 1.0)
+        r, c = best
+    H = (max(zs) - min(zs)) if zs else float("nan")
+    area = float(mask.sum()) * res * res / 1e6
+    tc_k = 0.0195 * (L ** 0.77) * ((H / L) ** -0.385) / 60.0 if L > 0 and H > 0 else float("nan")
+    tc_g = (4 * math.sqrt(area) + 1.5 * L / 1000) / (0.8 * math.sqrt(max(H, 1)))
+    return area, L / 1000.0, H, tc_k, tc_g
 
 
 def serie_cr2met(mask, tr, crs, y0, y1):
@@ -169,6 +214,9 @@ def pet_oudin(fechas, lat_deg, t_media_c):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--basin", default=BASIN, help="cuenca KINGSTON (04_rio_salado, 06_rio_huasco…)")
+    ap.add_argument("--outlet", nargs=2, type=float, default=[OUTLET_LON, OUTLET_LAT],
+                    metavar=("LON", "LAT"), help="desembocadura; se engancha al cauce mayor")
     ap.add_argument("--anios", nargs=2, type=int, default=[1979, 2021])
     ap.add_argument("--q-crit-p", type=float, default=0.995,
                     help="cuantil de la serie SIMULADA que define Q_c")
@@ -176,10 +224,14 @@ def main():
     a = ap.parse_args()
 
     print("[salado] delineando la cuenca aportante a Chañaral…")
-    mask, tr, crs, area, (rs, cs), area_outlet = delinear()
+    mask, tr, crs, area, (rs, cs), area_outlet = delinear(basin=a.basin, outlet=tuple(a.outlet))
     print(f"[salado] cuenca: {area:,.0f} km² (celda de salida declara {area_outlet:,.0f} km²)")
-    print(f"[salado]   referencia: el Salado en Chañaral son ~1.600 km² "
-          f"(docs/representacion-area-fanapex.md)")
+    ar, L, H, tck, tcg = tiempo_concentracion(mask, a.basin, 30.0)
+    print(f"[salado] geometría: cauce principal {L:.0f} km · desnivel {H:.0f} m · "
+          f"pendiente {H/(L*1000):.4f}")
+    print(f"[salado] tiempo de concentración: Kirpich {tck:.1f} h · Giandotti {tcg:.1f} h")
+    print(f"[salado]   → x4 físico (~1.75·tc) = {1.75*tcg/24:.2f} d (Giandotti) / "
+          f"{1.75*tck/24:.2f} d (Kirpich)")
 
     print(f"[salado] serie CR2MET {a.anios[0]}-{a.anios[1]} sobre la cuenca…")
     fechas, pr = serie_cr2met(mask, tr, crs, *a.anios)
@@ -187,15 +239,17 @@ def main():
           f"días con lluvia>1mm: {(pr>1).sum()} ({(pr>1).mean()*100:.1f}%)")
 
     import rasterio
-    with rasterio.open(os.path.join(KINGSTON, BASIN, "climate", "bio_01.tif")) as s:
+    with rasterio.open(os.path.join(KINGSTON, a.basin, "climate", "bio_01.tif")) as s:
         b1 = s.read(1).astype(float)
         b1[b1 < -100] = np.nan
         t_media = float(np.nanmean(b1))
-    pet = pet_oudin(fechas, OUTLET_LAT, t_media)
+    pet = pet_oudin(fechas, a.outlet[1], t_media)
     print(f"[salado]   T media {t_media:.1f} °C → PET media {pet.mean()*365:.0f} mm/año (Oudin)")
 
     json.dump({"fechas": fechas.tolist(), "pr": pr.tolist(), "pet": pet.tolist(),
-               "area_km2": area, "t_media_c": t_media},
+               "area_km2": area, "t_media_c": t_media, "basin": a.basin,
+               "L_km": L, "H_m": H, "tc_kirpich_h": tck, "tc_giandotti_h": tcg,
+               "x4_fisico_d": round(1.75*tcg/24, 3)},
               open(a.out.replace(".json", "_forzante.json"), "w"))
     print(f"[salado] → {a.out.replace('.json', '_forzante.json')}")
     return 0
