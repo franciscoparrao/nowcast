@@ -305,8 +305,8 @@ debris-flow model in the cellular-automata tradition \citep{dambrosio2003}, the 
 dependency), PS-InSAR/SBAS deformation \citep{ferretti2001,berardino2002}, and a wildfire-spread model (Rothermel surface-fire spread \citep{andrews2018} with a minimum-travel-time perimeter algorithm \citep{finney1998}) with a
 post-fire susceptibility cascade; a command-line runner exposes the engine
 (run, backtest, explain, watch, calibrate) and PyO3 bindings expose it to Python. The codebase is covered by
-$\sim$58 unit and documentation tests, the linter runs clean under
-\texttt{-D warnings}, and twenty-eight runnable examples reproduce every result below.
+$\sim$106 unit and documentation tests, the linter runs clean under
+\texttt{-D warnings}, and thirty runnable examples reproduce every result below.
 Each provider is a dependency-isolated crate implementing the same \texttt{Forcing}
 trait, so the design is reusable and extensible by construction: adding a hazard
 forcing is a new crate, not an edit to the core. That separation, not any single
@@ -837,6 +837,22 @@ forcing is adequate and the engine discriminates observed floods out of sample
 the triggering process}, not resolution in the abstract, a daily product that is
 useless for convective-burst landslides is sufficient for routed floods.
 
+The same arithmetic bites on a second, less obvious surface: the
+\emph{climatological reference} against which an event is judged anomalous. For
+the 2026 event of limitation~(iii) we compared the observed half-hourly
+accumulation at the affected commune against that commune's own winter
+climatology (CR2MET v2.5, May--September 1991--2020; \citealp{boisier2018cr2met}). At a 24\,h window the event sits
+at the 99.96th percentile, equalled twice in thirty winters ($\approx$1-in-15).
+Aggregated to five days the identical event falls to the 97th percentile and is
+equalled 127 times, roughly five times per winter, because it concentrated 87\,\%
+of its five-day total into two days. A rarity statistic computed on a window
+wider than the triggering burst therefore reports a routine event where a
+1-in-15-winter one occurred. This matters operationally because anomaly- or
+return-period-based triggers are a common alternative to fixed I--D curves: they
+inherit the resolution ceiling through the reference climatology even when the
+forcing itself is sub-daily, which is a failure mode the forcing-side diagnosis
+alone does not expose.
+
 \textbf{The inventory ceiling.} A second, independent ceiling is the validation
 target. The inventory is dated to $\sim$month and is incomplete, echoing a
 broader finding that uncertain identification of the triggering rainfall episode
@@ -884,9 +900,16 @@ We benchmark discrimination against supervised baselines (Section~5.2) and again
 the full ensemble of 35 published I--D thresholds (Section~5.1), but a formal
 calibration with uncertainty against an \emph{operational} early-warning system
 remains future work. (iii) The engine includes a streaming nowcast that ingests
-forcing step by step and emits alerts online (bit-identical to the batch engine),
-but validation here is hindcast: a live data feed and operational evaluation are
-not yet wired in.
+forcing step by step and emits alerts online (bit-identical to the batch engine).
+A live multi-feed ingestion chain is now wired (half-hourly GPM IMERG Early NRT,
+GOES-East QPE and in-situ rain gauges, fused by noisy-OR), and we replayed one dated
+2026 landslide event through it end to end. The engine placed the affected
+commune in alert for a ten-hour window on the day of the flows, crossing the
+threshold at 01:30 local time. But the alert covered a third of the domain at
+its peak: at $0.1^{\circ}$ the run identifies the region and the timing, not the
+commune, so this is a consistency check rather than an operational skill
+estimate. A shadow season against independent reports remains the necessary
+step, and the validation reported in Sections~5.1--5.6 is hindcast throughout.
 (iv) Antecedent soil moisture is captured only implicitly through long rolling
 windows, not as an explicit state. (v) The multi-trigger combination weights and
 the deformation critical rate are not yet calibrated. (vi) The snowmelt, InSAR-deformation
@@ -917,15 +940,17 @@ without touching the hazard logic.
 
 \section*{Code and data availability}
 
-The \texttt{nowcast} source (ten Rust crates, including a command-line runner and
-PyO3 Python bindings, plus twenty-eight examples) and all data-extraction scripts
+The \texttt{nowcast} source (eleven Rust crates, including a command-line runner and
+PyO3 Python bindings, plus thirty examples) and all data-extraction scripts
 are openly available at \url{https://github.com/franciscoparrao/nowcast} under the
 MIT or Apache-2.0 licence; a citable snapshot will be archived on Zenodo (DOI to be
 inserted on acceptance). \texttt{nowcast-core} builds and tests offline with no
 system dependencies and reproduces the headline resolution results; the provider
 crates wrap sibling engines of the author's Rust geohazard family through path
 dependencies. Input datasets are third-party and openly documented: CR2MET v2.5,
-GPM IMERG Final v07 (NASA GES DISC), CAMELS-CL
+GPM IMERG Final v07 and Early NRT v07 (NASA GES DISC; the latter feeds the live
+chain of limitation~(iii)), GOES-East ABI-L2-RRQPEF (NOAA, public AWS bucket),
+CAMELS-CL
 (\citealp{alvarez2018}; \url{https://doi.org/10.1594/PANGAEA.894885}) and the
 SERNAGEOMIN inventory.
 
