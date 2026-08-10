@@ -994,8 +994,17 @@ el abort solo miraba celdas CON dato, así que un hueco en tierra pasaba con un
 print. Degrada con aviso si la cartografía censal no está en la máquina, en vez
 de reventar o de afirmar una limpieza no verificada.
 
-**R4-N1 (HIGH, nuevo) — la grilla centro-sur tiene un agujero de modelo sobre
-el Gran Concepción y Arauco.** De las 63 celdas sin dato del dominio usado en
+**R4-N1 — RETRACTADO (2026-08-10). NO EXISTE tal agujero.** Lo que sigue se
+conserva como registro del error. La causa fue un bug de orientación en
+`make_susc_grid` (el ráster salía espejado verticalmente, ver commit 75813fa):
+se comparaba una máscara de nodata VOLTEADA contra una máscara de tierra bien
+orientada. Con el fix, de las 63 celdas sin dato del centro-sur **60 son mar**
+y solo 3 son tierra costera bajo MIN_COVERAGE. La afirmación ORIGINAL de la
+sesión del evento ("son el océano, que es correcto") era la correcta; esta
+"corrección" era el error. Texto original:
+
+> **R4-N1 (HIGH, nuevo) — la grilla centro-sur tiene un agujero de modelo sobre
+> el Gran Concepción y Arauco.** De las 63 celdas sin dato del dominio usado en
 la prueba de Coelemu, solo **3 son mar**: 56 son tierra SIN MODELO y 4 caen
 bajo MIN_COVERAGE. Las 56 tocan **21 comunas**, entre ellas Concepción,
 Hualpén, Chiguayante, Coronel, Lota, Arauco, Cañete, Curanilahue, Angol,
@@ -1096,3 +1105,30 @@ peligro I-D a 0.1°.
 No se implementó nada: el candidato que yo propuse no sobrevivió su propia
 medición, y shipear un índice que se ve plausible pero no discrimina habría
 sido peor que dejar el problema declarado.
+
+### R4-N2 (HIGH, 2026-08-10) — ráster de susceptibilidad espejado verticalmente
+
+`make_susc_grid` escribía el ráster invertido en latitud: la susceptibilidad del
+norte quedaba en el sur y viceversa (`susc[::-1]` sobre un arreglo que
+`fine_mosaic`/`aggregate` ya entregaban north-up). Corregido en 75813fa.
+
+**Lo que este bug enseña sobre el método de verificación, que importa más que el
+bug.** Sobrevivió intacto a la ronda 4 completa —incluidas las sondas hostiles y
+el barrido de hermanas— porque **todas las comprobaciones eran sobre
+estadísticos agregados**: min/mediana/max, contraste (p75−p25)/mediana,
+saturación, número de celdas mudas. Un flip vertical es invariante ante todos
+ellos. Peor: la MEDIANA es idéntica, así que el `ALERT_LEVEL` derivado tampoco
+cambiaba, y el ráster pasaba cualquier revisión de "¿los números son
+razonables?". Solo lo delata comparar contra la fuente **en una ubicación
+concreta**, que es exactamente lo que ninguna de las verificaciones hacía.
+
+Regla que queda: para cualquier producto GEOREFERENCIADO, un test de
+estadísticos no es verificación — hace falta al menos un punto de verdad
+conocida, o una fuente sintética con estructura espacial asimétrica. Añadido
+`make_susc_grid.py --selftest` (gradiente sintético 1-al-norte/0-al-sur).
+
+Efectos verificados uno por uno: R4-N1 retractado (arriba); el veredicto de
+Coelemu sobrevive con el cruce idéntico (31-jul 01:30 local); el paper necesitó
+un ajuste numérico ("a third" → "roughly 40 %" de extensión al pico); y en
+Atacama la grilla mala daba Chañaral 0.053 (muda para siempre) cuando en
+realidad es 0.768.
