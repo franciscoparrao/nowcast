@@ -75,7 +75,7 @@ fn leer_forzante() -> (Vec<String>, Vec<f64>, Vec<f64>, f64) {
         let key = "\"area_km2\":";
         let i = text.find(key).expect("falta area_km2");
         let resto = &text[i + key.len()..];
-        let fin = resto.find(|c| c == ',' || c == '}').unwrap();
+        let fin = resto.find([',', '}']).unwrap();
         resto[..fin].trim().parse::<f64>().unwrap_or(f64::NAN)
     };
     assert_eq!(fechas.len(), pr.len(), "fechas y pr descuadrados");
