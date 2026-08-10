@@ -57,6 +57,7 @@ import argparse
 import glob
 import math
 import os
+import shutil
 import sys
 
 import numpy as np
@@ -172,6 +173,63 @@ def land_mask(lons, lats):
                      fill=0, dtype=np.uint8, all_touched=True) == 1
 
 
+def selftest():
+    """Orientación norte-sur del ráster de salida, con verdad conocida.
+
+    Un ráster de susceptibilidad invertido verticalmente NO se nota: sigue
+    teniendo valores plausibles en [0,1], la mediana (y por tanto el
+    ALERT_LEVEL derivado) es idéntica, y el mapa se ve razonable. Solo se
+    delata comparando contra la fuente celda a celda — que es justo lo que
+    nadie hace. Este test construye una fuente sintética con gradiente conocido
+    (1 al NORTE, 0 al SUR) y verifica que la grilla lo preserve.
+
+    Historia: el bug existió (`susc[::-1]` sobre un arreglo que ya venía
+    north-up) y sobrevivió a una ronda de auditoría porque todas las
+    verificaciones miraban estadísticos agregados, no la geometría."""
+    import tempfile
+    from rasterio.transform import from_origin
+
+    global KINGSTON
+    d = tempfile.mkdtemp(prefix="susc_selftest_")
+    os.makedirs(os.path.join(d, "test_basin"))
+    S, N, W, E = -34.0, -33.0, -71.0, -70.0
+    res = 0.005
+    H, Wd = int((N - S) / res), int((E - W) / res)
+    arr = np.tile(((np.linspace(N, S, H) - S) / (N - S)).reshape(-1, 1), (1, Wd)).astype("float32")
+    with rasterio.open(os.path.join(d, "test_basin", "susceptibility_TEST.tif"), "w",
+                       driver="GTiff", height=H, width=Wd, count=1, dtype="float32",
+                       crs="EPSG:4326", transform=from_origin(W, N, res, res),
+                       nodata=np.nan) as f:
+        f.write(arr, 1)
+
+    kingston_prev, KINGSTON = KINGSTON, d
+    out = os.path.join(d, "g.tif")
+    argv_prev = sys.argv
+    sys.argv = ["make_susc_grid", "--bbox=-70.95,-33.95,-70.05,-33.05",
+                "--basins=test_basin", f"--out={out}", "--sub=20", "--allow-mute"]
+    try:
+        try:
+            main()
+        except SystemExit:
+            pass
+    finally:
+        sys.argv = argv_prev
+        KINGSTON = kingston_prev
+
+    with rasterio.open(out) as g:
+        a = g.read(1)
+        t = g.transform
+    norte, sur = float(np.nanmean(a[0])), float(np.nanmean(a[-1]))
+    ok = norte > sur
+    print(f"  fuente sintética: NORTE=1.00 · SUR=0.00")
+    print(f"  grilla: fila 0 (lat {t.f + 0.5*t.e:.2f}) = {norte:.3f} · "
+          f"fila -1 (lat {t.f + (a.shape[0]-0.5)*t.e:.2f}) = {sur:.3f}")
+    print(f"  {'ok   orientación norte-sur preservada' if ok else 'FALLA ráster INVERTIDO verticalmente'}")
+    shutil.rmtree(d, ignore_errors=True)
+    print(f"\n[selftest susc-grid] {'TODO OK' if ok else 'FALLA'}")
+    return 0 if ok else 1
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -209,9 +267,15 @@ def main():
     fine, _ = fine_mosaic(paths, lons, lats, sub)
     susc, cov = aggregate(fine, len(lats), len(lons), a.stat, sub)
 
-    # el ráster se escribe north-up, igual que los feeds (lats vienen S→N)
-    susc_nu = susc[::-1, :]
-    cov_nu = cov[::-1, :]
+    # NO se voltea: `fine` ya se construye north-up (from_origin usa lats[-1],
+    # el extremo NORTE, como origen) y `aggregate` preserva el orden de filas,
+    # así que `susc` sale con la fila 0 = norte, que es lo que espera el
+    # transform de salida. El `[::-1]` que había aquí invertía verticalmente el
+    # ráster: la susceptibilidad del norte quedaba escrita en el sur y
+    # viceversa. Detectado con una fuente sintética de gradiente conocido
+    # (1 al norte, 0 al sur) que salía exactamente al revés; ver selftest.
+    susc_nu = susc
+    cov_nu = cov
     transform = from_origin(lons[0] - RES / 2, lats[-1] + RES / 2, RES, RES)
     prof = dict(driver="GTiff", height=len(lats), width=len(lons), count=1,
                 dtype="float32", crs="EPSG:4326", transform=transform,
@@ -307,4 +371,6 @@ def main():
 
 
 if __name__ == "__main__":
+    if "--selftest" in sys.argv:
+        sys.exit(selftest())
     main()
