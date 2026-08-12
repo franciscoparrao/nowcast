@@ -383,6 +383,16 @@ def main():
     with open(os.path.join(work, "status.json"), "w") as f:
         json.dump(status, f, indent=1)
     print(f"[goes] status: {json.dumps(status)}")
+    # Hermana de fetch_imerg_early: mismo par xarray/h5 + rasterio/GDAL y mismo
+    # exit code consumido como señal de salud (monitor.sh:108). Acá el segfault
+    # de teardown TAMBIÉN se midió en producción (12-ago-2026, ciclos 19:17Z y
+    # 20:16Z del dominio atacama, misma firma y mismo fetched>=1), y era peor de
+    # diagnosticar: como GOES es feed secundario, su caída solo DEGRADA el ciclo
+    # y se anota como "feed caído" en vez de gritar — la fusión de fase A se
+    # perdía en silencio, que es justo la ganancia de lead time que existe.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":

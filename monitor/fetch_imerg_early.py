@@ -240,6 +240,19 @@ def main():
     with open(os.path.join(work, "status.json"), "w") as f:
         json.dump(status, f, indent=1)
     print(f"[fetch] status: {json.dumps(status)}")
+    # SIGSEGV al destruir el intérprete (medido 2026-08-12, reproducible al
+    # 100% con fetched>=1): xarray/h5 y rasterio/GDAL desarman cada uno su
+    # copia de HDF5 y el proceso muere DESPUÉS de que todo el trabajo quedó en
+    # disco (24 gránulos, 0 fallos de conversión, status.json escrito). Como
+    # monitor.sh solo ve exit!=0, descartaba un ciclo exitoso con "FETCH
+    # FALLÓ — El monitor NO corrió" y el dominio quedaba ciego cada 30 min.
+    # Mismo patrón y misma cura que forecast_gfs.py (eccodes) e fetch_icon /
+    # fetch_ecmwf: salida dura para saltarse la finalización, que es la única
+    # fase que revienta. Las rutas de falla usan sys.exit() ANTES de acá, así
+    # que siguen entregando exit!=0 — esto no enmascara errores reales.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
 
 
 if __name__ == "__main__":

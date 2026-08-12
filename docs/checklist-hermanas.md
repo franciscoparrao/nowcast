@@ -13,6 +13,19 @@ una ronda de auditoría completa en detectarse.
 | 4 | `gridded_rain_from_rasters` (±inf, ronda 2) | `susceptibility_from_raster` del **mismo archivo** | Ronda 3 (R3-M8) |
 | 5 | `run_runout` (pixel_size, ronda 1) | `from_footprint`, bypass público del mismo guard | Ronda 3 (R3-M10) |
 | 6 | `DepthField::from_states` (NaN, ronda 2) | `q_mass` NaN lo rodeaba **río arriba** (`apply_point_sources`) | Ronda 3 (R3-M7) |
+| 7 | Salida dura tras HDF5+GDAL en `forecast_gfs`, `fetch_icon`, `fetch_ecmwf` (cadena de **pronóstico**) | los fetchers de la cadena de **ingesta**: `fetch_imerg_early`, `fetch_goes_qpe`, `flood_salado` | Evento Atacama 12-ago-2026, EN PRODUCCIÓN (R5-H1) |
+
+La reincidencia #7 es la primera que **no** la encontró una auditoría sino el
+evento: el dominio atacama descartó ciclos exitosos durante horas porque el
+proceso moría con SIGSEGV al finalizar el intérprete *después* de dejar el
+trabajo en disco, y `monitor.sh` solo mira el exit code. La cura ya existía en
+la cadena de pronóstico desde antes y nadie la propagó a la de ingesta. Deja
+dos lecciones para el barrido: (a) las "hermanas" no son solo funciones del
+mismo struct, también son **scripts con el mismo par de dependencias nativas**;
+(b) el paso "un test hostil por hermana" debe guardar el invariante sobre la
+FAMILIA (`selftest.py --exit-contract` enumera quién mezcla HDF5 con GDAL), no
+sobre los archivos nombrados en el hallazgo — un test que lista archivos vuelve
+a fallar en cuanto aparece el séptimo.
 
 **Regla**: un fix de frontera (validación de entrada, panic OOB, NaN/±inf,
 rango [0,1]) no se cierra a nivel de *función*, se cierra a nivel de

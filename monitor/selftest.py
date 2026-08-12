@@ -226,6 +226,78 @@ def rescue_selftest():
     return 0 if not fallos else 1
 
 
+HDF5_FAMILIA = ("xarray", "h5py", "h5netcdf", "netCDF4", "cfgrib")
+
+
+def exit_contract_selftest():
+    """R5-H1: el segfault de teardown que descartaba ciclos EXITOSOS (12-ago-2026).
+
+    Un script que abre HDF5 y además usa rasterio termina con DOS copias de
+    HDF5 en el proceso; al finalizar el intérprete cada una desarma la suya y
+    el proceso muere con SIGSEGV DESPUÉS de que todo el trabajo quedó en disco.
+    monitor.sh y forecast_all.sh solo miran el exit code, así que descartaban
+    un ciclo bueno: medido en atacama con status.json fresco, 24 gránulos y 0
+    fallos de conversión, el ciclo igual se anunció como "FETCH FALLÓ — El
+    monitor NO corrió".
+
+    Este test NO reproduce el segfault (haría falta bajar HDF5 real, o sea red).
+    Guarda el INVARIANTE que impide la reincidencia, que es lo que falló acá: el
+    patrón ya estaba curado en forecast_gfs/fetch_icon/fetch_ecmwf desde antes y
+    nadie lo propagó a los fetchers del monitor. Por eso el chequeo se hace
+    sobre la FAMILIA y no sobre los archivos nombrados: si mañana aparece un
+    script nuevo que mezcle los dos stacks, este test falla hasta que lo blinden.
+    """
+    import subprocess
+
+    mdir = os.path.join(REPO, "monitor")
+    fallos = []
+
+    # (1) invariante estructural: toda hermana que mezcle los stacks sale duro.
+    hermanas = []
+    for f in sorted(os.listdir(mdir)):
+        if not f.endswith(".py") or f == "selftest.py":
+            continue
+        src = open(os.path.join(mdir, f)).read()
+        tiene_hdf5 = any(f"import {m}" in src or f"from {m}" in src for m in HDF5_FAMILIA)
+        if tiene_hdf5 and ("import rasterio" in src or "from rasterio" in src):
+            hermanas.append(f)
+    print(f"  hermanas HDF5+GDAL detectadas: {len(hermanas)}")
+    for f in hermanas:
+        src = open(os.path.join(mdir, f)).read()
+        ok = "os._exit(" in src
+        print(f"  {'ok  ' if ok else 'FALLA'} {f:24s} salida dura {'presente' if ok else 'AUSENTE'}")
+        if not ok:
+            fallos.append(f"{f}: sin os._exit")
+
+    # (2) contrato dinámico, sin red: éxito → 0, config incompleta → != 0.
+    #     Solo los dos fetchers del monitor admiten SKIP_FETCH; flood_salado
+    #     necesita CR2MET en disco, así que queda cubierto solo por (1).
+    work = os.path.join(BASE, "exitcontract")
+    shutil.rmtree(work, ignore_errors=True)
+    os.makedirs(work, exist_ok=True)
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now -= timedelta(minutes=now.minute % 30)
+    write_steps(os.path.join(work, "steps"), now, 96)
+    base = {**os.environ, "SKIP_FETCH": "1", "WORK_DIR": work,
+            "BBOX": "-70.80,-34.30,-69.70,-33.20"}
+    casos = [
+        ("fetch_imerg_early.py", "éxito sin red", base, 0),
+        ("fetch_imerg_early.py", "falta BBOX", {k: v for k, v in base.items() if k != "BBOX"}, 1),
+        ("fetch_goes_qpe.py", "falta BBOX", {k: v for k, v in base.items() if k != "BBOX"}, 1),
+    ]
+    for script, nombre, env_, esperado in casos:
+        r = subprocess.run([sys.executable, os.path.join(mdir, script)],
+                           env=env_, capture_output=True, text=True, timeout=600)
+        ok = (r.returncode == 0) if esperado == 0 else (r.returncode != 0)
+        print(f"  {'ok  ' if ok else 'FALLA'} {script:24s} {nombre:16s} "
+              f"exit={r.returncode} (esperado {'0' if esperado == 0 else '!=0'})")
+        if not ok:
+            fallos.append(f"{script} [{nombre}]: exit {r.returncode}")
+
+    print(f"\n[selftest exit-contract] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 def main(fusion=False):
     shutil.rmtree(os.path.join(BASE, "state"), ignore_errors=True)
     shutil.rmtree(os.path.join(BASE, "out"), ignore_errors=True)
@@ -274,4 +346,6 @@ if __name__ == "__main__":
         sys.exit(susc_selftest())
     if "--rescue" in sys.argv:
         sys.exit(rescue_selftest())
+    if "--exit-contract" in sys.argv:
+        sys.exit(exit_contract_selftest())
     main(fusion="--fusion" in sys.argv)

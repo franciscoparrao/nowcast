@@ -256,4 +256,11 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # Hermana de fetch_imerg_early/fetch_goes_qpe: mismo par xarray/h5 +
+    # rasterio/GDAL, luego mismo riesgo de SIGSEGV en la finalización. Acá el
+    # código de retorno SÍ tiene contrato (main() devuelve 0), así que se
+    # preserva en vez de forzar 0: las rutas de falla usan sys.exit() antes.
+    _rc = main()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(_rc or 0)
