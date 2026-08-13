@@ -638,6 +638,11 @@ name = "hashbrown"
 version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
+dependencies = [
+ "allocator-api2",
+ "equivalent",
+ "foldhash",
+]
 
 [[package]]
 name = "heapless"
@@ -949,7 +954,7 @@ dependencies = [
  "roxmltree",
  "serde",
  "serde_json",
- "surtgis-core 1.2.2",
+ "surtgis-core 1.2.3",
  "thiserror",
 ]
 
@@ -1017,11 +1022,11 @@ checksum = "953f07c43838f8e6f9758cab68bf5bed85465e7587ebe0b823f1bcd81978ad3a"
 
 [[package]]
 name = "lru"
-version = "0.16.4"
+version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f66e8d5d03f609abc3a39e6f08e4164ebf1447a732906d39eb9b99b7919ef39"
+checksum = "5d2f2f9b4ba7e6b24d95e7e899329d35be83bcded72c8540cdd5368932d1d90a"
 dependencies = [
- "hashbrown 0.16.1",
+ "hashbrown 0.17.1",
 ]
 
 [[package]]
@@ -1147,7 +1152,7 @@ dependencies = [
  "nowcast-core",
  "nowcast-surtgis",
  "serde_json",
- "surtgis-core 1.2.2",
+ "surtgis-core 1.2.3",
 ]
 
 [[package]]
@@ -1180,7 +1185,7 @@ dependencies = [
  "serde_json",
  "surtgis-algorithms",
  "surtgis-cloud",
- "surtgis-core 1.2.2",
+ "surtgis-core 1.2.3",
 ]
 
 [[package]]
@@ -1234,7 +1239,7 @@ version = "0.1.0"
 dependencies = [
  "ndarray",
  "nowcast-core",
- "surtgis-core 1.2.2",
+ "surtgis-core 1.2.3",
  "thiserror",
 ]
 
@@ -1250,7 +1255,7 @@ dependencies = [
  "serde_json",
  "surtgis-algorithms",
  "surtgis-cloud",
- "surtgis-core 1.2.2",
+ "surtgis-core 1.2.3",
  "swarm-abm",
 ]
 
@@ -1921,7 +1926,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "surtgis-algorithms"
-version = "1.2.2"
+version = "1.2.3"
 dependencies = [
  "anyhow",
  "csv",
@@ -1933,14 +1938,14 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
- "surtgis-core 1.2.2",
+ "surtgis-core 1.2.3",
  "surtgis-parallel",
  "thiserror",
 ]
 
 [[package]]
 name = "surtgis-cloud"
-version = "1.2.2"
+version = "1.2.3"
 dependencies = [
  "byteorder",
  "flate2",
@@ -1951,7 +1956,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "surtgis-core 1.2.2",
+ "surtgis-core 1.2.3",
  "thiserror",
  "tokio",
  "weezl",
@@ -1976,7 +1981,7 @@ dependencies = [
 
 [[package]]
 name = "surtgis-core"
-version = "1.2.2"
+version = "1.2.3"
 dependencies = [
  "anyhow",
  "flate2",
@@ -1994,12 +1999,12 @@ dependencies = [
 
 [[package]]
 name = "surtgis-parallel"
-version = "1.2.2"
+version = "1.2.3"
 dependencies = [
  "crossbeam",
  "ndarray",
  "rayon",
- "surtgis-core 1.2.2",
+ "surtgis-core 1.2.3",
  "thiserror",
 ]
 
