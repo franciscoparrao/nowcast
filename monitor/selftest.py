@@ -226,6 +226,94 @@ def rescue_selftest():
     return 0 if not fallos else 1
 
 
+def notify_contract_selftest():
+    """R5-H2: la histéresis solo se estampa tras una ENTREGA confirmada.
+
+    Estampar antes convertía un fallo de entrega en REALERT_HOURS de silencio.
+    Medido: con NTFY_TOPIC vacío el dominio atacama anotó "notificado" 10 h sin
+    que saliera un aviso, y con el canal ya arreglado la marca falsa tapaba la
+    alerta VIVA 6 h más. El invariante que se guarda acá es "no se marca lo que
+    no se entregó", y su corolario operativo —que importa más— es que un canal
+    roto REINTENTA cada ciclo en vez de callarse.
+    """
+    import http.server
+    import subprocess
+    import threading
+
+    recibidos = []
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            recibidos.append(self.headers.get("Title", ""))
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'{"id":"selftest"}')
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    puerto = srv.server_address[1]
+
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now -= timedelta(minutes=now.minute % 30)
+    write_steps(os.path.join(BASE, "steps"), now, 96, burst_last=6)
+    write_status(os.path.join(BASE, "status.json"), now, 96)
+    write_config(fusion=False)
+    base_cfg = open(os.path.join(BASE, "config.env")).read()
+
+    # (topic, url, debe_estamparse, debe_llegar_al_servidor)
+    casos = [
+        ("canal OK → SÍ marca", "selftest", f"http://127.0.0.1:{puerto}", True, True),
+        ("envío falla → NO marca", "selftest", "http://127.0.0.1:1", False, False),
+        ("topic vacío → NO marca", "", "http://127.0.0.1:1", False, False),
+    ]
+    marca = os.path.join(BASE, "state", "alert")
+    fallos = []
+    for nombre, topic, url, debe_marcar, debe_llegar in casos:
+        cfg = os.path.join(BASE, "config_notify.env")
+        with open(cfg, "w") as f:
+            f.write(base_cfg + f'\nNTFY_TOPIC="{topic}"\nNTFY_URL="{url}"\n')
+        shutil.rmtree(os.path.join(BASE, "state"), ignore_errors=True)
+        antes = len(recibidos)
+        r = subprocess.run([os.path.join(REPO, "monitor", "monitor.sh")],
+                           env={**os.environ, "SKIP_FETCH": "1", "CONFIG": cfg},
+                           capture_output=True, text=True, timeout=1800)
+        alerto = "NOTIFY" in r.stdout + r.stderr
+        marcado = os.path.exists(marca)
+        llego = len(recibidos) > antes
+        ok = alerto and (marcado == debe_marcar) and (llego == debe_llegar)
+        print(f"  {'ok  ' if ok else 'FALLA'} {nombre:26s} alertó={alerto} "
+              f"marca={'sí' if marcado else 'no':2s} (esperado {'sí' if debe_marcar else 'no'})"
+              f" entregado={'sí' if llego else 'no'}")
+        if not ok:
+            fallos.append(nombre)
+
+    # Corolario: con el canal roto, DOS ciclos seguidos avisan (no hay silencio).
+    cfg = os.path.join(BASE, "config_notify.env")
+    with open(cfg, "w") as f:
+        f.write(base_cfg + '\nNTFY_TOPIC="selftest"\nNTFY_URL="http://127.0.0.1:1"\n')
+    shutil.rmtree(os.path.join(BASE, "state"), ignore_errors=True)
+    avisos = 0
+    for _ in range(2):
+        r = subprocess.run([os.path.join(REPO, "monitor", "monitor.sh")],
+                           env={**os.environ, "SKIP_FETCH": "1", "CONFIG": cfg},
+                           capture_output=True, text=True, timeout=1800)
+        salida = r.stdout + r.stderr
+        if "NOTIFY" in salida and "suprimida por histéresis" not in salida:
+            avisos += 1
+    ok = avisos == 2
+    print(f"  {'ok  ' if ok else 'FALLA'} {'canal roto reintenta':26s} "
+          f"{avisos}/2 ciclos avisaron (esperado 2/2: sin entrega no hay silencio)")
+    if not ok:
+        fallos.append("canal roto no reintenta")
+
+    srv.shutdown()
+    print(f"\n[selftest notify-contract] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 HDF5_FAMILIA = ("xarray", "h5py", "h5netcdf", "netCDF4", "cfgrib")
 
 
@@ -348,4 +436,6 @@ if __name__ == "__main__":
         sys.exit(rescue_selftest())
     if "--exit-contract" in sys.argv:
         sys.exit(exit_contract_selftest())
+    if "--notify-contract" in sys.argv:
+        sys.exit(notify_contract_selftest())
     main(fusion="--fusion" in sys.argv)

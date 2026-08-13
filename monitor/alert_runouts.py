@@ -126,18 +126,28 @@ def main():
 
     ntfy_topic = os.environ.get("NTFY_TOPIC", "")
     ntfy_url = os.environ.get("NTFY_URL", "https://ntfy.sh")
+    # Hermana de notify() en monitor.sh: la marca de histéresis se estampa SOLO
+    # tras una entrega confirmada (12-ago-2026). Acá el orden invertido pegaba
+    # dos veces y más fuerte que en monitor.sh: (a) un --dry-run marcaba las
+    # localidades como alertadas, o sea una corrida en seco suprimía las
+    # alertas REALES de las horas siguientes —lo contrario de lo que significa
+    # "en seco"—; y (b) con el envío fallido se marcaba igual, convirtiendo un
+    # fallo de red en silencio. Ahora nada de eso muta el estado: solo el envío
+    # que devolvió OK lo hace.
     if a.dry_run or not ntfy_topic:
         if not ntfy_topic:
-            print("(NTFY_TOPIC no configurado — dry-run implícito, no se envía)", file=sys.stderr)
-        for _, name, *_ in fresh:
-            mark_alerted(a.state_dir, name)
+            print("(NTFY_TOPIC no configurado — no se envía y NO se marca: "
+                  "el próximo ciclo vuelve a intentar)", file=sys.stderr)
+        else:
+            print("(--dry-run: no se envía y NO se marca)", file=sys.stderr)
         return
 
     try:
         send_ntfy(title, body, "default", ntfy_url, ntfy_topic)
     except Exception as e:
-        print(f"WARN: envío a ntfy falló ({e}) — se sigue, el log es la fuente de verdad",
+        print(f"WARN: envío a ntfy falló ({e}) — NO se marca, se reintenta el próximo ciclo",
               file=sys.stderr)
+        return
     for _, name, *_ in fresh:
         mark_alerted(a.state_dir, name)
 
