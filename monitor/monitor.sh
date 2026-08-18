@@ -329,13 +329,74 @@ if [[ "${ARCHIVE_STEPS:-0}" == "1" && -s "$RUN_JSON" ]]; then
     cp "$RUN_JSON" "$WORK_DIR/out/history/run_$(date -u +%Y%m%dT%H%M).json" 2>/dev/null
 fi
 
+# --- 3.5 Path de CRECIDAS (mecanismo distinto, NO reemplaza al I-D) ------------
+# Por qué existe (17-ago-2026): el aluvión reportado en Puerto Viejo (Caldera)
+# ocurrió con 1.5 mm de lluvia satelital en su propia celda mientras la cabecera
+# andina recibía ~30 mm a 100 km al este, y la causal oficial de SENAPRED para esa
+# comuna era "Crecida". El I-D mide intensidad SOBRE LA CELDA: estructuralmente no
+# puede ver agua ruteada. Este paso corre el canal correcto (producción Hortoniana
+# sobre la cuenca aportante + excedencia Q/Q_c) sobre la MISMA ventana ya ingerida.
+#
+# Corre SIEMPRE, con I-D en alerta o en quiet — el caso que lo motivó es
+# precisamente "I-D quiet y crecida en curso". Y nunca mata el ciclo: si falta un
+# artefacto o el runner, degrada y avisa en el log, porque el I-D sigue siendo
+# válido sin esto.
+#
+# DEFAULT = MODO SOMBRA (FLOOD_NOTIFY=0): calcula, loguea y escribe out/flood.json
+# pero no notifica. Razón: Q_c es un cuantil de la serie SIMULADA (no hay aforo en
+# estas cuencas) y el Hortoniano tiene validación event-céntrica n=3 en dos
+# cuencas. Mandar eso al canal de avisos sin temporada de sombra erosiona la
+# confianza del único canal que llega al teléfono. FLOOD_NOTIFY=1 lo activa.
+FLOOD_NOTE=""
+if [[ "${FLOOD_ENABLED:-1}" == "1" && -d "$WORK_DIR/flood_basins" ]]; then
+    FLOOD_OUT=$(WORK_DIR="$WORK_DIR" FLOOD_NOTIFY="${FLOOD_NOTIFY:-0}" \
+        python3 "$HERE/flood_step.py" 2>>"$LOG")
+    FRC=$?
+    while IFS= read -r ln; do
+        [[ -n "$ln" ]] && log "$ln"
+    done <<< "$FLOOD_OUT"
+    case $FRC in
+    3)
+        log "crecidas: paso NO disponible (artefactos de cuenca o runner ausentes) — el ciclo sigue solo con el I-D"
+        ;;
+    2)
+        FLOOD_JSON="$WORK_DIR/out/flood.json"
+        FLOOD_DETAIL=$(python3 - "$FLOOD_JSON" 2>>"$LOG" <<'EOF'
+import json, sys
+d = json.load(open(sys.argv[1]))
+ex = [c for c in d["cuencas"] if c["excede"]]
+ex.sort(key=lambda c: -c["e_max"])
+partes = [f"{c['cuenca']} E={c['e_max']:.2f} (Q {c['q_mm_dia']:.2f} vs Q_c {c['q_crit']:.2f} mm/día, "
+          f"lluvia 24 h {c['lluvia_24h_mm']:.1f} mm, comunas: {', '.join(c['comunas'])})"
+          for c in ex]
+print(" · ".join(partes))
+EOF
+)
+        FLOOD_NOTE=" | CRECIDA: $FLOOD_DETAIL"
+        if [[ "${FLOOD_NOTIFY:-0}" == "1" ]]; then
+            notify "nowcast-monitor: ALERTA CRECIDA (Q/Q_c)" \
+                "$FLOOD_DETAIL. OJO: Q_c es cuantil de serie SIMULADA, sin aforo en estas cuencas — mide cuán inusual es la respuesta para este modelo, no magnitud absoluta. Detalle: $FLOOD_JSON" \
+                urgent flood_alert "${REALERT_HOURS:-6}"
+        else
+            log "crecidas: EXCEDE pero en MODO SOMBRA (FLOOD_NOTIFY=0) — no se notifica; ver $FLOOD_JSON"
+        fi
+        ;;
+    0)
+        rm -f "$WORK_DIR/state/flood_alert"
+        ;;
+    *)
+        log "crecidas: el paso falló (rc=$FRC) — el ciclo sigue solo con el I-D"
+        ;;
+    esac
+fi
+
 # --- 4. Interpretar y notificar ------------------------------------------------
 case $RC in
 0)
     # Al volver a quiet, resetear la histéresis para que la PRÓXIMA alerta
     # notifique de inmediato (notificamos cruces, no estados).
     rm -f "$WORK_DIR/state/alert"
-    log "quiet — $UNION_N pasos reales en la unión (primario $N_STEPS, último $NEWEST; unión hasta $UNION_NEWEST)$DEGRADED"
+    log "quiet — $UNION_N pasos reales en la unión (primario $N_STEPS, último $NEWEST; unión hasta $UNION_NEWEST)$DEGRADED$FLOOD_NOTE"
     ;;
 2)
     DETAIL=$(python3 - "$RUN_JSON" 2>>"$LOG" <<'EOF'
@@ -359,7 +420,7 @@ EOF
         exit 1
     fi
     notify "nowcast-monitor: ALERTA I-D en el dominio" \
-        "$DETAIL. Último dato IMERG: $NEWEST (~4 h de latencia)$DEGRADED$FUSION_NOTE. Feeds: $FUSE_SUMMARY. Detalle: $RUN_JSON" \
+        "$DETAIL. Último dato IMERG: $NEWEST (~4 h de latencia)$DEGRADED$FUSION_NOTE$FLOOD_NOTE. Feeds: $FUSE_SUMMARY. Detalle: $RUN_JSON" \
         urgent alert "${REALERT_HOURS:-6}"
     ;;
 *)

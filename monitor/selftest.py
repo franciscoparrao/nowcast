@@ -226,6 +226,100 @@ def rescue_selftest():
     return 0 if not fallos else 1
 
 
+def flood_selftest():
+    """R5-H3: el path de CRECIDAS corre en el ciclo y respeta el modo sombra.
+
+    El caso que lo motivó (Puerto Viejo, 17-ago-2026) es "I-D en quiet y crecida
+    en curso": el aluvión ocurrió con 1.5 mm en su propia celda y ~30 mm en la
+    cabecera, 100 km al este. Así que lo que hay que guardar no es solo que el
+    paso corra, sino que corra CUANDO EL I-D ESTÁ EN QUIET — si se enganchara
+    dentro de la rama de alerta, el evento que motivó todo pasaría de largo.
+
+    Sin red y sin KINGSTON: se fabrica una cuenca sintética cuyas celdas son el
+    cuadrante donde `write_steps` planta la ráfaga, y un Q_c bajo pero > 0.
+    """
+    import subprocess
+
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now -= timedelta(minutes=now.minute % 30)
+    bdir = os.path.join(BASE, "flood_basins")
+    shutil.rmtree(bdir, ignore_errors=True)
+    os.makedirs(bdir, exist_ok=True)
+    # write_steps pone la ráfaga en grid[2:5, 6:9] de una grilla 11×11.
+    celdas = [[r, c, 1.0 / 9.0] for r in range(2, 5) for c in range(6, 9)]
+    art = {
+        "slug": "sintetica", "comunas": ["Selftest"], "area_km2": 1000.0,
+        "cn": 88.0, "tc_horas": 12.0, "lambda": "arido", "dt_dias": 1.0,
+        "q_crit": 5.0, "q_crit_p": 0.995, "sin_aforo": True,
+        "q_crit_origen": "selftest (serie sintetica)", "celdas_0p1": celdas,
+    }
+    with open(os.path.join(bdir, "sintetica.json"), "w") as f:
+        json.dump(art, f)
+
+    runner = os.path.join(REPO, "target", "release", "nowcast-flood")
+    if not os.access(runner, os.X_OK):
+        print(f"  FALLA runner ausente: {runner}\n"
+              "        compilar: cargo build --release -p nowcast-rainflow --bin nowcast-flood")
+        return 1
+
+    fallos = []
+    # (nombre, burst_last, debe_exceder)
+    for nombre, burst, debe in (("ventana seca → no excede", 0, False),
+                                ("ráfaga → excede", 6, True)):
+        write_steps(os.path.join(BASE, "steps"), now, 96, burst_last=burst)
+        write_status(os.path.join(BASE, "status.json"), now, 96)
+        r = subprocess.run(
+            [sys.executable, os.path.join(REPO, "monitor", "flood_step.py"),
+             "--work", BASE, "--runner", runner],
+            capture_output=True, text=True, timeout=900)
+        excede = r.returncode == 2
+        ok = excede == debe
+        print(f"  {'ok  ' if ok else 'FALLA'} {nombre:26s} rc={r.returncode} "
+              f"{'(excede)' if excede else '(bajo Q_c)'}")
+        if not ok:
+            fallos.append(nombre)
+            print("        " + (r.stdout + r.stderr).strip()[:300])
+
+    # El escenario de Puerto Viejo en miniatura: lluvia que NO gatilla la ladera
+    # pero SÍ la cuenca. Una ráfaga fuerte no sirve para este test — con
+    # susceptibilidad uniforme 1.0 el peligro I-D satura en 1.00 y supera
+    # cualquier nivel. Con 1.5 mm por medio hora la intensidad queda en 3 mm/h,
+    # muy por debajo de Caine a 3 h (~9.6 mm/h) → factor de gatillo ~0.06 → I-D
+    # quiet; pero el total de 24 h (~17 mm) produce ~4.9 mm/día de escorrentía
+    # Hortoniana, sobre un Q_c de 3 → la crecida sí excede. Es exactamente la
+    # disociación que hace falta guardar.
+    write_steps(os.path.join(BASE, "steps"), now, 96, burst_last=6, burst_mm=1.5)
+    write_status(os.path.join(BASE, "status.json"), now, 96)
+    art["q_crit"] = 3.0
+    with open(os.path.join(bdir, "sintetica.json"), "w") as f:
+        json.dump(art, f)
+    write_config(fusion=False)
+    base_cfg = open(os.path.join(BASE, "config.env")).read()
+    for nombre, notify_flag, debe_notificar in (("sombra: NO notifica", "0", False),
+                                                ("FLOOD_NOTIFY=1: notifica", "1", True)):
+        cfg = os.path.join(BASE, "config_flood.env")
+        with open(cfg, "w") as f:
+            f.write(base_cfg + '\nALERT_LEVEL=0.5\nNTFY_TOPIC=""\n')
+        shutil.rmtree(os.path.join(BASE, "state"), ignore_errors=True)
+        r = subprocess.run([os.path.join(REPO, "monitor", "monitor.sh")],
+                           env={**os.environ, "SKIP_FETCH": "1", "CONFIG": cfg,
+                                "FLOOD_NOTIFY": notify_flag},
+                           capture_output=True, text=True, timeout=1800)
+        salida = r.stdout + r.stderr
+        corrio = "[flood]" in salida
+        quiet = "quiet —" in salida
+        notifico = "NOTIFY[urgent] nowcast-monitor: ALERTA CRECIDA" in salida
+        sombra = "MODO SOMBRA" in salida
+        ok = corrio and quiet and (notifico == debe_notificar) and (sombra != debe_notificar)
+        print(f"  {'ok  ' if ok else 'FALLA'} {nombre:26s} corrió={corrio} "
+              f"I-D quiet={quiet} notificó={notifico}")
+        if not ok:
+            fallos.append(nombre)
+
+    print(f"\n[selftest flood] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 def notify_contract_selftest():
     """R5-H2: la histéresis solo se estampa tras una ENTREGA confirmada.
 
@@ -438,4 +532,6 @@ if __name__ == "__main__":
         sys.exit(exit_contract_selftest())
     if "--notify-contract" in sys.argv:
         sys.exit(notify_contract_selftest())
+    if "--flood" in sys.argv:
+        sys.exit(flood_selftest())
     main(fusion="--fusion" in sys.argv)
