@@ -7,7 +7,7 @@ authors:
     family-names: Parra Ortiz
     affiliation: "Departamento de Ingeniería Informática, Universidad de Santiago de Chile, Santiago, Chile"
     email: francisco.parra.o@usach.cl
-    # orcid: "https://orcid.org/TODO"   # add before archival
+    orcid: "https://orcid.org/0009-0006-0435-1854"
 version: 0.1.0
 date-released: 2026-06-24
 license: "MIT OR Apache-2.0"
