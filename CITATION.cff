@@ -38,5 +38,5 @@ preferred-citation:
       affiliation: "Departamento de Ingeniería Informática, Universidad de Santiago de Chile, Santiago, Chile"
   journal: "Computers & Geosciences"
   year: 2026
-  # doi: "TODO"            # add on acceptance
+  doi: "10.5281/zenodo.22019137"   # concept DOI (siempre la ultima version)
   # volume / start / end:  # add on publication
