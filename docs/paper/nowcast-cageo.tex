@@ -3,6 +3,7 @@
 \usepackage{amssymb}
 \usepackage{amsmath}
 \usepackage{booktabs}
+\usepackage{multirow}
 \usepackage{lineno}
 \usepackage{hyperref}
 \usepackage{graphicx}
@@ -60,13 +61,17 @@ field to daily resolution collapses the operational catch rate to zero
 (in all 20 random realisations), with the model and terrain held fixed. The bottleneck is therefore the resolution of the
 forcing rather than the model. At half-hourly GPM IMERG
 resolution the same intensity--duration trigger pins the threshold crossing to a
-timestamp hours ahead of the documented flows, whereas the same rain aggregated
-to daily cannot trigger at all, because the finest resolvable mean intensity is
-total$/24$\,h, smeared below the curve. We reproduce this contrast across three
-dated events spanning opposite Chilean climates, and show it does not rest on the
-threshold chosen: each event has a measurable band of intercepts, spanning a factor
-of 2--3, in which resolution alone decides detection, and the contrast persists
-across the published I--D curves of the literature. A complementary flood path,
+timestamp hours ahead of the documented flows, which no daily product can do at any
+magnitude, because its finest resolvable mean intensity is total$/24$\,h. Across
+three dated events spanning opposite Chilean climates we decompose that contrast
+one factor at a time, inserting the same satellite series aggregated to 24\,h to
+separate the rainfall product from its resolution: resolution governs the timing in
+every case and governs detection for a short convective burst, whereas for a
+high-magnitude storm it is the product, not the resolution, that decides whether
+the curve is crossed at all. The result does not rest on the
+threshold chosen either: each event has a measurable band of intercepts, spanning a
+factor of 2--3, in which resolution alone decides detection, and the contrast
+persists across the published I--D curves of the literature. A complementary flood path,
 validated against observed daily streamflow on the R\'io Itata, discriminates
 observed floods out of sample (ROC-AUC 0.90), because discharge routing integrates
 the rainfall that a sub-daily landslide trigger must instead resolve directly. The
@@ -698,12 +703,20 @@ sees 30.1\,mm spread to 0.66\,mm\,h$^{-1}$, an exceedance of at most 0.45
 trigger}, for this storm's daily depth (its wettest day is 15.9\,mm); a larger daily total does cross the curve, as the 7 Maipo days of Section~\ref{sec:lumped} show. The same storm core in half-hourly IMERG peaks at
 40\,mm\,h$^{-1}$; the I--D threshold is crossed at 04:30 UTC on 24 March
 ($E\approx9$), hours before the documented flows (Fig.~\ref{fig:leadtime}).
-Higher-resolution forcing overcomes the limit with no change to the engine. The
-two products also disagree on magnitude (IMERG 108\,mm vs CR2MET 30\,mm at this
+Higher-resolution forcing overcomes the limit with no change to the engine.
+
+This comparison, however, moves \emph{two} things at once. The two products also
+disagree on magnitude (IMERG 108\,mm vs CR2MET 30\,mm at this
 core); IMERG is known to overestimate in arid convective regimes while CR2MET,
 gauge-blended over a near-ungauged zone, likely underestimates, so the true
-total lies between. Crucially, the resolution argument is \emph{independent} of
-this: even taking CR2MET's own 30\,mm total, spreading it over 24\,h yields a
+total lies between. A CR2MET-daily vs IMERG-half-hourly contrast therefore
+confounds the product with its resolution, and Section~\ref{sec:singlefactor}
+separates them explicitly --- with a result that qualifies this one, since at
+\emph{this} event the product, not the resolution, is what decides detection.
+What survives the separation unchanged is the timing: no daily product, whatever
+its magnitude, can place the crossing at 04:30. The purely
+arithmetic part of the argument is also independent of the magnitude dispute:
+even taking CR2MET's own 30\,mm total, spreading it over 24\,h yields a
 mean intensity far below the I--D curve, so a daily product cannot trigger
 regardless of which magnitude is correct.
 
@@ -742,7 +755,9 @@ The sub-daily result generalises across three dated debris-flow events in opposi
 climates (Table~\ref{tab:multievent}). In all three the half-hourly I--D crossing
 lands on or just before the documented day. For the Caj\'on del Maipo summer
 convective burst, the same rainfall aggregated to daily \textbf{never triggers}, only
-sub-daily resolution detects it. The inventory provides no event onset \emph{hour},
+sub-daily resolution detects it --- note that this column already holds the product
+fixed, since it aggregates the same IMERG series, which is the comparison
+Section~\ref{sec:singlefactor} generalises. The inventory provides no event onset \emph{hour},
 so these are not formal lead-time skill scores but a demonstration that sub-daily
 forcing resolves the threshold-crossing time that daily forcing cannot.
 
@@ -773,6 +788,83 @@ Event & Climate & Total & Peak 1\,h & Crossing (UTC) & Daily fires? \\
 Atacama/Copiap\'o & arid, convective & 108\,mm & 40\,mm\,h$^{-1}$ & 24-Mar 04:30 & yes \\
 Caj\'on del Maipo & Andes, summer & 28\,mm & 5\,mm\,h$^{-1}$ & 25-Feb 17:30 & \textbf{no} \\
 Villa Santa Luc\'ia & humid, frontal & 83\,mm & 17\,mm\,h$^{-1}$ & 15-Dec 15:30 & yes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Separating the product from its resolution}
+\label{sec:singlefactor}
+
+The head-to-head of Section~\ref{sec:headtohead} varies two things at once. CR2MET
+daily and IMERG half-hourly differ both in temporal resolution and in the rainfall
+product itself, and at these storm cores the two products disagree by up to a
+factor of four in event total. Attributing the whole difference to resolution is
+therefore unsound. We separate the factors by inserting the missing cell of the
+design: the \emph{same} IMERG series aggregated to 24\,h. Each adjacent comparison
+then moves exactly one factor,
+\begin{center}
+A. CR2MET daily $\;\xrightarrow{\text{product}}\;$ B. IMERG aggregated to 24\,h
+$\;\xrightarrow{\text{resolution}}\;$ C. IMERG half-hourly,
+\end{center}
+and because exceedance is multiplicative in intensity the total ratio factorises
+exactly, $E_C/E_A = (E_B/E_A)\cdot(E_C/E_B)$. To keep the test conservative, CR2MET
+is read as the \emph{maximum} over its cells inside the IMERG pixel (giving the
+daily product its best shot at the storm), and all three configurations see the same
+event window and the same engine.
+
+The outcome (Table~\ref{tab:singlefactor}) is more discriminating than the
+head-to-head suggested, and it revises how that comparison should be read. At
+Atacama the resolution factor is substantial ($\times3.2$) but the \emph{product}
+factor is twice as large ($\times6.2$), and it is the product that flips detection:
+IMERG aggregated to daily already crosses the curve ($E=2.8$). The claim that
+supports the sub-daily case at this event is thus about timing, not detection ---
+the daily series marks the day, only the half-hourly one places the crossing at
+04:30. At Villa Santa Luc\'ia neither factor flips anything: CR2MET daily already
+triggers ($E=1.6$), and resolution again buys timing alone. Only at Caj\'on del
+Maipo does resolution flip detection with the product held fixed
+($E=0.45\to1.23$), and there the product factor does not ($E=0.18\to0.45$, still
+below the curve).
+
+So of three events, resolution changes the \emph{detection} in one, and in that one
+the burst is short and weak --- precisely the regime the aggregation argument
+predicts. In all three it changes the \emph{timing}, which no daily product can
+supply at any magnitude. We state the distinction plainly because the two claims
+have different strengths: sub-daily forcing yields intra-day lead time generally,
+whereas it rescues detection specifically for short bursts, and a case like
+Atacama, where a daily product with the right magnitude would have fired anyway, is
+not evidence for the second claim. The controlled experiment of
+Section~\ref{sec:synthetic}, where the product is fixed by construction and only
+resolution varies, is what isolates the detection effect at scale.
+
+\begin{table}[ht]
+\centering
+\caption{Single-factor decomposition at each storm core: the product factor
+(A$\to$B) and the resolution factor (B$\to$C) on the peak I--D exceedance $E$
+($a^\star=5.5$). Bold marks the step that flips detection ($E$ crossing 1).}
+\label{tab:singlefactor}
+\small
+\begin{tabular}{@{}llccccc@{}}
+\toprule
+Event & Configuration & Total & $I_{\max}$ & $D$ & $E$ & Fires? \\
+ & & (mm) & (mm\,h$^{-1}$) & (h) & & \\
+\midrule
+\multirow{3}{*}{Atacama/Copiap\'o}
+ & A. CR2MET daily         & 26.8 & 0.55 & 48 & 0.45 & no \\
+ & B. IMERG at 24\,h       & 108.5 & 4.48 & 24 & \textbf{2.82} & \textbf{yes} \\
+ & C. IMERG half-hourly    & 108.5 & 31.81 & 3 & 8.88 & yes \\
+\multicolumn{7}{@{}l}{\quad\emph{product} $\times6.2$ $\cdot$ \emph{resolution} $\times3.2$ --- \emph{product flips detection; resolution adds timing}} \\
+\midrule
+\multirow{3}{*}{Caj\'on del Maipo}
+ & A. CR2MET daily         & 6.9 & 0.29 & 24 & 0.18 & no \\
+ & B. IMERG at 24\,h       & 27.5 & 0.54 & 48 & 0.45 & no \\
+ & C. IMERG half-hourly    & 27.5 & 4.41 & 3 & \textbf{1.23} & \textbf{yes} \\
+\multicolumn{7}{@{}l}{\quad\emph{product} $\times2.5$ $\cdot$ \emph{resolution} $\times2.8$ --- \emph{resolution flips detection, product alone does not}} \\
+\midrule
+\multirow{3}{*}{Villa Santa Luc\'ia}
+ & A. CR2MET daily         & 72.2 & 2.53 & 24 & 1.59 & yes \\
+ & B. IMERG at 24\,h       & 83.1 & 2.73 & 24 & 1.72 & yes \\
+ & C. IMERG half-hourly    & 83.1 & 12.43 & 3 & 3.47 & yes \\
+\multicolumn{7}{@{}l}{\quad\emph{product} $\times1.1$ $\cdot$ \emph{resolution} $\times2.0$ --- \emph{neither flips detection; resolution adds timing}} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -864,8 +956,8 @@ This is the validated positive that the daily \emph{landslide} path lacks, and t
 contrast is the resolution argument seen from the other side. Discharge routing
 \emph{integrates} rainfall over the catchment, supplying the temporal accumulation
 that a sub-daily I--D trigger must otherwise resolve in the rainfall itself; a daily
-forcing that structurally cannot trigger a convective-burst landslide
-(Section~5.4) is therefore adequate for a routed-discharge flood. Attainable skill
+forcing that cannot trigger a convective-burst landslide
+(Section~\ref{sec:singlefactor}) is therefore adequate for a routed-discharge flood. Attainable skill
 tracks the forcing resolution \emph{relative to the process}: daily suffices where
 routing integrates, and fails where triggering is sub-daily.
 
@@ -904,7 +996,14 @@ therefore the resolution of the forcing, not the susceptibility model or the
 threshold logic. This is intuitive once stated (with a daily value the maximum
 resolvable intensity is total$/24$\,h, so short, intense, convective bursts are
 smeared below any I--D curve), but it is rarely isolated, because most studies
-vary the model on one product rather than the product under one model. The
+vary the model on one product rather than the product under one model. Isolating it
+demands care in the other direction too: comparing a daily gauge-blended product
+against a half-hourly satellite one varies the product as well as its resolution,
+and Section~\ref{sec:singlefactor} shows the two factors can point to different
+conclusions at the same event --- at Atacama the product is what decides detection,
+and resolution only the timing. We therefore keep the two claims separate
+throughout: sub-daily forcing buys intra-day timing in general, and buys detection
+where the triggering burst is short. The
 controlled experiment (Section~\ref{sec:synthetic}) makes the mechanism explicit on
 a target with known ground truth: with the model and terrain held fixed,
 discrimination of planted events is near-perfect at sub-hourly resolution and
@@ -1015,7 +1114,9 @@ threshold is reached on 7 of 13\,880 days and never on a recorded event month; a
 but, distributed at daily resolution, does not discriminate event locations
 (AUC $\approx 0.48$); the identical trigger on half-hourly satellite forcing pins
 the threshold crossing to a timestamp hours ahead of documented flows across three
-climatically distinct events. The engine, its backtesting framework and all
+climatically distinct events, and a single-factor decomposition separates what that
+gain owes to the rainfall product from what it owes to its resolution, which turns
+out to differ by event. The engine, its backtesting framework and all
 examples are reproducible, and the architecture is designed so that
 higher-resolution forcing, the demonstrated path to skill, can be plugged in
 without touching the hazard logic.

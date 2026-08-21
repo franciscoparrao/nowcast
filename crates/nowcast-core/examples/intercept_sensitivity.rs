@@ -154,8 +154,8 @@ fn main() {
     println!("    a_crit = el `a` más alto con el que el evento aún cruza la curva.");
     println!("    Medición de la lluvia observada, no una elección: E escala como 1/a.\n");
     println!(
-        "    {:>18} | {:>13} | {:>13} | {:>6} | {}",
-        "evento", "a_crit semi", "a_crit diario", "razón", "rango donde la resolución decide"
+        "    {:>18} | {:>13} | {:>13} | {:>6} | rango donde la resolución decide",
+        "evento", "a_crit semi", "a_crit diario", "razón"
     );
     println!("    {}", "─".repeat(104));
 

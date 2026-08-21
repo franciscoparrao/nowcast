@@ -103,12 +103,12 @@ motores se enchufan como proveedores nativos en v0.2.
 - [x] **Head-to-head de resolución** (`examples/resolution_headtohead.rs` +
       `scripts/extract_atacama_cr2met.py`): mismo núcleo de tormenta, mismo motor
       I-D, CR2MET diario vs IMERG semihorario. CR2MET ve 30.1 mm, intensidad
-      resoluble 0.66 mm/h (=total/24h) → E máx 0.62 → **NO gatilla**. IMERG ve
-      108.5 mm, peak 40 mm/h → **ALERTA 24-mar 04:30, E≈12**. Demuestra
-      cuantitativamente que la resolución diaria *estructuralmente* no puede
-      gatillar I-D (la intensidad máxima resoluble es total/24h), y que subir la
-      resolución de la forzante supera el límite sin tocar el motor. Es la
-      respuesta a "superar el límite de CR2MET".
+      resoluble 0.66 mm/h (=total/24h) → E máx 0.45 → **NO gatilla**. IMERG ve
+      108.5 mm, peak 40 mm/h → **ALERTA 24-mar 04:30, E≈9**. Sube la resolución
+      de la forzante sin tocar el motor. **CUIDADO — mueve DOS factores a la vez**
+      (producto y resolución; los productos discrepan 3.6× en el mismo píxel), así
+      que NO se lee solo como resultado de resolución: ver el experimento de un
+      solo factor abajo, que lo corrige.
 - [x] **Generalización multi-evento** (`examples/multi_event_leadtime.rs` +
       `scripts/extract_event_imerg.py` con registro de eventos): IMERG semihorario
       sobre 3 aluviones fechados de climas opuestos — Atacama/Copiapó 25-mar-2015
@@ -130,6 +130,21 @@ motores se enchufan como proveedores nativos en v0.2.
       2.0–3.2× (Atacama 15.5–48.8, Maipo 2.5–6.8, VSL 9.4–19.1); (ii) las **35
       curvas de Guzzetti** sin tocar: la resolución voltea el resultado en 8/35,
       8/35 y 2/35. Tests de invarianza en `threshold.rs`.
+- [x] **Experimento de UN SOLO FACTOR** (`examples/single_factor_resolution.rs` +
+      `scripts/extract_event_cr2met.py`, 21-ago-2026): desarma el confound del
+      head-to-head insertando la celda que faltaba del diseño — la MISMA serie
+      IMERG agregada a 24 h. `A CR2MET diario →(producto)→ B IMERG 24h
+      →(resolución)→ C IMERG semihorario`, y como E es multiplicativa la razón
+      factoriza exacto. **Resultado que corrige la lectura previa**: en Atacama el
+      producto (×6.2) supera a la resolución (×3.2) y es EL PRODUCTO el que voltea
+      la detección (IMERG a 24 h ya gatilla, E=2.8); en Villa Santa Lucía no
+      voltea ninguno (CR2MET diario ya gatilla, E=1.6); **solo en el Cajón del
+      Maipo la resolución voltea la detección con producto fijo** (0.45→1.23). Lo
+      universal de la resolución es el **timing** intra-diario, no la detección —
+      las dos claims van separadas en el paper. Hallazgo de paso: el core IMERG
+      cae EXACTO a mitad de camino entre dos celdas CR2MET y el desempate movía el
+      día clave 25% (15.93 vs 12.73 mm) → ahora se usa el máx del footprint (la
+      lectura más favorable al diario, sesga en contra de nuestra propia tesis).
 - [x] (v0.2) **XAI / trazabilidad exacta**: módulo `explain` (`Explanation`,
       `Driver`) + `Nowcast::explain(cell, step)` + contrafactual
       `Nowcast::intensity_to_alert`. Como el peligro es forma cerrada

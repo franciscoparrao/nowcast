@@ -147,9 +147,13 @@ CR2MET daily vs IMERG half-hourly:
 | I–D (calibrated regional a\*=5.5) | **no alert** (E ≤ 0.45) | **alert 24-Mar 04:30** (E≈9) |
 
 With a daily value the finest resolvable duration is 24 h, so the peak intensity
-is capped at *(total / 24 h)* and smeared below the I–D curve — the daily product
-**structurally cannot trigger**, regardless of total. Higher-resolution forcing
+is capped at *(total / 24 h)* and smeared below the I–D curve — for **this storm's
+daily depth** the daily product cannot reach it. Higher-resolution forcing
 overcomes the limit with no change to the engine (same `Forcing` trait).
+
+⚠️ **This comparison moves two factors at once** (the product *and* its
+resolution), and the two products disagree ~3.6× on event total at the same pixel.
+See the single-factor experiment below before reading it as a resolution result.
 
 **Multi-event generalisation (`multi_event_leadtime`)** — three dated aluviones
 across opposite climates, same I–D engine on IMERG half-hourly:
@@ -162,7 +166,24 @@ across opposite climates, same I–D engine on IMERG half-hourly:
 
 The sub-daily crossing lands on or just before the documented day in all three.
 For the Cajón del Maipo convective burst the daily product never triggers — only
-sub-daily resolution detects it.
+sub-daily resolution detects it. (This table already holds the product fixed: the
+"daily fires?" column aggregates the *same* IMERG series.)
+
+**Single-factor decomposition (`single_factor_resolution`)** — inserts the missing
+cell of the design so each comparison moves exactly one factor:
+`A. CR2MET daily →(product)→ B. IMERG aggregated to 24 h →(resolution)→ C. IMERG half-hourly`.
+Exceedance is multiplicative, so the total ratio factorises exactly:
+
+| event | product × | resolution × | what flips detection? |
+|---|---|---|---|
+| Atacama / Copiapó | ×6.2 | ×3.2 | **the product** (IMERG at 24 h already fires, E=2.8) |
+| Cajón del Maipo | ×2.5 | ×2.8 | **the resolution** (E 0.45 → 1.23, product fixed) |
+| Villa Santa Lucía | ×1.1 | ×2.0 | neither (CR2MET daily already fires, E=1.6) |
+
+Honest reading: resolution buys **intra-day timing in all three** events — no daily
+product supplies that at any magnitude — but it rescues **detection** only where the
+burst is short (Cajón del Maipo). Where the storm is large, the *product* is what
+decides whether the curve is crossed. The two claims are kept separate on purpose.
 
 ## v0.2 — flood nowcasting from routed discharge (done)
 

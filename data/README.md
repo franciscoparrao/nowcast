@@ -29,6 +29,21 @@ python3 scripts/extract_maipo_distributed.py  # distributed grid — also needs 
 > `earthaccess` fails with `EulaNotAccepted`. Credentials are read from `~/.netrc`.
 > The raw HDF5 (~1 GB) lands in `data/imerg_hhr/` (git-ignored); only the CSV is kept.
 
+### Multi-event and single-factor experiment (`examples/multi_event_leadtime.rs`, `examples/single_factor_resolution.rs`)
+
+| file | content | source |
+|---|---|---|
+| `event_<key>.csv` | half-hourly rainfall rate at each event's storm core (`atacama_2015`, `maipo_2017`, `santalucia_2017`) | **GPM IMERG** Final v07 via `scripts/extract_event_imerg.py` |
+| `event_<key>_cr2met.csv` | daily precip (mm) at the **same** location: `p_mm_max` and `p_mm_mean` over the CR2MET cells inside the IMERG pixel | **CR2MET v2.5** via `scripts/extract_event_cr2met.py` |
+
+> **Why max and mean, not the nearest cell.** An IMERG pixel (~0.1°) covers about
+> 2×2 CR2MET cells (~0.05°), and at all three cores the IMERG centre falls
+> *exactly* halfway between two CR2MET centres — the nearest-cell tie-break is
+> numerically arbitrary and swings the wettest day by ~25 % (Atacama 24-Mar:
+> 15.93 vs 12.73 mm). The single-factor experiment uses `p_mm_max`, which gives
+> the daily product its best shot at the storm and so biases the comparison
+> against the resolution argument.
+
 ### Distributed (v0.2 backtest, `examples/backtest_distributed.rs`)
 
 | file | content | source |
