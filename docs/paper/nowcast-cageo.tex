@@ -9,7 +9,7 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta, positioning, fit, backgrounds}
 
-\journal{Computers \& Geosciences}
+\journal{Environmental Modelling \& Software}
 
 \begin{document}
 
@@ -44,7 +44,8 @@ on demand only where the cheap nowcast alerts. We use the engine as an
 experimental instrument over Chilean basins, holding the model fixed and varying
 the resolution of the forcing. A backtest of 157 dated rainfall-triggered
 landslides in the R\'io Maipo basin shows that the global Caine (1980)
-intensity--duration threshold never fires on daily CR2MET forcing (probability of
+intensity--duration threshold fires on only 7 of 13\,880 days, none coinciding with a
+recorded event (probability of
 detection, POD $=0$), whereas a calibrated regional intercept transfers
 split-sample (validation POD $\approx 0.50$). Distributing that daily forcing
 over the basin and weighting by a real machine-learning susceptibility raster
@@ -491,7 +492,7 @@ evaluated on even years.
 \subsection{Lumped landslide backtest (R\'io Maipo)}
 
 Over 13\,880 daily steps (1979--2016) and 157 dated rainfall-triggered events, the
-global Caine threshold ($a=14.82$) \textbf{never fires} on CR2MET daily forcing
+global Caine threshold ($a=14.82$) is crossed on only \textbf{7 of 13\,880 days} on CR2MET daily forcing
 (POD $=0$): the daily-mean intensity of even the wettest days sits below the curve
 at 24\,h duration. A calibrated regional intercept $a^\star\approx5.5$\,mm\,h$^{-1}$
 is robust, the full-period and odd-year calibrations agree, and transfers
@@ -511,7 +512,7 @@ inventory, not model error.
 \toprule
 Configuration & POD & FAR & note \\
 \midrule
-Caine global, $a=14.82$ & 0.00 & 1.00 & never fires \\
+Caine global, $a=14.82$ & 0.00 & 1.00 & fires 7/13\,880 d, none on event month \\
 Regional $a^\star=5.5$ (full period) & 0.53 & 0.92 & max-CSI calibration \\
 Regional $a^\star=5.5$ (split-sample) & 0.50 & 0.93 & calibrate odd $\to$ validate even \\
 $a^\star=5.5$, tol. $\pm0/\pm1/\pm2/\pm3$\,mo & \multicolumn{2}{c}{POD 0.21/0.53/0.58/0.68} & inventory date noise \\
@@ -681,7 +682,7 @@ distributed backtest (Section~5.2) and the controlled experiment
 24\,h, so the maximum resolvable mean intensity is (daily total)$/24$\,h: CR2MET
 sees 30.1\,mm spread to 0.66\,mm\,h$^{-1}$, an exceedance of at most 0.62
 (regional $a=4.0$) or 0.17 (Caine), the daily product \textbf{structurally cannot
-trigger}, regardless of total. The same storm core in half-hourly IMERG peaks at
+trigger}, for this storm's daily depth (its wettest day is 15.9\,mm); a larger daily total does cross the curve, as the 7 Maipo days of Section~\ref{sec:lumped} show. The same storm core in half-hourly IMERG peaks at
 40\,mm\,h$^{-1}$; the I--D threshold is crossed at 04:30 UTC on 24 March
 ($E\approx12$), hours before the documented flows (Fig.~\ref{fig:leadtime}).
 Higher-resolution forcing overcomes the limit with no change to the engine. The
@@ -929,7 +930,7 @@ substrate and InSAR deformation, and exact closed-form attribution of every aler
 Used as an experimental instrument over Chilean basins, it yields an honest and,
 we argue, generalisable result: the resolution of the forcing, not the
 model, sets the skill ceiling of intensity--duration nowcasting. A global I--D
-threshold never fires on daily forcing; a calibrated regional threshold transfers
+threshold is reached on 7 of 13\,880 days and never on a recorded event month; a calibrated regional threshold transfers
 but, distributed at daily resolution, does not discriminate event locations
 (AUC $\approx 0.48$); the identical trigger on half-hourly satellite forcing pins
 the threshold crossing to a timestamp hours ahead of documented flows across three
@@ -958,7 +959,7 @@ SERNAGEOMIN inventory.
 
 \section*{Acknowledgements}
 
-\textit{To be completed.} The author thanks the CR2 (Center for Climate and
+The author thanks the CR2 (Center for Climate and
 Resilience Research) for CR2MET, NASA for GPM IMERG, and SERNAGEOMIN for the
 landslide inventory.
 
