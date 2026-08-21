@@ -153,7 +153,7 @@ At half-hourly resolution the engine recovers the planted events almost perfectl
 
 ### 5.4 Resolution head-to-head
 
-The previous null motivates a controlled comparison of forcing resolution on the same storm core (Atacama, 24–26 March 2015; the IMERG event-total maximum at lon −70.45, lat −27.15), with the identical I–D engine (Table 3). The core is selected *conditional on the known event*, so this is a triggering-timing comparison (can each product cross the curve, and when), not a discrimination test; discrimination is the business of the distributed backtest (Section 5.2) and the controlled experiment (Section 5.3). With a daily value the finest resolvable duration is 24 h, so the maximum resolvable mean intensity is (daily total)/24 h: CR2MET sees 30.1 mm spread to 0.66 mm h⁻¹, an exceedance of at most 0.62 (regional `a = 4.0`) or 0.17 (Caine), the daily product **cannot reach the curve for this storm**: its wettest day is 15.9 mm, so the finest resolvable intensity is 0.66 mm h⁻¹ against `I_crit(24 h) = 1.16 mm h⁻¹`. This is a statement about *this* storm's daily depth, not a universal one — a sufficiently large daily total does cross the curve, which is precisely what the 7 Maipo days of Section 5.1 show. The same storm core in half-hourly IMERG peaks at 40 mm h⁻¹; the I–D threshold is crossed at 04:30 UTC on 24 March (`E ≈ 12`), hours before the documented flows. Higher-resolution forcing overcomes the limit with no change to the engine.
+The previous null motivates a controlled comparison of forcing resolution on the same storm core (Atacama, 24–26 March 2015; the IMERG event-total maximum at lon −70.45, lat −27.15), with the identical I–D engine (Table 3). The core is selected *conditional on the known event*, so this is a triggering-timing comparison (can each product cross the curve, and when), not a discrimination test; discrimination is the business of the distributed backtest (Section 5.2) and the controlled experiment (Section 5.3). With a daily value the finest resolvable duration is 24 h, so the maximum resolvable mean intensity is (daily total)/24 h: CR2MET sees 30.1 mm spread to 0.66 mm h⁻¹, an exceedance of at most 0.45 (the calibrated regional `a* = 5.5`) or 0.17 (Caine), the daily product **cannot reach the curve for this storm**: its wettest day is 15.9 mm, so the finest resolvable intensity is 0.66 mm h⁻¹ against `I_crit(24 h) = 1.16 mm h⁻¹`. This is a statement about *this* storm's daily depth, not a universal one — a sufficiently large daily total does cross the curve, which is precisely what the 7 Maipo days of Section 5.1 show. The same storm core in half-hourly IMERG peaks at 40 mm h⁻¹; the I–D threshold is crossed at 04:30 UTC on 24 March (`E ≈ 9`), hours before the documented flows. Higher-resolution forcing overcomes the limit with no change to the engine.
 
 **Table 3.** CR2MET daily vs GPM IMERG half-hourly at the Atacama storm core (same I–D engine).
 
@@ -163,21 +163,21 @@ The previous null motivates a controlled comparison of forcing resolution on the
 | wettest single day | 15.9 mm | — |
 | finest resolvable duration | 24 h | 0.5 h |
 | max resolvable intensity | 0.66 mm h⁻¹ | 40.0 mm h⁻¹ |
-| I–D (a=4.0) | no alert (E ≤ 0.62) | alert 24-Mar 04:30 UTC (E ≈ 12) |
+| I–D (calibrated regional a\* = 5.5) | no alert (E ≤ 0.45) | alert 24-Mar 04:30 UTC (E ≈ 9) |
 
 ### 5.5 Multi-event sub-daily lead time
 
 The sub-daily result generalises across three dated debris-flow events in opposite climates (Table 4). In all three the half-hourly I–D crossing lands on or just before the documented day. For the Cajón del Maipo summer convective burst, the same rainfall aggregated to daily **never triggers**, only sub-daily resolution detects it. We emphasise that the inventory provides no event onset *hour*, so these are not formal lead-time skill scores but a demonstration that sub-daily forcing resolves the threshold-crossing time that daily forcing cannot.
 
-As a spatial false-alarm check, we ran the identical per-cell I–D trigger over each event's full IMERG scene. The documented storm core is in every case the most extreme cell (96.7–100th percentile of peak exceedance), but the trigger crosses the curve over a broad footprint — 41 % of the Atacama scene, 16 % at Cajón del Maipo, and the entire (small, frontal) Villa Santa Lucía box — so the crossing is not spatially sparse within these storm-centred scenes. This locates the *peak* correctly but is *not* a low false-alarm rate, and because the box is event-centred by construction a high crossing fraction is expected. A genuine discrimination estimate needs the off-event crossing frequency at these cores — a multi-year sub-daily record on days *without* a documented flow, which the present event-window granules do not provide. The sub-daily results are therefore triggering-timing demonstrations, not skill scores; assembling that multi-year sub-daily record is, with a day-resolution inventory (Section 7), the key remaining validation step.
+As a spatial false-alarm check, we ran the identical per-cell I–D trigger over each event's full IMERG scene. The documented storm core is in every case the most extreme cell (96.7–100th percentile of peak exceedance), but the trigger crosses the curve over a broad footprint — 30 % of the Atacama scene, 6 % at Cajón del Maipo, and the entire (small, frontal) Villa Santa Lucía box — so the crossing is not spatially sparse within these storm-centred scenes. This locates the *peak* correctly but is *not* a low false-alarm rate, and because the box is event-centred by construction a high crossing fraction is expected. A genuine discrimination estimate needs the off-event crossing frequency at these cores — a multi-year sub-daily record on days *without* a documented flow, which the present event-window granules do not provide. The sub-daily results are therefore triggering-timing demonstrations, not skill scores; assembling that multi-year sub-daily record is, with a day-resolution inventory (Section 7), the key remaining validation step.
 
-**Table 4.** Sub-daily I–D crossing across three events (GPM IMERG half-hourly, storm core, `a = 4.0`).
+**Table 4.** Sub-daily I–D crossing across three events (GPM IMERG half-hourly, storm core, calibrated regional `a* = 5.5`).
 
 | Event | Climate | Total | Peak 1 h | I–D crossing (UTC) | Documented day | Daily fires? |
 |---|---|---|---|---|---|---|
 | Atacama / Copiapó | arid, convective | 108 mm | 40 mm h⁻¹ | 24-Mar 04:30 | 25-Mar-2015 | yes |
-| Cajón del Maipo | central Andes, summer | 28 mm | 5 mm h⁻¹ | 25-Feb 16:30 | 25-Feb-2017 | **no** |
-| Villa Santa Lucía | humid south, frontal | 83 mm | 17 mm h⁻¹ | 15-Dec 15:00 | 16-Dec-2017 | yes |
+| Cajón del Maipo | central Andes, summer | 28 mm | 5 mm h⁻¹ | 25-Feb 17:30 | 25-Feb-2017 | **no** |
+| Villa Santa Lucía | humid south, frontal | 83 mm | 17 mm h⁻¹ | 15-Dec 15:30 | 16-Dec-2017 | yes |
 
 ### 5.6 Flood path: a validated discharge nowcast
 

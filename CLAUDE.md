@@ -117,6 +117,19 @@ motores se enchufan como proveedores nativos en v0.2.
       o justo antes del día documentado en los tres; y en el Cajón del Maipo (ráfaga
       convectiva breve) el producto **diario NO gatilla** — solo lo sub-diario lo
       detecta. Cierra el caso de la forzante de alta resolución.
+- [x] **Sensibilidad al intercepto** (`examples/intercept_sensitivity.rs`,
+      20-ago-2026): mata el parámetro libre `a=4.0` que sostenía los resultados
+      sub-diarios. Todo el paper corre ahora con el **a\*=5.5 calibrado** en el
+      Maipo (una sola copia en `examples/shared/curves.rs`, compartida con
+      `published_thresholds` para que no vuelvan a divergir) y **ninguna conclusión
+      cambia**: head-to-head CR2MET E máx 0.45 (sigue sin gatillar) vs IMERG alerta
+      04:30 E≈9; multi-evento sí/NO/sí idéntico. Dos argumentos independientes del
+      umbral: (i) **intercepto crítico** `a_crit = max I·D^b` — como E escala 1/a,
+      cada evento tiene un `a` máximo medible; el rango
+      `a_crit(diario) < a ≤ a_crit(semi)` es donde la RESOLUCIÓN decide, y mide
+      2.0–3.2× (Atacama 15.5–48.8, Maipo 2.5–6.8, VSL 9.4–19.1); (ii) las **35
+      curvas de Guzzetti** sin tocar: la resolución voltea el resultado en 8/35,
+      8/35 y 2/35. Tests de invarianza en `threshold.rs`.
 - [x] (v0.2) **XAI / trazabilidad exacta**: módulo `explain` (`Explanation`,
       `Driver`) + `Nowcast::explain(cell, step)` + contrafactual
       `Nowcast::intensity_to_alert`. Como el peligro es forma cerrada

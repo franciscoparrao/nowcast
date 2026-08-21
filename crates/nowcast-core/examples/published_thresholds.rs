@@ -32,48 +32,11 @@ const MAX_WINDOW_DAYS: usize = 7; // storm I–D durations (1–7 days)
 const ALERT_LEVEL: f64 = 0.5; // hazard ≥ 0.5 ⟺ exceedance ≥ 1 (on/above the curve)
 const TOL_MONTHS: u32 = 1; // absorb inventory month-level date uncertainty
 
-/// Published I–D power laws `I = a·D^-b` (a in mm/h, b dimensionless), verbatim
-/// from Guzzetti et al. (2007), Table 2. Entry 0 is the Caine (1980) global curve.
-const PUBLISHED: &[(f64, f64)] = &[
-    (14.82, 0.39),  // Caine (1980), global
-    (41.66, 0.77),
-    (44.668, 0.78),
-    (66.18, 0.52),
-    (41.83, 0.58),
-    (39.71, 0.62),
-    (35.23, 0.54),
-    (26.51, 0.19),
-    (30.53, 0.57),
-    (176.40, 0.90),
-    (27.3, 0.38),
-    (20.1, 0.55),
-    (91.46, 0.82),
-    (9.23, 0.37),
-    (10.0, 0.77),
-    (5.94, 1.50),
-    (32.0, 0.70),
-    (47.742, 0.507),
-    (9.521, 0.4955),
-    (11.698, 0.4783),
-    (11.00, 0.4459),
-    (10.67, 0.5043),
-    (12.649, 0.5324),
-    (18.675, 0.565),
-    (28.10, 0.74),
-    (9.9, 0.52),
-    (116.48, 0.63),
-    (15.0, 0.70),
-    (11.5, 0.26),
-    (4.0, 0.45),
-    (19.0, 0.50),
-    (18.83, 0.59),
-    (82.73, 1.13),
-    (7.00, 0.60),
-    (115.47, 0.80),
-];
-
-/// Self-calibrated regional intercept from the `backtest` example, for reference.
-const REGIONAL: (f64, f64) = (5.5, 0.39);
+// The literature table and the self-calibrated regional curve live in one place
+// (`examples/shared/curves.rs`), shared with `intercept_sensitivity`.
+#[path = "shared/curves.rs"]
+mod curves;
+use curves::{PUBLISHED, REGIONAL};
 
 fn data_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data")

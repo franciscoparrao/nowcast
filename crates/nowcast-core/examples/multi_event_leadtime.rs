@@ -15,8 +15,15 @@ use std::path::PathBuf;
 
 use nowcast_core::{Forcing, GridDims, IdThreshold, Nowcast, SusceptibilityMap, TriggerModel, UniformRain};
 
-const A: f64 = 4.0; // regional "low" I–D intercept (mm/h); b = 0.39
-const B: f64 = 0.39;
+// El intercepto NO se elige aquí: es el regional a* = 5.5 mm/h calibrado por
+// max-CSI en el backtest del Maipo (ejemplo `calibrate_maipo`), la única curva
+// I–D de este trabajo ajustada a datos. Una copia, en shared/curves.rs.
+// La robustez de la tabla a esa elección se mide en `intercept_sensitivity`.
+#[path = "shared/curves.rs"]
+mod curves;
+
+const A: f64 = curves::REGIONAL.0;
+const B: f64 = curves::REGIONAL.1;
 
 struct Event { key: &'static str, label: &'static str, climate: &'static str, day: &'static str }
 

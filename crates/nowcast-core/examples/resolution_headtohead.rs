@@ -20,7 +20,11 @@ use std::path::PathBuf;
 
 use nowcast_core::IdThreshold;
 
-const B: f64 = 0.39;
+// Intercepto regional calibrado (una copia; ver shared/curves.rs), no elegido aquí.
+#[path = "shared/curves.rs"]
+mod curves;
+
+const B: f64 = curves::REGIONAL.1;
 
 fn data(name: &str) -> String {
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data").join(name);
@@ -113,7 +117,11 @@ fn main() {
     );
     println!("  (IMERG peak at {})\n", imerg_t[imerg_at]);
 
-    for (name, a) in [("Caine global  a=14.82", 14.82), ("Atacama-low   a=4.0", 4.0)] {
+    let regional_label = format!("regional a*={} (calibrado Maipo)", curves::REGIONAL.0);
+    for (name, a) in [
+        ("Caine global  a=14.82".to_string(), 14.82),
+        (regional_label, curves::REGIONAL.0),
+    ] {
         let th = IdThreshold::new(a, B).unwrap();
         let (cr2_first, cr2_pk) = id_response(&cr2_ev, 24.0, th);
         let (im_first, im_pk) = id_response(&imerg_depth, 0.5, th);

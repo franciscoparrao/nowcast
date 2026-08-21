@@ -56,14 +56,17 @@ than average, and a supervised baseline trained on the same daily features fares
 no better (cross-validated AUC $\le 0.56$). A controlled experiment with known
 ground truth illustrates the mechanism: the same engine discriminates planted
 sub-daily bursts almost perfectly (AUC $\approx 1$), but aggregating the identical
-field to daily resolution collapses the operational catch rate to effectively zero
-(over 20 random realisations), with the model and terrain held fixed. The bottleneck is therefore the resolution of the
+field to daily resolution collapses the operational catch rate to zero
+(in all 20 random realisations), with the model and terrain held fixed. The bottleneck is therefore the resolution of the
 forcing rather than the model. At half-hourly GPM IMERG
 resolution the same intensity--duration trigger pins the threshold crossing to a
 timestamp hours ahead of the documented flows, whereas the same rain aggregated
 to daily cannot trigger at all, because the finest resolvable mean intensity is
 total$/24$\,h, smeared below the curve. We reproduce this contrast across three
-dated events spanning opposite Chilean climates. A complementary flood path,
+dated events spanning opposite Chilean climates, and show it does not rest on the
+threshold chosen: each event has a measurable band of intercepts, spanning a factor
+of 2--3, in which resolution alone decides detection, and the contrast persists
+across the published I--D curves of the literature. A complementary flood path,
 validated against observed daily streamflow on the R\'io Itata, discriminates
 observed floods out of sample (ROC-AUC 0.90), because discharge routing integrates
 the rainfall that a sub-daily landslide trigger must instead resolve directly. The
@@ -490,6 +493,7 @@ evaluated on even years.
 \section{Results}
 
 \subsection{Lumped landslide backtest (R\'io Maipo)}
+\label{sec:lumped}
 
 Over 13\,880 daily steps (1979--2016) and 157 dated rainfall-triggered events, the
 global Caine threshold ($a=14.82$) is crossed on only \textbf{7 of 13\,880 days} on CR2MET daily forcing
@@ -545,7 +549,9 @@ indistinguishable from the self-calibrated regional intercept (CSI $=0.077$): th
 entire ensemble is pinned near the same low operating point. A curve high enough to
 be selective sits above the wettest day (POD $0$); lowered enough to fire, it fires
 on most wet months (FAR $\to 1$). The binding constraint is the forcing resolution,
-not the choice of published threshold (\texttt{published\_thresholds} example).
+not the choice of published threshold (\texttt{published\_thresholds} example). The
+same 35 curves are re-used in Section~\ref{sec:intercept} to show that the sub-daily
+results do not hinge on the choice of curve either.
 
 \subsection{Distributed daily backtest, an honest null}
 
@@ -634,15 +640,15 @@ planted events at each resolution, averaged over 20 random realisations
 (Fig.~\ref{fig:synthetic}).
 
 At half-hourly resolution the engine recovers the planted events almost perfectly
-(ROC-AUC $1.00\pm0.00$ on the trigger alone; $0.88\pm0.02$ once multiplied by the
+(ROC-AUC $1.00\pm0.00$ on the trigger alone; $0.94\pm0.02$ once multiplied by the
 structured susceptibility, which here adds noise but no signal) and the operational
-catch rate is high (POD at a 5\,\% alerted-area budget $0.37\pm0.10$). As the field
+catch rate is high (POD at a 5\,\% alerted-area budget $0.55\pm0.10$). As the field
 is aggregated the maximum resolvable mean intensity falls toward total$/24$\,h, the
-bursts smear below the curve, the trigger rate drops from 35\,\% to 18\,\% of
+bursts smear below the curve, the trigger rate drops from 24\,\% to 9\,\% of
 cell-days, the trigger-only AUC decays monotonically (to $0.79\pm0.01$; multiplied
-by the structured susceptibility it ends at $0.81\pm0.02$ after a shallow,
-noise-driven plateau), and the operational catch rate \textbf{collapses to
-POD@5\,\% $=0.002\pm0.005$, i.e.\ effectively zero,} at daily resolution: with a
+by the structured susceptibility it decays likewise, from $0.94\pm0.02$ to
+$0.80\pm0.02$), and the operational catch rate \textbf{collapses to
+POD@5\,\% $=0.000\pm0.000$, i.e.\ exactly zero across all 20 realisations,} at daily resolution: with a
 realistic alert budget a daily product catches essentially \emph{none} of the
 events a sub-daily product catches. The residual daily AUC above 0.5 is, if
 anything, the optimistic case for daily forcing, the synthetic events still carry an
@@ -660,16 +666,19 @@ not a claim about real-event base rates, which the field backtests
 \caption{Controlled resolution experiment (mean over 20 random realisations; bands
 $\pm1$ sd). Synthetic half-hourly rainfall fields with planted convective-burst
 events and same-total spread-rain confounders, aggregated to coarser resolution
-(log axis) under a fixed I--D engine and 24\,h maximum duration. Discrimination of
-the planted events, ROC-AUC weighted by susceptibility (blue) and POD at a 5\,\%
-alerted-area budget (orange), is high at sub-hourly resolution and collapses toward
-daily, the operational catch rate to effectively zero. The engine discriminates when the burst
+(log axis) under a fixed I--D engine (calibrated regional $a^\star=5.5$) and 24\,h
+maximum duration. Discrimination of
+the planted events, ROC-AUC weighted by susceptibility (blue, $0.94\to0.80$) and POD
+at a 5\,\% alerted-area budget (orange, $0.55\to0.00$), is high at sub-hourly
+resolution and falls monotonically toward daily, the operational catch rate to
+exactly zero. The engine discriminates when the burst
 is resolved; daily aggregation (intensity capped at total$/24$\,h) destroys the
 skill, with the model and terrain held fixed.}
 \label{fig:synthetic}
 \end{figure}
 
 \subsection{Resolution head-to-head}
+\label{sec:headtohead}
 
 The previous null motivates a controlled comparison of forcing resolution on the
 same storm core (Atacama, 24--26 March 2015; the IMERG event-total maximum at
@@ -678,13 +687,17 @@ lon $-70.45$, lat $-27.15$), with the identical I--D engine
 event}, so this is a triggering-timing comparison, can each product cross the curve,
 and when, not a discrimination test; discrimination is the business of the
 distributed backtest (Section~5.2) and the controlled experiment
-(Section~\ref{sec:synthetic}). With a daily value the finest resolvable duration is
+(Section~\ref{sec:synthetic}). Throughout this section and the next we use the
+regional intercept $a^\star=5.5$\,mm\,h$^{-1}$ calibrated in Section~\ref{sec:lumped}
+--- the only I--D curve fitted to data in this work --- rather than a value chosen
+to make the comparison work; Section~\ref{sec:intercept} shows the conclusion does
+not rest on that choice. With a daily value the finest resolvable duration is
 24\,h, so the maximum resolvable mean intensity is (daily total)$/24$\,h: CR2MET
-sees 30.1\,mm spread to 0.66\,mm\,h$^{-1}$, an exceedance of at most 0.62
-(regional $a=4.0$) or 0.17 (Caine), the daily product \textbf{structurally cannot
+sees 30.1\,mm spread to 0.66\,mm\,h$^{-1}$, an exceedance of at most 0.45
+(the calibrated regional $a^\star=5.5$) or 0.17 (Caine), the daily product \textbf{structurally cannot
 trigger}, for this storm's daily depth (its wettest day is 15.9\,mm); a larger daily total does cross the curve, as the 7 Maipo days of Section~\ref{sec:lumped} show. The same storm core in half-hourly IMERG peaks at
 40\,mm\,h$^{-1}$; the I--D threshold is crossed at 04:30 UTC on 24 March
-($E\approx12$), hours before the documented flows (Fig.~\ref{fig:leadtime}).
+($E\approx9$), hours before the documented flows (Fig.~\ref{fig:leadtime}).
 Higher-resolution forcing overcomes the limit with no change to the engine. The
 two products also disagree on magnitude (IMERG 108\,mm vs CR2MET 30\,mm at this
 core); IMERG is known to overestimate in arid convective regimes while CR2MET,
@@ -705,7 +718,7 @@ regardless of which magnitude is correct.
 event total & 30.1\,mm & 108.5\,mm \\
 finest resolvable duration & 24\,h & 0.5\,h \\
 max resolvable intensity & 0.66\,mm\,h$^{-1}$ & 40.0\,mm\,h$^{-1}$ \\
-I--D ($a=4.0$) & no alert ($E\leq0.62$) & alert 24-Mar 04:30 ($E\approx12$) \\
+I--D ($a^\star=5.5$) & no alert ($E\leq0.45$) & alert 24-Mar 04:30 ($E\approx9$) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -723,6 +736,7 @@ triggering burst.}
 \end{figure}
 
 \subsection{Multi-event sub-daily lead time}
+\label{sec:multievent}
 
 The sub-daily result generalises across three dated debris-flow events in opposite
 climates (Table~\ref{tab:multievent}). In all three the half-hourly I--D crossing
@@ -735,7 +749,7 @@ forcing resolves the threshold-crossing time that daily forcing cannot.
 As a spatial false-alarm check, we ran the identical per-cell I--D trigger over each
 event's full IMERG scene. The documented storm core is in every case the most
 extreme cell (96.7--100th percentile of peak exceedance), but the trigger crosses
-the curve over a broad footprint, 41\,\% of the Atacama scene, 16\,\% at Caj\'on del
+the curve over a broad footprint, 30\,\% of the Atacama scene, 6\,\% at Caj\'on del
 Maipo, and the entire (small, frontal) Villa Santa Luc\'ia box, so the crossing is
 not spatially sparse within these storm-centred scenes. This locates the \emph{peak}
 correctly but is \emph{not} a low false-alarm rate, and because the box is
@@ -749,15 +763,82 @@ validation step.
 
 \begin{table}[ht]
 \centering
-\caption{Sub-daily I--D crossing across three events (GPM IMERG half-hourly, storm core, $a=4.0$).}
+\caption{Sub-daily I--D crossing across three events (GPM IMERG half-hourly, storm
+core, calibrated regional $a^\star=5.5$).}
 \label{tab:multievent}
 \begin{tabular}{@{}llcccc@{}}
 \toprule
 Event & Climate & Total & Peak 1\,h & Crossing (UTC) & Daily fires? \\
 \midrule
 Atacama/Copiap\'o & arid, convective & 108\,mm & 40\,mm\,h$^{-1}$ & 24-Mar 04:30 & yes \\
-Caj\'on del Maipo & Andes, summer & 28\,mm & 5\,mm\,h$^{-1}$ & 25-Feb 16:30 & \textbf{no} \\
-Villa Santa Luc\'ia & humid, frontal & 83\,mm & 17\,mm\,h$^{-1}$ & 15-Dec 15:00 & yes \\
+Caj\'on del Maipo & Andes, summer & 28\,mm & 5\,mm\,h$^{-1}$ & 25-Feb 17:30 & \textbf{no} \\
+Villa Santa Luc\'ia & humid, frontal & 83\,mm & 17\,mm\,h$^{-1}$ & 15-Dec 15:30 & yes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{The sub-daily result does not rest on the chosen intercept}
+\label{sec:intercept}
+
+Sections~\ref{sec:headtohead}--\ref{sec:multievent} apply one I--D curve, and a
+sceptical reader may reasonably ask whether the conclusion is an artefact of that
+choice: a low enough intercept makes any storm trigger, and a high enough one makes
+none. We remove the choice in two ways.
+
+First, the intercept can be \emph{measured} rather than chosen. Because exceedance
+scales exactly as $1/a$ --- $E(a)=I\,D^{b}/a$, so $E(a)=(a_0/a)\,E(a_0)$ --- and the
+window that maximises it is therefore the same for every $a$, each event has a
+well-defined \emph{critical intercept}
+\begin{equation}
+a_\mathrm{crit} \;=\; \max_{t,m}\; I(t,m)\,D(m)^{b},
+\label{eq:acrit}
+\end{equation}
+the highest intercept at which that event still crosses the curve. It is a property
+of the observed rainfall and of $b$, not of the analyst. Computing it on the
+half-hourly series and on the same series aggregated to daily yields two values,
+and the interval between them,
+$a_\mathrm{crit}(\text{daily}) < a \leq a_\mathrm{crit}(\text{half-hourly})$, is the
+band of thresholds in which \emph{resolution alone} decides detection. That band
+spans a factor of 2.0--3.2 in $a$ at all three events (Table~\ref{tab:intercept}),
+and the calibrated $a^\star=5.5$ falls inside it at Caj\'on del Maipo --- which is
+why the daily product misses that event at the intercept the paper calibrates
+independently, in the Maipo backtest, and not at one tuned for this comparison.
+
+Second, and without selecting any intercept at all, we re-ran the 35 published
+power laws of \citet{guzzetti2007} --- each with its own $(a,b)$, unchanged ---
+over each event at both resolutions. Resolution flips the outcome (sub-daily fires,
+daily does not) for 8 of 35 curves at Atacama, 8 of 35 at Villa Santa Luc\'ia, and 2
+of 35 at Caj\'on del Maipo. The Caj\'on del Maipo figure also states the honest
+limit of that event: it is a weak burst (28\,mm, 5\,mm\,h$^{-1}$ peak) that only 4
+of the 35 published curves detect at \emph{any} resolution, so while the
+resolution effect there is real, it is demonstrated on an event near the detection
+floor of the literature. At the two stronger events, where most published curves do
+fire, the resolution effect is carried by roughly a quarter of the ensemble. Both
+analyses are reproduced by the \texttt{intercept\_sensitivity} example.
+
+Two caveats bound this. Applying $a^\star$, fitted in the R\'io Maipo, to storms in
+the Atacama and in Patagonia is a transfer well outside its calibration region, and
+we make no claim that 5.5\,mm\,h$^{-1}$ is the right regional curve for either;
+the point of Table~\ref{tab:intercept} is precisely that the resolution result
+survives whatever intercept one adopts within a broad band, so no such claim is
+needed. And $b$ is held at 0.39 throughout: the critical intercept of
+Eq.~\ref{eq:acrit} is defined for a given exponent, and the published-curve
+ensemble, which varies $b$ from 0.19 to 1.50, is what covers that dimension.
+
+\begin{table}[ht]
+\centering
+\caption{Critical I--D intercept $a_\mathrm{crit}$ (Eq.~\ref{eq:acrit}, $b=0.39$) per
+event and forcing resolution, and the band of intercepts in which resolution alone
+decides detection.}
+\label{tab:intercept}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Event & $a_\mathrm{crit}$ half-hourly & $a_\mathrm{crit}$ daily & ratio & resolution decides for \\
+ & (mm\,h$^{-1}$) & (mm\,h$^{-1}$) & & (mm\,h$^{-1}$) \\
+\midrule
+Atacama/Copiap\'o & 48.8 & 15.5 & 3.2$\times$ & $15.5 < a \leq 48.8$ \\
+Caj\'on del Maipo & 6.8 & 2.5 & 2.8$\times$ & $2.5 < a \leq 6.8$ \hfill ($\ni a^\star$) \\
+Villa Santa Luc\'ia & 19.1 & 9.4 & 2.0$\times$ & $9.4 < a \leq 19.1$ \\
 \bottomrule
 \end{tabular}
 \end{table}

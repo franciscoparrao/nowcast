@@ -73,7 +73,7 @@ cr <- read.csv("data/atacama_cr2met_daily.csv")
 cr$h0 <- as.numeric(difftime(as.POSIXct(paste0(cr$date, " 00:00"), format = "%Y-%m-%d %H:%M", tz = "UTC"), t0, units = "hours"))
 imw <- subset(im, h >= 0 & h < 48)
 crw <- subset(cr, h0 >= 0 & h0 < 48)
-cross_h <- 5  # I–D crossing: 24-Mar 05:00 UTC
+cross_h <- 4.5  # I–D crossing at the calibrated regional a* = 5.5: 24-Mar 04:30 UTC
 
 p3 <- ggplot() +
   geom_segment(data = crw, aes(x = h0, xend = h0 + 24, y = p_mm / 24, yend = p_mm / 24,
@@ -81,7 +81,7 @@ p3 <- ggplot() +
   geom_area(data = imw, aes(h, core_mm_hr), fill = ok[["imerg"]], alpha = 0.18) +
   geom_line(data = imw, aes(h, core_mm_hr, colour = "GPM IMERG ½-hourly"), linewidth = 0.5) +
   geom_vline(xintercept = cross_h, linetype = 2, colour = ok[["cross"]], linewidth = 0.4) +
-  annotate("text", x = cross_h + 0.8, y = 36, label = "I–D crossing\n24-Mar 05:00 UTC", hjust = 0, size = 2.4, lineheight = 0.9) +
+  annotate("text", x = cross_h + 1.4, y = 36, label = "I–D crossing\n24-Mar 04:30 UTC", hjust = 0, size = 2.4, lineheight = 0.9) +
   scale_colour_manual(values = c("GPM IMERG ½-hourly" = ok[["imerg"]], "CR2MET daily (total/24 h)" = ok[["cr2"]]), name = NULL) +
   scale_x_continuous(breaks = c(0, 12, 24, 36, 48),
                      labels = c("24-Mar", "12 h", "25-Mar", "12 h", "26-Mar")) +

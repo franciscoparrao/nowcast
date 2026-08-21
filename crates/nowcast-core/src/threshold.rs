@@ -102,3 +102,65 @@ impl IdThreshold {
         (best_e, best_m)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A storm profile with a short burst inside a long wet spell, so the
+    /// dominant window is a genuine choice among competing durations.
+    const BURST: [f64; 8] = [0.5, 0.5, 2.0, 18.0, 22.0, 3.0, 0.5, 0.5];
+
+    fn depth(m: usize) -> f64 {
+        BURST[BURST.len() - m..].iter().sum()
+    }
+
+    /// `E = I·D^b / a` — exceedance is exactly inversely proportional to the
+    /// intercept. The `intercept_sensitivity` example and the critical-intercept
+    /// definition `a_crit = max I·D^b` both rest on this, so it is pinned here.
+    #[test]
+    fn exceedance_scales_inversely_with_intercept() {
+        for &a in &[1.0, 4.0, 5.5, 14.82, 176.4] {
+            let th = IdThreshold::new(a, 0.39).unwrap();
+            let e = th.exceedance(12.0, 3.0);
+            let unit = IdThreshold::new(1.0, 0.39).unwrap().exceedance(12.0, 3.0);
+            assert!(
+                (e * a - unit).abs() < 1e-12,
+                "E({a}) should equal E(1)/{a}, got {e} vs {}",
+                unit / a
+            );
+        }
+    }
+
+    /// The window that maximises exceedance is the SAME for every intercept
+    /// (`a` is a common factor), which is what makes `a_crit` well defined —
+    /// it is a property of the rainfall, not of the threshold chosen.
+    #[test]
+    fn worst_window_picks_same_window_for_any_intercept() {
+        let reference = IdThreshold::new(1.0, 0.39)
+            .unwrap()
+            .worst_window(0.5, BURST.len(), depth);
+        for &a in &[0.5, 4.0, 5.5, 14.82, 1000.0] {
+            let (e, m) = IdThreshold::new(a, 0.39)
+                .unwrap()
+                .worst_window(0.5, BURST.len(), depth);
+            assert_eq!(m, reference.1, "dominant window moved at a = {a}");
+            assert!(
+                (e * a - reference.0).abs() < 1e-9,
+                "worst exceedance should scale as 1/a at a = {a}"
+            );
+        }
+    }
+
+    /// Hostile: a dry series has no critical intercept — the worst exceedance is
+    /// zero at every intercept, so no threshold, however low, is crossed.
+    #[test]
+    fn dry_series_never_crosses_at_any_intercept() {
+        for &a in &[1e-6, 1.0, 14.82] {
+            let (e, _) = IdThreshold::new(a, 0.39)
+                .unwrap()
+                .worst_window(0.5, 4, |_| 0.0);
+            assert_eq!(e, 0.0, "dry series crossed at a = {a}");
+        }
+    }
+}

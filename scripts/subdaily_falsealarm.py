@@ -20,7 +20,7 @@ from datetime import datetime
 import numpy as np
 import xarray as xr
 
-A, B = 4.0, 0.39          # regional I-D intercept / exponent (as in the paper)
+A, B = 5.5, 0.39          # regional I-D intercept a* (calibrated in Section 5.1) / exponent
 DT_H = 0.5                # half-hourly
 MAX_WIN = 48              # rolling windows up to 24 h
 CROSS = 1.0              # exceedance >= 1 means the I-D curve is crossed

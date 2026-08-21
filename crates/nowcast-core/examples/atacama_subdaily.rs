@@ -19,6 +19,10 @@
 
 use std::path::PathBuf;
 
+// Intercepto regional calibrado (una copia; ver shared/curves.rs), no elegido aquí.
+#[path = "shared/curves.rs"]
+mod curves;
+
 use nowcast_core::{
     Forcing, GridDims, IdThreshold, Nowcast, SusceptibilityMap, TriggerModel, UniformRain,
 };
@@ -117,7 +121,11 @@ fn main() {
 
     // Sub-daily trigger: half-hourly IMERG.
     println!("\nNowcast trigger (susceptibility = 1, I = a·D^-0.39):");
-    for (name, a) in [("Caine global a=14.82", 14.82), ("Atacama-low a=4.0", 4.0)] {
+    let regional_label = format!("regional a*={}", curves::REGIONAL.0);
+    for (name, a) in [
+        ("Caine global a=14.82".to_string(), 14.82),
+        (regional_label, curves::REGIONAL.0),
+    ] {
         let forcing = UniformRain::new(dims, DT_HALFHOUR, depths.clone()).unwrap();
         match first_alert(forcing, IdThreshold::new(a, 0.39).unwrap(), MAX_WINDOW_HH) {
             Some(step) => println!(
@@ -148,13 +156,14 @@ fn main() {
         println!("  {d}: {p:5.1} mm");
     }
     let daily_forcing = UniformRain::new(dims, 24.0, daily.clone()).unwrap();
-    match first_alert(daily_forcing, IdThreshold::new(4.0, 0.39).unwrap(), 3) {
+    let (reg_a, reg_b) = curves::REGIONAL;
+    match first_alert(daily_forcing, IdThreshold::new(reg_a, reg_b).unwrap(), 3) {
         Some(step) => println!(
-            "  daily | Atacama-low a=4.0: first alert on {} — no intra-day timing, \
+            "  daily | regional a*={reg_a}: first alert on {} — no intra-day timing, \
              so no sub-daily lead time.",
             day_label[step]
         ),
-        None => println!("  daily | Atacama-low a=4.0: no alert"),
+        None => println!("  daily | regional a*={reg_a}: no alert"),
     }
 
     println!(

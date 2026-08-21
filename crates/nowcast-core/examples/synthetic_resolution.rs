@@ -31,6 +31,9 @@ use std::path::PathBuf;
 
 use nowcast_core::{GridDims, GriddedRain, IdThreshold, Nowcast, SusceptibilityMap, TriggerModel};
 
+#[path = "shared/curves.rs"]
+mod curves;
+
 // --- experiment configuration ------------------------------------------------
 const NCOLS: usize = 20;
 const NROWS: usize = 20;
@@ -38,8 +41,11 @@ const N_DAYS: usize = 60;
 const STEPS_PER_DAY: usize = 48; // half-hourly
 const DT_SUB_H: f64 = 0.5;
 
-const A_INTERCEPT: f64 = 4.0; // regional-style I–D intercept (mm/h at 1 h)
-const B_EXPONENT: f64 = 0.39;
+// Same calibrated regional curve as the field experiments (one copy; see
+// shared/curves.rs). The discrimination scores here are rank-based, so they are
+// insensitive to the intercept; it only sets the trigger rate.
+const A_INTERCEPT: f64 = curves::REGIONAL.0;
+const B_EXPONENT: f64 = curves::REGIONAL.1;
 const MAX_DURATION_H: f64 = 24.0; // same physical max I–D duration at every resolution
 
 // rainfall calendar (per active cell, per day) — probabilities and amounts
