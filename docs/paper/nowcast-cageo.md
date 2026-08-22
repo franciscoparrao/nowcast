@@ -8,6 +8,19 @@
 
 ---
 
+> ⚠️ **This Markdown rendering is an OUTDATED snapshot. The manuscript of record is
+> `nowcast-cageo.tex`.** It diverged during the August 2026 revisions and several
+> numbers below are superseded, in particular: the synthetic experiment (§5.3) now
+> draws its labels from an independent pore-pressure mechanism rather than from the
+> I–D rule, and reports results stratified by failure mechanism (burst-driven catch
+> rate 0.46 → 0.00 under aggregation, accumulation-driven ≈0.42 throughout), so the
+> figures quoted here for that section no longer apply; the distributed null (§5.2)
+> now carries diagnostics showing it accuses the inventory as much as the forcing;
+> the resolution comparison is now decomposed one factor at a time; and the I–D
+> intercept is the calibrated a\* = 5.5 throughout. Read the `.tex`.
+
+---
+
 ## Abstract
 
 Landslide and flood susceptibility maps are static: fixed predisposing factors combined by physical or machine-learning models. Turning susceptibility into an operational *nowcast* requires modulating it in time with the dynamic forcing that triggers failure, rainfall, snowmelt, routed discharge, ground deformation. We present **nowcast**, a dependency-light Rust engine that expresses time-varying hazard as `hazard(cell, t) = susceptibility(cell) × trigger(exceedance, t)` behind a single interchangeable forcing interface, so the hazard logic is decoupled from the data source and from the trigger family. The engine ships native providers that wrap sibling Rust models for rainfall–runoff, snowmelt, 2-D shallow-water inundation, an agent-based debris-flow model, a geospatial raster substrate, and PS-InSAR/SBAS deformation; triggers are composable (rainfall intensity–duration, discharge, deformation rate) and physical refinement runs on demand only where the cheap nowcast alerts. Using the engine as an experimental instrument over Chilean basins, we hold the model fixed and vary the resolution of the forcing. A backtest of 157 dated rainfall-triggered landslides in the Río Maipo basin shows that the global Caine (1980) intensity–duration threshold fires on only 7 of 13 880 days, none of them coinciding with a recorded event (probability of detection, POD = 0), while a calibrated regional intercept transfers split-sample (validation POD ≈ 0.50). Distributing that daily forcing over the basin and weighting by a real machine-learning susceptibility raster does **not** improve discrimination. The area under the ROC curve is indistinguishable from random (AUC ≈ 0.48; month-block bootstrap 95 % CI spans 0.5): at 5 km daily resolution the gridded rainfall at event cell-months is no higher than average, and a supervised baseline trained on the same daily features fares no better (cross-validated AUC ≤ 0.56). A controlled experiment with known ground truth illustrates the mechanism: the same engine discriminates planted sub-daily bursts almost perfectly (AUC ≈ 1), but aggregating the identical field to daily resolution collapses the operational catch rate to effectively zero (over 20 random realisations), with the model and terrain held fixed. The bottleneck is therefore the *resolution* of the forcing rather than the model: at half-hourly GPM IMERG resolution the same intensity–duration trigger pins the threshold crossing to a timestamp hours ahead of the documented flows, whereas the same rain aggregated to daily leaves the finest resolvable mean intensity at (daily depth)/24 h — 0.66 mm h⁻¹ for the wettest day of that storm — well below the curve. We reproduce this across three dated events spanning opposite Chilean climates. A complementary flood path, validated against observed daily streamflow on the Río Itata, discriminates observed floods out of sample (ROC-AUC 0.90), because discharge routing integrates the rainfall that a sub-daily landslide trigger must instead resolve directly. The engine, its backtesting framework, and all examples are open and reproducible.

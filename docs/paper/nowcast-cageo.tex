@@ -54,11 +54,14 @@ does not improve discrimination. The area under the ROC curve is indistinguishab
 from random (AUC $\approx 0.48$; month-block bootstrap 95\,\% CI spans 0.5): at
 5\,km daily resolution the gridded rainfall at event cell-months is no higher
 than average, and a supervised baseline trained on the same daily features fares
-no better (cross-validated AUC $\le 0.56$). A controlled experiment with known
-ground truth illustrates the mechanism: the same engine discriminates planted
-sub-daily bursts almost perfectly (AUC $\approx 1$), but aggregating the identical
-field to daily resolution collapses the operational catch rate to zero
-(in all 20 random realisations), with the model and terrain held fixed. The bottleneck is therefore the resolution of the
+no better (cross-validated AUC $\le 0.56$). Diagnostics show that null accuses the
+target as much as the forcing --- recorded events sit at the 46th percentile of
+their own cell's history and dilating the label in time and space does not recover
+signal --- so we do not rest the resolution claim on it. A controlled experiment whose labels come from an
+\emph{independent} failure mechanism, not from the rule under test, isolates why:
+aggregating the identical field to daily resolution collapses the catch rate on
+burst-driven failures from 0.46 to 0.00 while leaving accumulation-driven failures
+untouched at ${\approx}0.42$, with the model and terrain held fixed. The bottleneck is therefore the resolution of the
 forcing rather than the model. At half-hourly GPM IMERG
 resolution the same intensity--duration trigger pins the threshold crossing to a
 timestamp hours ahead of the documented flows, which no daily product can do at any
@@ -205,6 +208,27 @@ series per cell (a gridded precipitation product) and, through the provider
 crates, snowmelt runoff and InSAR deformation. The same trait therefore admits a
 gauge, a reanalysis grid, a satellite product or a model output without touching
 the hazard logic (Fig.~\ref{fig:arch}).
+
+\paragraph{Relation to model-coupling standards.}
+Standardised interfaces for coupling environmental models are long established:
+OpenMI \citep{gregersen2007} defines a link-based standard for exchanging
+time-varying quantities between running components, the CSDMS Basic Model
+Interface \citep{peckham2013,hutton2020} prescribes a small set of
+initialise/update/get--set functions that any model implements to become
+composable, and the Object Modeling System \citep{david2013} approaches the same
+problem from a software-engineering direction, using lightweight annotations
+instead of a prescriptive component API. We do not propose \texttt{Forcing} as an
+alternative to these. It is deliberately narrower: a read-only, random-access view
+of \emph{one} scalar field, with no lifecycle, no time control and no
+bidirectional exchange, which is what makes the random access that the I--D window
+kernel and the backtester both need cheap to provide. The trade is the usual one:
+a single-purpose interface is trivial for a provider to implement --- each of our
+six adapters is a few dozen lines --- but it cannot express two-way coupling or
+let a component drive the clock, which is precisely what BMI and OpenMI exist to
+do. The two levels compose rather than compete: a BMI-exposed model is a
+legitimate source behind a \texttt{Forcing} implementation, and wrapping the
+engine itself in BMI so that it can be driven inside a CSDMS or OpenMI
+composition is the natural interoperability step, left as future work.
 
 \begin{figure}[t]
 \centering
@@ -572,13 +596,41 @@ within-month spatial autocorrelation is preserved; $B=2000$) puts all three 95\,
 confidence intervals across the random 0.5 ($[0.40, 0.57]$ for the best
 configuration), and the bootstrap probability that AUC exceeds 0.5 is only
 0.21--0.34. None of the configurations is distinguishable from random. The mean
-7-day rainfall at recorded event cell-months (45\,mm) is in fact \emph{lower}
+7-day rainfall at recorded event cell-months (39\,mm) is in fact \emph{lower}
 than the grid-wide average (49\,mm).
-At 5\,km daily resolution the gridded rainfall does not discriminate where and
-when these landslides were recorded, and 30\,m susceptibility averaged to 5\,km
-loses its edge. Distributing the forcing does not help: the limiting factor is the
-\emph{resolution} of the forcing and susceptibility (and the month-level
-inventory), not the lumping.
+
+\paragraph{What this null does, and does not, accuse.}
+That last number deserves scrutiny rather than a passing mention: if recorded
+events sit where it rained \emph{less}, the finger points at the inventory or the
+rainfall field, not at the time step, and it would be self-serving to read it as
+evidence for a resolution argument. We therefore tested the competing explanations
+on the same data (\texttt{null\_diagnosis} example). \emph{Is it a dry cell or a dry
+month?} Removing the spatial gradient by standardising each cell against its own
+history leaves the null intact (AUC 0.472; the mean event-month anomaly is
+$z=-0.13$), so there is no temporal signal being masked by the space dimension.
+\emph{Is the record merely displaced?} Dilating the \emph{label} --- counting a
+cell-month as positive if an event is recorded within $\pm k$ months and $r$ cells
+--- lifts AUC only to 0.496 at $\pm2$ months and one cell of slack, still
+indistinguishable from chance, so the events are not simply mis-filed by a month or
+a cell. \emph{Is it exposure bias?} Cells that ever record an event receive
+essentially the same climatological rainfall as the rest ($-0.2$\,\%), though they
+are slightly more susceptible (0.351 vs 0.329), so the inventory is not
+concentrated in a systematically drier part of the basin. Most directly, a recorded
+event cell-month sits at the 46th percentile of its own cell's history and the 45th
+percentile of its own month's spatial distribution: on both axes it is where chance
+would put it.
+
+The honest conclusion is stronger and narrower than the one this null is often
+asked to support. The daily 5\,km field carries no recoverable information about
+where and when these events were recorded, and no reasonable relaxation of the
+label recovers any; but that is a statement about \emph{this target and this
+product jointly}, and it cannot be attributed to temporal resolution alone. The
+evidence for the resolution claim comes instead from the controlled experiment,
+where the labels are generated by a known process (Section~\ref{sec:synthetic}),
+and from the single-factor field decomposition
+(Section~\ref{sec:singlefactor}). We report the distributed null because a method
+paper should show where its instrument reads nothing, not because it proves the
+thesis.
 
 \begin{table}[ht]
 \centering
@@ -630,55 +682,68 @@ controlled data, how that discrimination returns as resolution increases.}
 The distributed null is ambiguous on its own: a near-random AUC could mean the
 engine has no skill, or that the month-dated, incomplete inventory cannot reveal
 skill that is present. We resolve the ambiguity with a controlled experiment whose
-ground truth is known by construction. On a $20\times20$ grid over 60 days we
-synthesise one half-hourly rainfall field in which the \emph{only} feature that
-separates an event cell-day from a non-event cell-day is the sub-daily intensity
-profile, not the daily total: event cell-days deliver a modest total (16--26\,mm)
-as a ${\sim}1$\,h convective burst that crosses the I--D curve, while
-\emph{confounder} cell-days deliver a similar or larger total (16--46\,mm) smeared
-over 16--23\,h, so their intensity stays below the curve. The same active cells
-host both kinds of day, so the static susceptibility carries no information that
-distinguishes them and discrimination must come from resolving the burst. We then
-aggregate the identical field to coarser resolution (0.5\,h to 24\,h), holding the
-I--D engine and the 24\,h maximum duration fixed, and score discrimination of the
-planted events at each resolution, averaged over 20 random realisations
-(Fig.~\ref{fig:synthetic}).
+ground truth is known.
 
-At half-hourly resolution the engine recovers the planted events almost perfectly
-(ROC-AUC $1.00\pm0.00$ on the trigger alone; $0.94\pm0.02$ once multiplied by the
-structured susceptibility, which here adds noise but no signal) and the operational
-catch rate is high (POD at a 5\,\% alerted-area budget $0.55\pm0.10$). As the field
-is aggregated the maximum resolvable mean intensity falls toward total$/24$\,h, the
-bursts smear below the curve, the trigger rate drops from 24\,\% to 9\,\% of
-cell-days, the trigger-only AUC decays monotonically (to $0.79\pm0.01$; multiplied
-by the structured susceptibility it decays likewise, from $0.94\pm0.02$ to
-$0.80\pm0.02$), and the operational catch rate \textbf{collapses to
-POD@5\,\% $=0.000\pm0.000$, i.e.\ exactly zero across all 20 realisations,} at daily resolution: with a
-realistic alert budget a daily product catches essentially \emph{none} of the
-events a sub-daily product catches. The residual daily AUC above 0.5 is, if
-anything, the optimistic case for daily forcing, the synthetic events still carry an
-above-dry daily total; in the real Maipo data even that vanishes, because recorded
-event cell-months are no wetter than average (Section~5.2). The experiment isolates
-the \emph{aggregation mechanism} under known ground truth, the engine discriminates
-when the triggering signal is temporally resolved and loses that skill under
-aggregation, with model and terrain fixed; it is a demonstration of the mechanism,
-not a claim about real-event base rates, which the field backtests
-(Sections~5.1--5.2) address.
+\paragraph{The labels do not come from the rule under test.}
+A synthetic experiment that defines an event as ``a burst that crosses the I--D
+curve'' and then reports that an I--D trigger recovers it is deductive: the result
+is entailed by the construction, not evidence about it. We therefore generate the
+labels with an \emph{independent} failure mechanism. On a $20\times20$ grid over 60
+days we synthesise one half-hourly rainfall field with two day types --- a
+${\sim}1$\,h burst (8--30\,mm) and a similar-to-larger total (16--46\,mm) smeared
+over 8--23\,h --- and then decide failure with a transient pore-pressure analogue:
+a linear store fed by capped infiltration (excess runs off) and drained with a
+${\sim}4$\,h time constant, failing the cell-day when it exceeds
+$\theta_\mathrm{crit}=12$\,mm. This is a different functional form from
+$I=a\,D^{-b}$, and the two do not coincide: per realisation about 123 of 667 bursts
+never fail, and about 1167 failures fall on days that were \emph{not} bursts, so the
+label is not a relabelling of the day type. Critically, the store is always
+integrated at the native half-hourly step --- the physics happens at full
+resolution and it is the \emph{observation} we degrade. Susceptibility is
+structured but uncorrelated with which days fail, so it carries no separating
+information. We then aggregate the identical field from 0.5\,h to 24\,h, holding
+the engine and the 24\,h maximum duration fixed, and score against the physical
+labels over 20 random realisations (Fig.~\ref{fig:synthetic}).
+
+\paragraph{Aggregation destroys one failure route and spares the other.}
+The store fails cell-days by two paths: a burst outrunning drainage, and slower
+rain accumulating past $\theta_\mathrm{crit}$. Aggregation does not treat them
+alike, and that is the result. \textbf{Stratified by mechanism, the operational
+catch rate on burst-driven failures collapses from $0.46\pm0.09$ at half-hourly to
+$0.00\pm0.01$ at daily, while accumulation-driven failures are caught at
+${\approx}0.42$ at \emph{every} resolution} (POD at a 5\,\% alerted-area budget).
+The trigger rate falls from 27\,\% to 9\,\% of cell-days over the same sweep.
+
+The pooled scores, by contrast, decay only mildly --- trigger-only AUC
+$0.99\to0.92$, susceptibility-weighted $0.93\to0.91$, pooled POD@5\,\%
+$0.43\to0.29$ --- and that mildness is itself informative: the pooled number
+averages a population the aggregation annihilates with one it leaves untouched, so
+reporting it alone would hide the effect entirely. With these labels, 68\,\% of
+failures are accumulation-driven, and those a daily product catches perfectly well.
+The honest statement is therefore not that daily forcing is blind, but that it is
+blind \emph{to the sub-daily triggering route} --- which is the route an I--D
+nowcast exists to catch, and the one the field cases confirm
+(Section~\ref{sec:singlefactor}, where resolution flips detection only for the
+short Caj\'on del Maipo burst). The experiment isolates the \emph{aggregation
+mechanism} under known ground truth with the model and terrain fixed; it is not a
+claim about real-event base rates, which the field backtests (Sections~5.1--5.2)
+address.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.6\linewidth]{figs/fig_synthetic.pdf}
 \caption{Controlled resolution experiment (mean over 20 random realisations; bands
-$\pm1$ sd). Synthetic half-hourly rainfall fields with planted convective-burst
-events and same-total spread-rain confounders, aggregated to coarser resolution
+$\pm1$ sd). Synthetic half-hourly rainfall fields, aggregated to coarser resolution
 (log axis) under a fixed I--D engine (calibrated regional $a^\star=5.5$) and 24\,h
-maximum duration. Discrimination of
-the planted events, ROC-AUC weighted by susceptibility (blue, $0.94\to0.80$) and POD
-at a 5\,\% alerted-area budget (orange, $0.55\to0.00$), is high at sub-hourly
-resolution and falls monotonically toward daily, the operational catch rate to
-exactly zero. The engine discriminates when the burst
-is resolved; daily aggregation (intensity capped at total$/24$\,h) destroys the
-skill, with the model and terrain held fixed.}
+maximum duration, scored against labels from an \emph{independent} pore-pressure
+store rather than from the I--D rule itself. Stratifying by failure mechanism is
+what reveals the effect: the operational catch rate on \textbf{burst-driven}
+failures (orange) collapses from 0.46 to 0.00, while \textbf{accumulation-driven}
+failures (green) are caught at ${\approx}0.42$ at every resolution. The pooled
+susceptibility-weighted AUC (blue) barely moves ($0.93\to0.91$) precisely because it
+averages the two, which is why a pooled score hides the phenomenon. Daily
+aggregation (intensity capped at total$/24$\,h) destroys the sub-daily triggering
+route specifically, with the model and terrain held fixed.}
 \label{fig:synthetic}
 \end{figure}
 
@@ -1005,11 +1070,12 @@ and resolution only the timing. We therefore keep the two claims separate
 throughout: sub-daily forcing buys intra-day timing in general, and buys detection
 where the triggering burst is short. The
 controlled experiment (Section~\ref{sec:synthetic}) makes the mechanism explicit on
-a target with known ground truth: with the model and terrain held fixed,
-discrimination of planted events is near-perfect at sub-hourly resolution and
-decays to an effectively zero operational catch rate at daily resolution, so the real-data null
+a target whose labels come from an independent physical process: with the model and
+terrain held fixed, aggregation drives the catch rate on burst-driven failures to
+zero while sparing accumulation-driven ones entirely, so the real-data null
 reflects the resolution of the forcing, not an absence of recoverable signal in
-principle. The practical corollary is that an I--D nowcast is only as good as its
+principle. It also shows why a pooled skill score can conceal this, by averaging
+the two populations. The practical corollary is that an I--D nowcast is only as good as its
 rainfall's temporal resolution; effort spent on susceptibility sophistication is
 wasted where the forcing is daily. The flood path makes the same point with a
 \emph{positive} result: where discharge routing integrates the rainfall, daily
@@ -1129,15 +1195,50 @@ are openly available at \url{https://github.com/franciscoparrao/nowcast} under t
 MIT or Apache-2.0 licence; a citable snapshot of the version used here (v0.1.0) is archived on
 Zenodo at \url{https://doi.org/10.5281/zenodo.22019138} (concept DOI
 \url{https://doi.org/10.5281/zenodo.22019137}, which always resolves to the
-latest version). \texttt{nowcast-core} builds and tests offline with no
-system dependencies and reproduces the headline resolution results; the provider
-crates wrap sibling engines of the author's Rust geohazard family through path
-dependencies. Input datasets are third-party and openly documented: CR2MET v2.5,
+latest version). 
+
+\paragraph{What the archived snapshot reproduces, and what it does not.}
+Reproducibility here is not uniform across the paper, and it would be misleading to
+claim otherwise. \texttt{nowcast-core} has \emph{no} path dependencies: it builds
+and tests offline with no system dependencies, and its 22 examples regenerate every
+result in Sections~\ref{sec:lumped}--\ref{sec:intercept} --- the lumped and
+distributed backtests and their null diagnostics, the published-threshold ensemble,
+the controlled resolution experiment, the head-to-head, the multi-event lead times,
+the single-factor decomposition and the intercept sensitivity --- from the archived
+snapshot alone, given the derived input CSVs (regenerated by the extraction scripts
+from the third-party datasets below). The provider crates are different: each wraps
+a sibling engine of the author's Rust geohazard family through a \emph{path}
+dependency to a repository outside this snapshot, so the flood path of
+Section~5.8 (GR4J on CAMELS-CL Itata, ROC-AUC 0.90, in
+\texttt{nowcast-rainflow}), the coupling demonstrations of Section~5.9 and the
+command-line runner, which links the geospatial substrate, cannot be rebuilt from
+the Zenodo record on its own; they require the sibling repositories checked out
+alongside, which \texttt{scripts/check\_siblings.sh} verifies and the README
+documents. Publishing the sibling engines as versioned registry crates would close
+this gap and is the intended path; until then the honest scope of the archived
+artefact is the core engine and the resolution results, which is where the paper's
+claims live. Input datasets are third-party and openly documented: CR2MET v2.5,
 GPM IMERG Final v07 and Early NRT v07 (NASA GES DISC; the latter feeds the live
 chain of limitation~(iii)), GOES-East ABI-L2-RRQPEF (NOAA, public AWS bucket),
 CAMELS-CL
 (\citealp{alvarez2018}; \url{https://doi.org/10.1594/PANGAEA.894885}) and the
 SERNAGEOMIN inventory.
+
+\paragraph{Software availability.}
+\emph{Name}: \texttt{nowcast}.
+\emph{Developer}: Francisco Parra.
+\emph{Contact}: see corresponding author.
+\emph{Year first available}: 2026.
+\emph{Hardware required}: any 64-bit machine; the experiments in this paper run on
+a laptop (the full example suite in minutes; see Section~2.6 for timings).
+\emph{Software required}: Rust 1.75 or later (stable) for the engine and CLI;
+Python 3.9 or later with \texttt{maturin} for the optional bindings; R with
+\texttt{ggplot2} to regenerate the figures; the data-extraction scripts need
+\texttt{numpy}, \texttt{netCDF4}, \texttt{xarray} and \texttt{earthaccess}.
+\emph{Program language}: Rust (with Python bindings via PyO3).
+\emph{Program size}: approximately 25\,000 lines across eleven crates.
+\emph{Availability and cost}: free and open source, MIT or Apache-2.0, at the
+repository and Zenodo DOIs above.
 
 \section*{Acknowledgements}
 
@@ -1215,6 +1316,12 @@ D'Ambrosio, D., Di Gregorio, S., Iovine, G., 2003. Simulating debris flows
 through a hexagonal cellular automata model: SCIDDICA S3-hex. Nat.\ Hazards
 Earth Syst.\ Sci.\ 3, 545--559. \url{https://doi.org/10.5194/nhess-3-545-2003}.
 
+\bibitem[David et al.(2013)]{david2013}
+David, O., Ascough, J.C., Lloyd, W., Green, T.R., Rojas, K.W., Leavesley, G.H.,
+Ahuja, L.R., 2013. A software engineering perspective on environmental modeling
+framework design: The Object Modeling System. Environ.\ Model.\ Softw.\ 39,
+201--213. \url{https://doi.org/10.1016/j.envsoft.2012.03.006}.
+
 \bibitem[Ferretti et al.(2001)]{ferretti2001}
 Ferretti, A., Prati, C., Rocca, F., 2001. Permanent scatterers in SAR
 interferometry. IEEE Trans.\ Geosci.\ Remote Sens.\ 39 (1), 8--20.
@@ -1241,6 +1348,11 @@ Veloso-Aguila, D., 2019. The Central Chile Mega Drought (2010--2018): a climate
 dynamics perspective. Int.\ J.\ Climatol.\ 40 (1), 421--439.
 \url{https://doi.org/10.1002/joc.6219}.
 
+\bibitem[Gregersen et al.(2007)]{gregersen2007}
+Gregersen, J.B., Gijsbers, P.J.A., Westen, S.J.P., 2007. OpenMI: Open modelling
+interface. J.\ Hydroinform.\ 9 (3), 175--191.
+\url{https://doi.org/10.2166/hydro.2007.023}.
+
 \bibitem[Gupta et al.(2009)]{gupta2009}
 Gupta, H.V., Kling, H., Yilmaz, K.K., Martinez, G.F., 2009. Decomposition of the
 mean squared error and NSE performance criteria: implications for improving
@@ -1266,6 +1378,11 @@ receiver operating characteristic (ROC) curve. Radiology 143 (1), 29--36.
 \bibitem[Huffman et al.(2020)]{huffman2020}
 Huffman, G.J., et al., 2020. GPM IMERG Final Precipitation L3 Half Hourly, V07.
 NASA GES DISC. \url{https://doi.org/10.5067/GPM/IMERG/3B-HH/07}.
+
+\bibitem[Hutton et al.(2020)]{hutton2020}
+Hutton, E.W.H., Piper, M.D., Tucker, G.E., 2020. The Basic Model Interface 2.0: A
+standard interface for coupling numerical models in the geosciences. J.\ Open
+Source Softw.\ 5 (51), 2317. \url{https://doi.org/10.21105/joss.02317}.
 
 \bibitem[Kirschbaum and Stanley(2018)]{kirschbaum2018}
 Kirschbaum, D., Stanley, T., 2018. Satellite-based assessment of
@@ -1299,6 +1416,11 @@ Niculescu-Mizil, A., Caruana, R., 2005. Predicting good probabilities with
 supervised learning. In: Proceedings of the 22nd International Conference on
 Machine Learning (ICML), pp.\ 625--632.
 \url{https://doi.org/10.1145/1102351.1102430}.
+
+\bibitem[Peckham et al.(2013)]{peckham2013}
+Peckham, S.D., Hutton, E.W.H., Norris, B., 2013. A component-based approach to
+integrated modeling in the geosciences: The design of CSDMS. Comput.\ Geosci.\
+53, 3--12. \url{https://doi.org/10.1016/j.cageo.2012.04.002}.
 
 \bibitem[Peres et al.(2018)]{peres2018}
 Peres, D.J., Cancelliere, A., Greco, R., Bogaard, T., 2018. Influence of

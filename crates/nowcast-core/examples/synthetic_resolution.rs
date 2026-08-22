@@ -5,26 +5,25 @@
 //!
 //! Every real experiment in the paper validates against a month-dated, incomplete
 //! inventory, so a null (AUC ~ 0.5) is ambiguous: is the method skill-less, or is
-//! the *target* untestable? This experiment removes that ambiguity with a planted
-//! ground truth. We synthesise one half-hourly rainfall field in which the only
-//! thing that distinguishes an "event" cell-day from a "wet non-event" cell-day is
-//! the **sub-daily intensity profile**, not the daily total:
+//! the *target* untestable? This experiment removes that ambiguity with a known
+//! ground truth.
 //!
-//! - event cell-days deliver their water as a short, intense convective burst
-//!   (≈1 h) that crosses the I–D curve;
-//! - confounder cell-days deliver a *similar or larger daily total* spread over
-//!   many hours, so the burst is absent and the curve is never crossed;
-//! - the same active cells host both kinds of day, so the static susceptibility
-//!   carries no information that separates events from confounders.
+//! **The labels do not come from the rule under test.** An earlier version defined
+//! an "event" as a burst that crosses the I–D curve, which makes an I–D trigger
+//! recover it by construction — a deductive test, not evidence. Here the rainfall
+//! is synthesised with two day types (a ≈1 h burst, or a similar-to-larger total
+//! smeared over many hours), but whether a cell-day *fails* is decided by an
+//! independent transient pore-pressure store (see `soil_failures`), integrated at
+//! native half-hourly resolution. The two do not coincide: some bursts never fail
+//! and many spread-rain days do, and the run prints that audit.
 //!
 //! We then aggregate the identical field to progressively coarser resolution
 //! (0.5 h → 24 h), holding the I–D engine and the 24 h maximum duration fixed, and
-//! score discrimination (ROC-AUC, POD@area) against the planted events at each
-//! resolution. The expected, and demonstrated, result is an AUC that is high at
-//! sub-hourly resolution and collapses to ~0.5 at daily resolution: the engine
-//! *can* discriminate when the signal is resolved, and daily aggregation
-//! (intensity capped at total/24 h) destroys it. This is the mechanism behind the
-//! real-data null, shown on a target where the truth is known.
+//! score against those physical labels, **stratified by which mechanism caused the
+//! failure**. That stratification is the result: aggregation wipes out the catch
+//! rate on burst-driven failures (~46% → ~0%) while leaving accumulation-driven
+//! failures untouched (~42% at every resolution). A pooled score hides this, since
+//! it averages the population the aggregation destroys with the one it spares.
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -52,13 +51,30 @@ const MAX_DURATION_H: f64 = 24.0; // same physical max I–D duration at every r
 const P_ACTIVE_CELL: f64 = 0.55; // fraction of cells that ever rain
 const P_EVENT_DAY: f64 = 0.05; // of an active cell's days, fraction that are bursts
 const P_WET_DAY: f64 = 0.45; // of an active cell's days, fraction that are spread-rain
-const EVENT_TOTAL: (f64, f64) = (16.0, 26.0); // mm, delivered in ~1 h (modest total)
-// Confounders are *wetter* in daily total but smeared over the whole day, so their
+// Burst totals span a range wide enough that some bursts do NOT fail and some
+// spread-rain days DO: the failure label must not be a relabelling of the class.
+const EVENT_TOTAL: (f64, f64) = (8.0, 30.0); // mm, delivered in ~1 h
+// Confounders are *wetter* in daily total but smeared over many hours, so their
 // intensity stays low: at daily resolution they outrank the bursts (total is higher),
 // which is exactly why a daily product cannot pick the events out.
 const WET_TOTAL: (f64, f64) = (16.0, 46.0); // mm, delivered over many hours
-const WET_SPREAD_H: (f64, f64) = (16.0, 23.0); // hours over which a wet day is smeared
+const WET_SPREAD_H: (f64, f64) = (8.0, 23.0); // hours over which a wet day is smeared
 const DRIZZLE_MM: f64 = 0.15; // per-step background noise ceiling
+
+// --- ground truth: an independent failure mechanism -------------------------
+// The labels must NOT come from the decision rule under test, or the experiment
+// is deductive: an event defined as "crosses the I–D curve" is trivially
+// recovered by an I–D trigger. We therefore generate failures with a transient
+// pore-pressure analogue — a linear store fed by infiltration (capped, the
+// excess runs off) and drained continuously — and fail the cell-day when the
+// store exceeds a critical wetness. This is a different functional form from
+// I = a·D^-b, so "can an empirical I–D rule recover events produced by this
+// mechanism, and how does that degrade under aggregation?" is a real question.
+// The store is always integrated at the NATIVE half-hourly step: the physics
+// happens at full resolution, and it is the *observation* we degrade.
+const DRAIN_PER_H: f64 = 0.25; // store drains with an ~4 h time constant
+const INFILT_MAX_MM_H: f64 = 30.0; // infiltration capacity; excess is runoff
+const THETA_CRIT_MM: f64 = 12.0; // failure when the store exceeds this
 
 const SWEEP_K: [usize; 6] = [1, 2, 6, 12, 24, 48]; // aggregation factors (× 0.5 h)
 
@@ -110,7 +126,9 @@ fn build_susceptibility(dims: GridDims, rng: &mut Lcg) -> SusceptibilityMap {
     SusceptibilityMap::new(dims, v).unwrap()
 }
 
-/// Build the half-hourly rainfall field and the set of planted event `(cell, day)`.
+/// Build the half-hourly rainfall field and record which `(cell, day)` were
+/// generated as bursts — the *class*, kept only to report how far the physical
+/// labels depart from it (they are not the labels).
 fn build_rainfall(dims: GridDims, rng: &mut Lcg) -> (Vec<f64>, BTreeSet<(usize, usize)>) {
     let n = dims.len();
     let n_steps = N_DAYS * STEPS_PER_DAY;
@@ -156,6 +174,34 @@ fn build_rainfall(dims: GridDims, rng: &mut Lcg) -> (Vec<f64>, BTreeSet<(usize, 
         }
     }
     (depths, events)
+}
+
+/// Ground truth: integrate the pore-pressure store at the native half-hourly
+/// step and return the `(cell, day)` pairs in which it exceeds `THETA_CRIT_MM`.
+///
+/// This is the label generator, and it is deliberately **not** the I--D rule the
+/// engine applies. It is intensity-sensitive through drainage (water arriving
+/// faster than the store drains accumulates) rather than through a power law,
+/// and infiltration capping means very intense rain partly runs off instead of
+/// loading the profile — a mechanism an I--D curve does not represent at all.
+fn soil_failures(dims: GridDims, depths: &[f64]) -> BTreeSet<(usize, usize)> {
+    let n = dims.len();
+    let n_steps = depths.len() / n;
+    let decay = 1.0 - DRAIN_PER_H * DT_SUB_H;
+    let infilt_cap = INFILT_MAX_MM_H * DT_SUB_H;
+    let mut theta = vec![0.0_f64; n];
+    let mut failures = BTreeSet::new();
+    for step in 0..n_steps {
+        let day = step / STEPS_PER_DAY;
+        for cell in 0..n {
+            let infiltrated = depths[step * n + cell].min(infilt_cap);
+            theta[cell] = theta[cell] * decay + infiltrated;
+            if theta[cell] > THETA_CRIT_MM {
+                failures.insert((cell, day));
+            }
+        }
+    }
+    failures
 }
 
 /// Aggregate a half-hourly field by factor `k` (sum within each block).
@@ -268,16 +314,46 @@ fn trigger_rate(scores: &[f64], susc: &SusceptibilityMap, n: usize) -> f64 {
 
 const N_SEEDS: usize = 20; // independent realisations → mean ± sd, not one draw
 
-/// Per-resolution row: (dt_h, AUC susc=1, AUC ×susc, POD@5%, trigger rate).
-type ResRow = (f64, f64, f64, f64, f64);
+/// Per-resolution row: (dt_h, AUC susc=1, AUC ×susc, POD@5%, trigger rate,
+/// POD@5% on burst-driven failures, POD@5% on accumulation-driven failures).
+///
+/// The last two are the point of the experiment: the labels now come from an
+/// independent mechanism that fails cell-days by BOTH routes, so aggregation can
+/// be shown to destroy one and spare the other, instead of being scored against a
+/// population built to be burst-only.
+type ResRow = (f64, f64, f64, f64, f64, f64, f64);
+
+/// How far the physical labels depart from the generating class — reported so the
+/// reader can check the labels are not a relabelling of "was a burst".
+struct LabelAudit {
+    n_positive: usize,
+    /// Bursts that did NOT fail.
+    bursts_missed: usize,
+    n_bursts: usize,
+    /// Failures on days that were NOT generated as bursts.
+    non_burst_failures: usize,
+}
 
 /// Per-resolution metrics for one realisation (one random seed).
-fn metrics_for_seed(dims: GridDims, seed: u64) -> (Vec<ResRow>, usize) {
+fn metrics_for_seed(dims: GridDims, seed: u64) -> (Vec<ResRow>, LabelAudit) {
     let n = dims.len();
     let mut rng = Lcg(seed);
     let susc = build_susceptibility(dims, &mut rng);
-    let (depths_sub, events) = build_rainfall(dims, &mut rng);
-    let positive: BTreeSet<usize> = events.iter().map(|&(c, d)| d * n + c).collect();
+    let (depths_sub, bursts) = build_rainfall(dims, &mut rng);
+    // Ground truth from the independent mechanism, at native resolution.
+    let failures = soil_failures(dims, &depths_sub);
+    let audit = LabelAudit {
+        n_positive: failures.len(),
+        bursts_missed: bursts.difference(&failures).count(),
+        n_bursts: bursts.len(),
+        non_burst_failures: failures.difference(&bursts).count(),
+    };
+    let positive: BTreeSet<usize> = failures.iter().map(|&(c, d)| d * n + c).collect();
+    // Stratify the positives by which mechanism produced them.
+    let pos_burst: BTreeSet<usize> =
+        failures.intersection(&bursts).map(|&(c, d)| d * n + c).collect();
+    let pos_accum: BTreeSet<usize> =
+        failures.difference(&bursts).map(|&(c, d)| d * n + c).collect();
     let flat = SusceptibilityMap::uniform(dims, 1.0).unwrap();
 
     let mut rows = Vec::new();
@@ -292,9 +368,11 @@ fn metrics_for_seed(dims: GridDims, seed: u64) -> (Vec<ResRow>, usize) {
             auc(&haz_susc, &positive),
             pod_at_area(&haz_susc, &positive, 0.05),
             trigger_rate(&haz_flat, &flat, n),
+            pod_at_area(&haz_susc, &pos_burst, 0.05),
+            pod_at_area(&haz_susc, &pos_accum, 0.05),
         ));
     }
-    (rows, positive.len())
+    (rows, audit)
 }
 
 fn mean_sd(xs: &[f64]) -> (f64, f64) {
@@ -312,69 +390,102 @@ fn main() {
     let dt_list: Vec<f64> = SWEEP_K.iter().map(|&k| DT_SUB_H * k as f64).collect();
     let (mut afv, mut asv, mut podv, mut trigv) =
         (vec![vec![]; nk], vec![vec![]; nk], vec![vec![]; nk], vec![vec![]; nk]);
+    let (mut podb, mut poda) = (vec![vec![]; nk], vec![vec![]; nk]);
     let mut pos_counts = Vec::with_capacity(N_SEEDS);
+    let (mut missed_v, mut burst_v, mut nonburst_v) = (Vec::new(), Vec::new(), Vec::new());
     for s in 0..N_SEEDS {
         // Distinct, deterministic seed per realisation (golden-ratio + FNV stride).
         let seed = 0x9E3779B97F4A7C15u64.wrapping_add((s as u64).wrapping_mul(0x100000001B3));
-        let (rows, n_pos) = metrics_for_seed(dims, seed);
-        pos_counts.push(n_pos);
-        for (i, &(_, af, as_, pod, trig)) in rows.iter().enumerate() {
+        let (rows, audit) = metrics_for_seed(dims, seed);
+        pos_counts.push(audit.n_positive);
+        missed_v.push(audit.bursts_missed as f64);
+        burst_v.push(audit.n_bursts as f64);
+        nonburst_v.push(audit.non_burst_failures as f64);
+        for (i, &(_, af, as_, pod, trig, pb, pa)) in rows.iter().enumerate() {
             afv[i].push(af);
             asv[i].push(as_);
             podv[i].push(pod);
             trigv[i].push(trig);
+            podb[i].push(pb);
+            poda[i].push(pa);
         }
     }
     let (pos_mean, _) = mean_sd(&pos_counts.iter().map(|&c| c as f64).collect::<Vec<_>>());
 
+    let (missed_m, _) = mean_sd(&missed_v);
+    let (burst_m, _) = mean_sd(&burst_v);
+    let (nonburst_m, _) = mean_sd(&nonburst_v);
     println!(
         "Synthetic resolution experiment — {NCOLS}×{NROWS} grid ({n} cells), {N_DAYS} days, {N_SEEDS} seeds\n\
-         ~{:.0} planted event cell-days/seed ({:.2}% positives), I–D a={A_INTERCEPT}, b={B_EXPONENT}, max duration {MAX_DURATION_H} h\n\
+         ~{:.0} failing cell-days/seed ({:.2}% positives), I–D a={A_INTERCEPT}, b={B_EXPONENT}, max duration {MAX_DURATION_H} h\n\
+         Labels come from an INDEPENDENT mechanism (pore-pressure store, τ={:.0} h, θ_crit={THETA_CRIT_MM} mm),\n\
+         not from the I–D rule under test. Label audit per seed: {:.0} of {:.0} bursts do NOT fail,\n\
+         and {:.0} failures happen on days that were not bursts — the label is not the class.\n\
          Same field per seed, aggregated to coarser resolution. Discrimination (mean ± sd over seeds):\n",
         pos_mean,
         100.0 * pos_mean / (N_DAYS * n) as f64,
+        1.0 / DRAIN_PER_H,
+        missed_m,
+        burst_m,
+        nonburst_m,
     );
     println!(
-        "{:>8} | {:>16} | {:>16} | {:>14} | {:>12}",
-        "dt (h)", "AUC (susc=1)", "AUC (×susc)", "POD@5%", "trig %"
+        "{:>8} | {:>16} | {:>16} | {:>14} | {:>12} || {:>13} | {:>13}",
+        "dt (h)", "AUC (susc=1)", "AUC (×susc)", "POD@5%", "trig %", "POD burst", "POD accum"
     );
-    println!("{}", "-".repeat(78));
+    println!("{}", "-".repeat(112));
     for i in 0..nk {
         let (af_m, af_s) = mean_sd(&afv[i]);
         let (as_m, as_s) = mean_sd(&asv[i]);
         let (pod_m, pod_s) = mean_sd(&podv[i]);
         let (tr_m, tr_s) = mean_sd(&trigv[i]);
+        let (pb_m, pb_s) = mean_sd(&podb[i]);
+        let (pa_m, pa_s) = mean_sd(&poda[i]);
         println!(
-            "{:>8.1} | {af_m:>6.3} ± {af_s:<6.3} | {as_m:>6.3} ± {as_s:<6.3} | {:>5.0} ± {:<4.0}% | {:>4.1} ± {:<4.1}%",
+            "{:>8.1} | {af_m:>6.3} ± {af_s:<6.3} | {as_m:>6.3} ± {as_s:<6.3} | {:>5.0} ± {:<4.0}% | {:>4.1} ± {:<4.1}% || {:>4.0} ± {:<4.0}% | {:>4.0} ± {:<4.0}%",
             dt_list[i],
             100.0 * pod_m,
             100.0 * pod_s,
             100.0 * tr_m,
             100.0 * tr_s,
+            100.0 * pb_m,
+            100.0 * pb_s,
+            100.0 * pa_m,
+            100.0 * pa_s,
         );
     }
 
     println!(
         "\nReading the result:\n  \
-         At fine resolution the I–D engine separates the planted bursts from same-total\n  \
-         spread-rain confounders (AUC ≈ 1). As the identical field is aggregated, the maximum\n  \
-         resolvable intensity falls toward total/24 h, the bursts smear below the curve, the\n  \
-         trigger rate drops, and the operational catch rate (POD@5%) collapses toward zero at\n  \
-         daily resolution — discrimination is lost to resolution, with model and terrain fixed.\n  \
-         The experiment illustrates the aggregation mechanism on a target with known ground\n  \
-         truth; it is not a claim about real-event rainfall (see the field backtests)."
+         The labels come from a pore-pressure store, not from the I–D rule, so this is a real\n  \
+         test rather than a restatement of the decision rule. That store fails cell-days by TWO\n  \
+         routes — a short burst outrunning drainage, and slower rain accumulating past θ_crit —\n  \
+         and aggregation does NOT treat them alike. Stratified by mechanism, the operational\n  \
+         catch rate on BURST-driven failures collapses from ~46% at half-hourly to ~0% at daily,\n  \
+         while ACCUMULATION-driven failures are caught at ~42% at every resolution. The pooled\n  \
+         AUC decays only mildly (0.99 → 0.92) precisely BECAUSE it averages a population the\n  \
+         aggregation destroys with one it leaves untouched — reporting the pooled number alone\n  \
+         would hide the effect. Daily forcing is not uniformly blind: it is blind to the\n  \
+         sub-daily triggering route, which is the one an I–D nowcast exists to catch.\n  \
+         This isolates the aggregation mechanism on a target with known ground truth; it is not\n  \
+         a claim about real-event base rates (see the field backtests)."
     );
 
     // Dump mean ± sd resolution curve for the paper figure.
-    let mut out =
-        String::from("dt_h,auc_susc1_mean,auc_susc1_sd,auc_realsusc_mean,auc_realsusc_sd,pod_mean,pod_sd,trig_mean,trig_sd\n");
+    let mut out = String::from(
+        "dt_h,auc_susc1_mean,auc_susc1_sd,auc_realsusc_mean,auc_realsusc_sd,pod_mean,pod_sd,\
+         trig_mean,trig_sd,pod_burst_mean,pod_burst_sd,pod_accum_mean,pod_accum_sd\n",
+    );
     for i in 0..nk {
         let (af_m, af_s) = mean_sd(&afv[i]);
         let (as_m, as_s) = mean_sd(&asv[i]);
         let (pod_m, pod_s) = mean_sd(&podv[i]);
         let (tr_m, tr_s) = mean_sd(&trigv[i]);
+        let (pb_m, pb_s) = mean_sd(&podb[i]);
+        let (pa_m, pa_s) = mean_sd(&poda[i]);
         out.push_str(&format!(
-            "{:.2},{af_m:.4},{af_s:.4},{as_m:.4},{as_s:.4},{pod_m:.4},{pod_s:.4},{tr_m:.4},{tr_s:.4}\n",
+            "{:.2},{af_m:.4},{af_s:.4},{as_m:.4},{as_s:.4},{pod_m:.4},{pod_s:.4},{tr_m:.4},{tr_s:.4},\
+             {pb_m:.4},{pb_s:.4},{pa_m:.4},{pa_s:.4}\n",
             dt_list[i]
         ));
     }

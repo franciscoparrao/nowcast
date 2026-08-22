@@ -16,8 +16,11 @@ and `snowmelt-rs` (snowmelt).
 ## Building
 
 `nowcast-core` is self-contained (`std` + `thiserror`) and builds and tests with no
-network and no system libraries — it carries the paper's headline resolution
-results on its own:
+network and no system libraries. It has **no path dependencies**, so it carries every
+result in Sections 5.1–5.7 of the paper on its own (backtests, null diagnostics,
+published-threshold ensemble, controlled experiment, head-to-head, multi-event lead
+times, single-factor decomposition, intercept sensitivity). The flood path and the
+coupling demos live in the provider crates below and need the sibling repos:
 
 ```bash
 cargo test -p nowcast-core
@@ -438,6 +441,9 @@ cargo clippy --workspace -- -D warnings
 cargo run --release --example backtest               # lumped Maipo I–D backtest
 cargo run --release --example published_thresholds   # 35 published I–D curves (Guzzetti et al. 2007)
 cargo run --release --example synthetic_resolution   # controlled resolution experiment
+cargo run --release --example single_factor_resolution  # product vs resolution, one factor at a time
+cargo run --release --example intercept_sensitivity  # does the result depend on the I-D threshold?
+cargo run --release --example null_diagnosis         # what the distributed null actually accuses
 cargo run -p nowcast-rainflow --release --example itata_validation  # flood path vs observed Q
 ```
 

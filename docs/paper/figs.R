@@ -94,29 +94,36 @@ ggsave(file.path(outdir, "fig3_leadtime.pdf"), p3, width = 4.6, height = 2.6, de
 ## Controlled experiment: planted sub-daily bursts, identical field aggregated to
 ## coarser resolution. AUC and operational catch rate (POD@5%) vs resolution.
 sr <- read.csv("data/synthetic_resolution.csv")
+## Stratified by failure mechanism: the pooled curve averages a population the
+## aggregation destroys (burst-driven) with one it spares (accumulation-driven),
+## which is what made the earlier pooled version look flat.
 srl <- data.frame(
-  dt = rep(sr$dt_h, 2),
-  metric = factor(rep(c("ROC-AUC (× susc.)", "POD @ 5% area"), each = nrow(sr)),
-                  levels = c("ROC-AUC (× susc.)", "POD @ 5% area")),
-  value = c(sr$auc_realsusc_mean, sr$pod_mean),
-  sd = c(sr$auc_realsusc_sd, sr$pod_sd)
+  dt = rep(sr$dt_h, 3),
+  metric = factor(rep(c("ROC-AUC (× susc.)", "POD @ 5% — burst-driven",
+                        "POD @ 5% — accumulation-driven"), each = nrow(sr)),
+                  levels = c("ROC-AUC (× susc.)", "POD @ 5% — burst-driven",
+                             "POD @ 5% — accumulation-driven")),
+  value = c(sr$auc_realsusc_mean, sr$pod_burst_mean, sr$pod_accum_mean),
+  sd = c(sr$auc_realsusc_sd, sr$pod_burst_sd, sr$pod_accum_sd)
 )
 psyn <- ggplot(srl, aes(dt, value, colour = metric, fill = metric, shape = metric)) +
   geom_hline(yintercept = 0.5, linetype = 3, colour = "grey60", linewidth = 0.35) +
   annotate("text", x = 0.5, y = 0.52, label = "AUC = 0.5 (random)", hjust = 0, vjust = 0,
            size = 2.3, colour = "grey45") +
-  geom_ribbon(aes(ymin = value - sd, ymax = value + sd), colour = NA, alpha = 0.15) +
+  geom_ribbon(aes(ymin = pmax(0, value - sd), ymax = pmin(1, value + sd)), colour = NA, alpha = 0.15) +
   geom_line(linewidth = 0.6) + geom_point(size = 1.4) +
   scale_colour_manual(values = c("ROC-AUC (× susc.)" = ok[["POD"]],
-                                 "POD @ 5% area" = ok[["FAR"]]), name = NULL) +
+                                 "POD @ 5% — burst-driven" = ok[["FAR"]],
+                                 "POD @ 5% — accumulation-driven" = ok[["CSI"]]), name = NULL) +
   scale_fill_manual(values = c("ROC-AUC (× susc.)" = ok[["POD"]],
-                               "POD @ 5% area" = ok[["FAR"]]), name = NULL) +
-  scale_shape_manual(values = c(16, 17), name = NULL) +
+                               "POD @ 5% — burst-driven" = ok[["FAR"]],
+                               "POD @ 5% — accumulation-driven" = ok[["CSI"]]), name = NULL) +
+  scale_shape_manual(values = c(16, 17, 15), name = NULL) +
   scale_x_log10(breaks = c(0.5, 1, 3, 6, 12, 24),
                 labels = c("0.5", "1", "3", "6", "12", "24")) +
   scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
   labs(x = "forcing resolution (h, log scale)", y = "skill") +
-  theme_pub + theme(legend.position = c(0.30, 0.22),
+  theme_pub + theme(legend.position = c(0.50, 0.71),
                     legend.background = element_rect(fill = "white", colour = "grey80", linewidth = 0.3))
 ggsave(file.path(outdir, "fig_synthetic.pdf"), psyn, width = 3.4, height = 2.5, device = cairo_pdf)
 

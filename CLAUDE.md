@@ -145,6 +145,45 @@ motores se enchufan como proveedores nativos en v0.2.
       cae EXACTO a mitad de camino entre dos celdas CR2MET y el desempate movía el
       día clave 25% (15.93 vs 12.73 mm) → ahora se usa el máx del footprint (la
       lectura más favorable al diario, sesga en contra de nuestra propia tesis).
+- [x] **Experimento sintético NO deductivo** (`examples/synthetic_resolution.rs`,
+      21-ago-2026): el review objetó —con razón— que etiquetar el evento como
+      "ráfaga que cruza la curva I-D" y luego reportar que el motor I-D la detecta
+      es una tautología. Ahora la etiqueta la genera un **mecanismo físico
+      independiente**: tanque de presión de poros (infiltración capada + drenaje
+      τ=4h, falla si θ>12mm), integrado SIEMPRE a resolución nativa (la física pasa
+      a resolución fina; lo que degradamos es la OBSERVACIÓN). Auditoría impresa:
+      123 de 667 ráfagas NO fallan y 1167 fallos caen en días que no son ráfaga →
+      la etiqueta no es la clase. **El resultado clave aparece al estratificar por
+      mecanismo**: con la agregación el POD de fallos por RÁFAGA cae 0.46→0.00
+      mientras los de ACUMULACIÓN quedan intactos en ~0.42. El AUC agrupado
+      (0.99→0.92) parecía "plano" —cargo del review sobre la Fig. 5— justamente
+      porque promedia una población que la agregación aniquila con otra que no
+      toca. Coherente con el single-factor: la resolución rescata la detección
+      solo en la ruta de gatillo sub-diario.
+- [x] **Diagnóstico del null distribuido** (`examples/null_diagnosis.rs`,
+      21-ago-2026): el review objetó que §5.2 se apoyaba en que las celdas-mes de
+      evento son MÁS SECAS que el promedio, lo que acusa al inventario, no a la
+      resolución. Se testearon las hipótesis en vez de discutirlas: (a) quitando el
+      gradiente espacial (z-score dentro de celda) el null persiste (AUC 0.472,
+      z=−0.13); (b) dilatando la ETIQUETA (±2 meses, radio 1) sube apenas a 0.496
+      —el registro NO está meramente corrido—; (c) las celdas con registro reciben
+      la MISMA lluvia climatológica (−0.2%), no hay sesgo de exposición espacial;
+      (d) el evento cae en el **percentil 46 temporal y 45 espacial** de su propia
+      distribución: donde lo pondría el azar. Conclusión que ahora dice el paper:
+      el null distribuido NO es evidencia limpia sobre resolución temporal, y la
+      tesis se apoya en el experimento controlado y el single-factor. OJO al
+      construir estos tests: dilatar el PREDICTOR (máx en ventana) suaviza
+      positivos y negativos por igual y no responde nada; hay que dilatar la
+      ETIQUETA.
+- [x] **Posicionamiento vs estándares de acoplamiento** (21-ago-2026): el paper no
+      citaba OpenMI / BMI-CSDMS / OMS3. Añadidas las 4 refs (verificadas por DOI en
+      Crossref) y un párrafo en §2.2 que dice en qué el trait `Forcing` es
+      deliberadamente MÁS ESTRECHO (solo lectura, acceso aleatorio, un campo
+      escalar, sin ciclo de vida ni control de reloj ni intercambio bidireccional)
+      y que los niveles componen en vez de competir. Alcance de reproducibilidad
+      del snapshot Zenodo declarado con precisión: core = §5.1-5.7 sin path-deps;
+      flood path y acoples NO reproducen sin los repos hermanos. + bloque Software
+      Availability formato EMS.
 - [x] (v0.2) **XAI / trazabilidad exacta**: módulo `explain` (`Explanation`,
       `Driver`) + `Nowcast::explain(cell, step)` + contrafactual
       `Nowcast::intensity_to_alert`. Como el peligro es forma cerrada
