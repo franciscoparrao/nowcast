@@ -9,7 +9,7 @@
 ---
 
 > ⚠️ **This Markdown rendering is an OUTDATED snapshot. The manuscript of record is
-> `nowcast-cageo.tex`.** It diverged during the August 2026 revisions and several
+> `nowcast-ems.tex`.** It diverged during the August 2026 revisions and several
 > numbers below are superseded, in particular: the synthetic experiment (§5.3) now
 > draws its labels from an independent pore-pressure mechanism rather than from the
 > I–D rule, and reports results stratified by failure mechanism (burst-driven catch

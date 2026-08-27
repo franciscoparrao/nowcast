@@ -209,7 +209,7 @@ crates, snowmelt runoff and InSAR deformation. The same trait therefore admits a
 gauge, a reanalysis grid, a satellite product or a model output without touching
 the hazard logic (Fig.~\ref{fig:arch}).
 
-\paragraph{Relation to model-coupling standards.}
+\paragraph{Relation to model-coupling standards}
 Standardised interfaces for coupling environmental models are long established:
 OpenMI \citep{gregersen2007} defines a link-based standard for exchanging
 time-varying quantities between running components, the CSDMS Basic Model
@@ -563,7 +563,7 @@ high across the sweep; the critical success index peaks at $a^\star\approx5.5$\,
 \label{fig:idsweep}
 \end{figure}
 
-\paragraph{Published thresholds do not rescue daily forcing.}
+\paragraph{Published thresholds do not rescue daily forcing}
 Self-calibration invites the objection that a published threshold, taken as is,
 might do better. We tested this directly by applying, unchanged, the 35 empirical
 I--D power laws ($I=a\,D^{-b}$, mm\,h$^{-1}$) compiled by \citet{guzzetti2007}
@@ -599,7 +599,7 @@ configuration), and the bootstrap probability that AUC exceeds 0.5 is only
 7-day rainfall at recorded event cell-months (39\,mm) is in fact \emph{lower}
 than the grid-wide average (49\,mm).
 
-\paragraph{What this null does, and does not, accuse.}
+\paragraph{What this null does, and does not, accuse}
 That last number deserves scrutiny rather than a passing mention: if recorded
 events sit where it rained \emph{less}, the finger points at the inventory or the
 rainfall field, not at the time step, and it would be self-serving to read it as
@@ -684,7 +684,7 @@ engine has no skill, or that the month-dated, incomplete inventory cannot reveal
 skill that is present. We resolve the ambiguity with a controlled experiment whose
 ground truth is known.
 
-\paragraph{The labels do not come from the rule under test.}
+\paragraph{The labels do not come from the rule under test}
 A synthetic experiment that defines an event as ``a burst that crosses the I--D
 curve'' and then reports that an I--D trigger recovers it is deductive: the result
 is entailed by the construction, not evidence about it. We therefore generate the
@@ -705,7 +705,7 @@ information. We then aggregate the identical field from 0.5\,h to 24\,h, holding
 the engine and the 24\,h maximum duration fixed, and score against the physical
 labels over 20 random realisations (Fig.~\ref{fig:synthetic}).
 
-\paragraph{Aggregation destroys one failure route and spares the other.}
+\paragraph{Aggregation destroys one failure route and spares the other}
 The store fails cell-days by two paths: a burst outrunning drainage, and slower
 rain accumulating past $\theta_\mathrm{crit}$. Aggregation does not treat them
 alike, and that is the result. \textbf{Stratified by mechanism, the operational
@@ -1197,7 +1197,7 @@ Zenodo at \url{https://doi.org/10.5281/zenodo.22019138} (concept DOI
 \url{https://doi.org/10.5281/zenodo.22019137}, which always resolves to the
 latest version). 
 
-\paragraph{What the archived snapshot reproduces, and what it does not.}
+\paragraph{What the archived snapshot reproduces, and what it does not}
 Reproducibility here is not uniform across the paper, and it would be misleading to
 claim otherwise. \texttt{nowcast-core} has \emph{no} path dependencies: it builds
 and tests offline with no system dependencies, and its 22 examples regenerate every
@@ -1224,7 +1224,7 @@ CAMELS-CL
 (\citealp{alvarez2018}; \url{https://doi.org/10.1594/PANGAEA.894885}) and the
 SERNAGEOMIN inventory.
 
-\paragraph{Software availability.}
+\paragraph{Software availability}
 \emph{Name}: \texttt{nowcast}.
 \emph{Developer}: Francisco Parra.
 \emph{Contact}: see corresponding author.
@@ -1240,9 +1240,20 @@ Python 3.9 or later with \texttt{maturin} for the optional bindings; R with
 \emph{Availability and cost}: free and open source, MIT or Apache-2.0, at the
 repository and Zenodo DOIs above.
 
+\section*{Funding}
+
+This work was supported by the Direcci\'on de Investigaci\'on Cient\'ifica y
+Tecnol\'ogica (DICYT), Vicerrector\'ia de Investigaci\'on, Innovaci\'on y
+Creaci\'on, Universidad de Santiago de Chile [project code
+062619MC\_POSTDOC]. The funder had no role in study design, in the collection,
+analysis and interpretation of data, in the writing of the report, or in the
+decision to submit the article for publication.
+
 \section*{Acknowledgements}
 
-The author thanks the CR2 (Center for Climate and
+The author acknowledges Project 062619MC\_POSTDOC of the Vicerrector\'ia de
+Investigaci\'on, Innovaci\'on y Creaci\'on, Universidad de Santiago de Chile.
+The author also thanks the CR2 (Center for Climate and
 Resilience Research) for CR2MET, NASA for GPM IMERG, and SERNAGEOMIN for the
 landslide inventory.
 
