@@ -7,7 +7,7 @@ name = "nowcast"
 description = "Dynamic geohazard nowcasting engine in Rust, with Python bindings"
 requires-python = ">=3.9"
 license = { text = "MIT OR Apache-2.0" }
-authors = [{ name = "Francisco Parra-O." }]
+authors = [{ name = "Francisco Parra" }]
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: 3",
