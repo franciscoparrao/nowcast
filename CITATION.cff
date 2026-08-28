@@ -4,10 +4,13 @@ message: "If you use this software or the derived results, please cite the manus
 type: software
 authors:
   - given-names: Francisco
-    family-names: Parra Ortiz
+    family-names: Parra
     affiliation: "Departamento de Ingeniería Informática, Universidad de Santiago de Chile, Santiago, Chile"
     email: francisco.parra.o@usach.cl
     orcid: "https://orcid.org/0009-0006-0435-1854"
+# NOTA: el registro Zenodo v0.1.0 ya publicado acredita "Parra Ortiz, Francisco".
+# La forma de firma acordada es «Francisco Parra» y aplica desde la proxima version;
+# el ORCID es el mismo en ambas, asi que la atribucion no se pierde.
 version: 0.1.0
 date-released: 2026-06-24
 license: "MIT OR Apache-2.0"
@@ -34,9 +37,9 @@ preferred-citation:
   title: "nowcast: a forcing-agnostic Rust engine for dynamic geohazard nowcasting, and why forcing resolution, not the model, sets the skill ceiling"
   authors:
     - given-names: Francisco
-      family-names: Parra Ortiz
+      family-names: Parra
       affiliation: "Departamento de Ingeniería Informática, Universidad de Santiago de Chile, Santiago, Chile"
-  journal: "Computers & Geosciences"
+  journal: "Environmental Modelling & Software"
   year: 2026
   doi: "10.5281/zenodo.22019137"   # concept DOI (siempre la ultima version)
   # volume / start / end:  # add on publication

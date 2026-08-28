@@ -71,11 +71,20 @@ sub-daily forcing recovers hours of lead time across opposite climates.
 | T1| multi-event lead-time, 3 climates | `multi_event_leadtime` |
 | T2| CR2MET vs IMERG head-to-head | `resolution_headtohead` |
 
-## Target venues (rationale)
-- **NHESS** (Copernicus, open) — methods + multi-hazard + the honest
-  resolution/limitations framing fits its scope and review culture. *First choice.*
-- **Landslides** (Springer) — if framed landslide-first (I–D + inventory).
-- **Natural Hazards** (Springer) — broader hazard + EWS angle, more applied.
+## Target venue — DECIDED 2026-08-26
+- **Environmental Modelling & Software** (Elsevier, JIF 5.2, Q1 26/132 Water
+  Resources, hybrid). Hits its three privileged content types: generic framework
+  integrating disciplines, generalisable insight, environmental software. Its
+  blind review has already been run and its four charges closed.
+- Backup: **Computers & Geosciences** (Q1 64/259, hybrid).
+- **NHESS was ruled out** — Copernicus, fully open access with a mandatory APC.
+  The author's constraint is *hybrid only*, which also excludes GMD, HESS, ESurf,
+  JOSS and SoftwareX, i.e. the native venues of this genre. That constraint
+  decides the venue more than fit does.
+- **Landslides** ruled out despite the highest JIF (7.4): it is mass-movement
+  only, and fitting it would mean amputating the flood path — the paper's one
+  validated positive result.
+- Full reasoning: `~/vault/journals/_matches/2026-08-26_14-30_nowcast-cageo.md`.
 
 ## Open decisions (for the user)
 - Venue & framing (multi-hazard methods vs landslide-first).

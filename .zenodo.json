@@ -3,7 +3,7 @@
   "description": "Rust engine that turns static landslide/flood susceptibility into a time-varying hazard nowcast through a single interchangeable forcing interface and a composable trigger (rainfall intensity-duration, routed discharge, ground deformation), with exact closed-form attribution of every alert. Ships native providers wrapping sibling engines for rainfall-runoff, snowmelt, 2-D shallow-water inundation, agent-based debris-flow runout, a geospatial raster substrate and PS-InSAR deformation, plus a CLI, PyO3 bindings, a backtesting framework for sparse dated inventories, and runnable examples reproducing every published result. Dual-licensed MIT OR Apache-2.0.",
   "creators": [
     {
-      "name": "Parra Ortiz, Francisco",
+      "name": "Parra, Francisco",
       "affiliation": "Department of Informatics Engineering, Universidad de Santiago de Chile (USACH), Santiago, Chile",
       "orcid": "0009-0006-0435-1854"
     }

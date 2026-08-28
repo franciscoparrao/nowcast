@@ -340,7 +340,22 @@ Backtesting contra inventario de eventos fechados (SERNAGEOMIN) — hit rate,
 falsas alarmas, lead time.
 
 ## Venue objetivo
-**NHESS**, **Landslides** o **Natural Hazards**.
+**Environmental Modelling & Software** (Elsevier, JIF 5.2, Q1 26/132 Water
+Resources, híbrido) — DECIDIDO 2026-08-26 tras barrer los 41 journals del vault
+más el universo JCR 2025 (3.568) con filtro híbrido + Q1/Q2. Backup: Computers &
+Geosciences. El manuscrito es `docs/paper/nowcast-ems.tex`.
+
+**NHESS quedó descartado** y con él casi todo el género: la restricción del autor
+es *journal híbrido, nunca fully OA con APC obligatorio*, y los venues nativos de
+los model description papers (NHESS, GMD, HESS, ESurf, JOSS, SoftwareX) son todos
+OA puro. Esa restricción decide el venue más que el fit; si aparece
+financiamiento de APC, GMD (Q1 39/259) vuelve al tablero. Razonamiento completo
+en `~/vault/journals/_matches/2026-08-26_14-30_nowcast-cageo.md`.
+
+**Bloqueante de rendición, no editorial:** las bases DICYT (10.3.1) exigen que el
+IR **Mauricio Marín** sea coautor. Hoy el manuscrito tiene un solo autor. Cuando
+entre, hay que repartir la sección CRediT. Verificar siempre con
+`/firma-postdoc check docs/paper/nowcast-ems.tex` (hoy pasa 6/7).
 
 ## Conexiones con tu ecosistema
 - **rainflow** / **snowmelt-rs**: proveen las forzantes dinámicas.
