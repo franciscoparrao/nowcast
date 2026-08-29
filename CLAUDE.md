@@ -357,6 +357,23 @@ IR **Mauricio Marín** sea coautor. Hoy el manuscrito tiene un solo autor. Cuand
 entre, hay que repartir la sección CRediT. Verificar siempre con
 `/firma-postdoc check docs/paper/nowcast-ems.tex` (hoy pasa 6/7).
 
+### Traducción al español (`nowcast-ems-ES.tex`) — ARTEFACTO DERIVADO
+
+Existe para **auditar el contenido** en la lengua del autor, no para someter. El
+manuscrito de record es siempre el `.tex` en inglés; las correcciones van ahí y
+la traducción se regenera. Lleva el sha del fuente en `\sourcehash` y un recuadro
+de aviso en la primera página, para que no se lea como el paper.
+
+Se creó justo después de borrar `nowcast-cageo.md`, que era una hermana
+divergente con números falsos, así que **tiene dos defensas contra repetir esa
+historia**: (1) `python3 scripts/check_translation_numbers.py` compara los
+multiconjuntos de cifras del cuerpo de ambos .tex y falla si una sola difiere
+(hoy: 584 cifras idénticas); (2) la notación numérica se preserva con punto
+decimal, no coma, precisamente para que esa comparación sea mecánica. La
+estructura también se mantiene 1:1 (8 secciones, 19 subsecciones, 9 tablas, 6
+figuras, 5 ecuaciones, 27 labels, 43 citas). Si el inglés cambia, el sha queda
+obsoleto y el chequeo de cifras avisa.
+
 ## Conexiones con tu ecosistema
 - **rainflow** / **snowmelt-rs**: proveen las forzantes dinámicas.
 - **Smelt**: modelo de susceptibilidad base + XAI.
