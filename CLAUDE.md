@@ -304,6 +304,19 @@ caer a uniforme. Autotest sin red: `python3 monitor/selftest.py`
 (`--fusion`, `--susc`). Es monitor de eventos, NO alerta temprana; requiere
 temporada en modo sombra antes de confiar.
 
+**Respaldo in-situ verificado (2026-08-29)**: `monitor/crosscheck_elcolorado.py`
+cruza El Colorado 2750 m —la ÚNICA estación de cordillera del dominio piloto—
+entre sus dos fuentes independientes: la API DMC (330077) que el monitor usa hoy
+con token, y el acumulador local `~/proyectos/agromet-scraper` (INIA, id 108).
+Son el mismo sensor: TA con MAE 0.03 °C sobre 8 horas comunes. O sea agromet
+sirve de respaldo si la API cae o el token vence. **HALLAZGO: agromet guarda hora
+LOCAL y la DMC UTC** — desfase +4 h hoy, pero el 2026-09-06 Chile pasa a UTC−3 y
+será +3 h; el script lo detecta solo vía `zoneinfo` y avisa con fecha, en vez de
+fijarlo a mano. La comparación de PP quedó en ceros (no llovió en la ventana
+común) y el script lo declara: **repetir tras un evento** antes de confiar en el
+pluviómetro. Límite honesto de agromet para nowcast: no sirve de feed en vivo
+(corre 2×/día vs 30 min) ni cubre el dominio (8 estaciones, 1 en cordillera).
+
 **Fase A del plan EWS (2026-07-11) LISTA**: fusión multi-forzante de punta a
 punta. (1) CLI: `nowcast run --fuse-rasters <stack>` repetible + `--combine
 noisy-or|max|product` — cada stack extra es su propio `IdTrigger` vía
