@@ -1,0 +1,14 @@
+[Unit]
+Description=nowcast-archive-ema cada hora
+
+[Timer]
+# Al minuto :05. La API sirve ~12 h, así que una corrida horaria deja 12× de
+# redundancia: se pueden perder once corridas seguidas sin perder un solo dato.
+# Persistent=true recupera la corrida si la máquina estuvo apagada — que es
+# justo cuando uno se olvida y el evento pasa igual.
+OnCalendar=*-*-* *:05:00
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

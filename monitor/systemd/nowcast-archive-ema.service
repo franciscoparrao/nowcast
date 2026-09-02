@@ -1,0 +1,18 @@
+[Unit]
+Description=nowcast: archiva el minutario de las EMA de la DMC antes de que caduque
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# La API de la DMC sirve ~12 h y nada más. Sin este archivador, cualquier
+# verificación posterior a un evento es imposible: cuando uno va a mirar, el
+# dato ya no existe en ningún lado. Corre seguido y barato (~700 registros).
+ExecStart=%h/proyectos/nowcast/monitor/archive_ema.py --code 330077
+Environment=DMC_USUARIO=
+Environment=DMC_TOKEN=
+# Las credenciales reales salen de monitor/config.local.env, que el script lee
+# solo (gitignored). Las Environment= de arriba quedan vacías a propósito para
+# no filtrar el token al journal de systemd.
+TimeoutStartSec=5min
+Nice=15

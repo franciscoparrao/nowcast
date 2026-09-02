@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
-"""Cruza la estación El Colorado (2750 m) entre sus DOS fuentes independientes.
+"""Cruza la estación El Colorado (2750 m) entre sus DOS RUTAS DE ENTREGA.
 
 El monitor consume esa estación por la API de la DMC (código 330077), con token,
-y el acumulador `agromet-scraper` la scrapea en paralelo desde agrometeorologia.cl
-(INIA, id 108). Son el mismo sensor físico: mismas coordenadas (−70.294, −33.350)
-y misma cota. Que dos rutas de datos coincidan no es obvio, y saberlo sirve para
-dos cosas concretas:
+y el acumulador `agromet-scraper` la recoge en paralelo desde agrometeorologia.cl.
 
-  1. Si coinciden, agromet es un RESPALDO local de la única estación de cordillera
-     del dominio piloto, sin depender de token ni de que la API responda.
-  2. Si discrepan, hay un problema de datos en la fuente que el monitor usa HOY,
-     y conviene enterarse por un cruce y no por una alerta rara.
+QUÉ SON EXACTAMENTE LAS DOS FUENTES (corregido 2026-09-02). Al principio esto se
+escribió como si fueran dos fuentes independientes. No lo son: en agromet la
+estación figura con `institucion='DMC'` y con prefijo `EXT-`, que es como ese
+acumulador marca las estaciones REPUBLICADAS de terceros (DMC, SERVIMET, CEAZA…)
+frente a su red propia `INIA-`. O sea es el MISMO sensor y la MISMA cadena de la
+DMC, servido por dos caminos distintos. Eso acota lo que el cruce puede probar:
+
+  ✓ valida la RUTA DE ENTREGA. Si coinciden, agromet es un respaldo utilizable
+    cuando la API se cae o el token vence — que es el modo de falla realista.
+  ✗ NO valida el SENSOR. Un pluviómetro tapado o descalibrado se ve idéntico por
+    los dos caminos. Para eso hace falta una fuente de verdad independiente
+    (satélite IMERG/GOES, o una estación vecina de otra institución).
+
+Por eso el acuerdo esperado no es "parecido dentro de tolerancia" sino
+prácticamente exacto; una diferencia grande acusa a la ruta, no al clima.
 
 Método. La API de la DMC entrega ~12 h y es minutaria en UTC; agromet guarda
 totales horarios. Se agrega el minutario a horas y se comparan las horas comunes.
@@ -20,82 +28,66 @@ zona horaria de agromet, que no está documentada. Un desfase distinto de cero n
 es un error de nadie: es una convención que hay que conocer antes de fusionar.
 
 Uso:
-    python3 monitor/crosscheck_elcolorado.py                    # usa config.local.env
+    python3 monitor/crosscheck_elcolorado.py                    # API, ventana ~12 h
     python3 monitor/crosscheck_elcolorado.py --horas 12
+    # Un evento pasado solo se puede mirar si estaba archivado (ver archive_ema.py):
+    python3 monitor/crosscheck_elcolorado.py --desde 2026-09-02 --hasta 2026-09-02
 Sale 0 si las fuentes son consistentes, 1 si divergen o falta información.
 """
 
 import argparse
-import json
-import os
 import sqlite3
 import sys
-import urllib.parse
-import urllib.request
 from collections import defaultdict
 from datetime import datetime, timedelta
+from math import cos, hypot, radians
 from pathlib import Path
 
-API = "https://climatologia.meteochile.gob.cl/application/servicios/getDatosRecientesEma"
+# El acceso a la EMA vive en archive_ema (capa de datos) y acá solo se consume.
+# Tener dos copias del fetch era exactamente cómo nacen las hermanas divergentes
+# que este repo ya persiguió seis veces.
+from archive_ema import (credentials, fetch_ema_raw, parse_records,
+                         read_archive)
+
 DMC_CODE = "330077"      # El Colorado en la red EMA de la DMC
-AGROMET_ID = "108"       # El Colorado en agrometeorologia.cl (INIA)
 AGROMET_DB = Path.home() / "proyectos/agromet-scraper/data/agromet.db"
 MONITOR = Path(__file__).resolve().parent
+
+# La estación se busca por DÓNDE ESTÁ, no por su id. El id de agromet ya cambió
+# una vez bajo nuestros pies: era "108" hasta el 2026-08-31, cuando el scraper
+# descubrió que los ids numéricos colisionan entre instituciones (INIA-78 Visviri
+# vs EXT-78 Portezuelo) y pasó a prefijarlos por API de origen → "EXT-108". Este
+# script pedía "108", recibía cero filas y moría. Un identificador ajeno es un
+# contrato que el otro repo puede renegociar; las coordenadas del cerro, no.
+EL_COLORADO_LONLAT = (-70.29361, -33.35)
+MATCH_RADIUS_KM = 1.0
 
 # Tolerancias: por debajo de esto las fuentes se consideran de acuerdo.
 TOL_TA_C = 1.0     # °C — sensores y promediado distinto justifican décimas
 TOL_PP_MM = 0.3    # mm — resolución típica de un pluviómetro de balancín
 
 
-def load_local_env():
-    """Lee monitor/config.local.env sin exportar nada al entorno global."""
-    creds = {}
-    path = MONITOR / "config.local.env"
-    if not path.exists():
-        return creds
-    for line in path.read_text().splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        k, v = line.split("=", 1)
-        creds[k.strip()] = v.strip().strip('"').strip("'")
-    return creds
+def load_dmc(desde=None, hasta=None):
+    """Minutario de la DMC → ({datetime: {...}}, origen).
 
-
-def fetch_dmc(usuario, token):
-    """Serie reciente de la DMC → {datetime UTC: {'ta': float, 'pp': float}}."""
-    q = urllib.parse.urlencode({"usuario": usuario, "token": token})
-    with urllib.request.urlopen(f"{API}/{DMC_CODE}?{q}", timeout=60) as r:
-        payload = json.load(r)
-    if "bloqueda" in json.dumps(payload):
-        raise SystemExit(f"la API rechazó las credenciales: {payload.get('mensaje', payload)}")
-
-    recs = payload.get("datosEstaciones", {}).get("datos", [])
-    if not recs:
-        raise SystemExit(f"sin registros para {DMC_CODE}; claves: {list(payload)[:8]}")
-
-    def num(raw):
-        if raw is None:
-            return None
-        s = str(raw).split()[0].replace(",", ".")
-        try:
-            return float(s)
-        except ValueError:
-            return None
-
-    out = {}
-    for rec in recs:
-        stamp = rec.get("momento") or rec.get("fecha") or rec.get("momentoUTC")
-        if not stamp:
-            continue
-        txt = str(stamp).replace("T", " ")[:16]
-        try:
-            dt = datetime.strptime(txt, "%Y-%m-%d %H:%M")
-        except ValueError:
-            continue
-        out[dt] = {"ta": num(rec.get("temperatura")),
-                   "pp": num(rec.get("aguaCaidaDelMinuto"))}
-    return out
+    Sin rango va a la API, que es lo que sirve para la operación del día. Con
+    rango lee el ARCHIVO local: es la única manera de mirar un evento pasado,
+    porque la API solo recuerda ~12 h.
+    """
+    if desde or hasta:
+        recs = read_archive(DMC_CODE, desde, hasta)
+        if not recs:
+            raise SystemExit(
+                f"no hay nada archivado para {DMC_CODE} en el rango pedido.\n"
+                "El archivo se llena con `monitor/archive_ema.py`, que hay que tener "
+                "corriendo ANTES del evento:\n"
+                "la API de la DMC no sirve historia, así que un evento no archivado "
+                "está perdido para siempre.")
+        return parse_records(recs), "archivo local"
+    usuario, token = credentials()
+    if not usuario or not token:
+        raise SystemExit("faltan DMC_USUARIO/DMC_TOKEN (monitor/config.local.env o entorno)")
+    return parse_records(fetch_ema_raw(usuario, token, DMC_CODE)), "API DMC (ventana ~12 h)"
 
 
 def dmc_hourly(minutely):
@@ -114,21 +106,49 @@ def dmc_hourly(minutely):
             for h, a in acc.items()}
 
 
-def fetch_agromet():
+def resolve_agromet_station(con):
+    """Encuentra El Colorado en agromet por CERCANÍA, no por id → (id, nombre, inst).
+
+    Falla ruidosamente si no hay nada dentro del radio: mejor un error que dice
+    "cambió el catálogo río arriba" que una comparación vacía que parece un
+    problema de clima.
+    """
+    lon0, lat0 = EL_COLORADO_LONLAT
+    km_per_deg_lat = 111.32
+    km_per_deg_lon = km_per_deg_lat * cos(radians(lat0))
+    best = None
+    q = ("SELECT id, nombre, institucion, longitud, latitud FROM estaciones "
+         "WHERE longitud IS NOT NULL AND latitud IS NOT NULL")
+    for sid, nombre, inst, lon, lat in con.execute(q):
+        dkm = hypot((lon - lon0) * km_per_deg_lon, (lat - lat0) * km_per_deg_lat)
+        if best is None or dkm < best[0]:
+            best = (dkm, sid, nombre, inst)
+    if best is None or best[0] > MATCH_RADIUS_KM:
+        got = f"la más cercana quedó a {best[0]:.1f} km ({best[2]})" if best else "catálogo vacío"
+        raise SystemExit(
+            f"no encontré El Colorado en {AGROMET_DB} dentro de {MATCH_RADIUS_KM} km "
+            f"de ({lon0}, {lat0}): {got}.\n"
+            "Puede que el scraper haya cambiado el catálogo de estaciones o que la "
+            "estación saliera de línea. Revisar ~/proyectos/agromet-scraper.")
+    dkm, sid, nombre, inst = best
+    return sid, nombre, inst, dkm
+
+
+def fetch_agromet(con, station_id):
     """Serie horaria de agromet → {datetime: {'ta': float, 'pp': float}}."""
-    if not AGROMET_DB.exists():
-        raise SystemExit(f"no existe la base de agromet: {AGROMET_DB}")
-    con = sqlite3.connect(f"file:{AGROMET_DB}?mode=ro", uri=True)
     out = defaultdict(dict)
     q = ("SELECT fecha, metrica, valor FROM mediciones "
          "WHERE estacion_id=? AND stack='HOUR' AND metrica IN ('TA-AVG','PP-SUM')")
-    for fecha, metrica, valor in con.execute(q, (AGROMET_ID,)):
+    for fecha, metrica, valor in con.execute(q, (station_id,)):
         try:
             dt = datetime.strptime(fecha[:16], "%Y-%m-%d %H:%M")
         except ValueError:
             continue
         out[dt]["ta" if metrica == "TA-AVG" else "pp"] = valor
-    con.close()
+    if not out:
+        raise SystemExit(
+            f"la estación {station_id} existe en el catálogo de agromet pero no tiene "
+            "mediciones horarias TA-AVG/PP-SUM. ¿El scraper dejó de correr?")
     return dict(out)
 
 
@@ -187,20 +207,30 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--horas", type=int, default=12, help="ventana a comparar")
+    ap.add_argument("--desde", help="'YYYY-MM-DD[ HH:MM]' UTC — lee del archivo local")
+    ap.add_argument("--hasta", help="'YYYY-MM-DD[ HH:MM]' UTC — lee del archivo local")
     args = ap.parse_args()
 
-    creds = load_local_env()
-    usuario = os.environ.get("DMC_USUARIO") or creds.get("DMC_USUARIO")
-    token = os.environ.get("DMC_TOKEN") or creds.get("DMC_TOKEN")
-    if not usuario or not token:
-        print("faltan DMC_USUARIO/DMC_TOKEN (monitor/config.local.env o entorno)")
-        return 1
+    if not AGROMET_DB.exists():
+        raise SystemExit(f"no existe la base de agromet: {AGROMET_DB}")
+    con = sqlite3.connect(f"file:{AGROMET_DB}?mode=ro", uri=True)
+    sid, nombre, inst, dkm = resolve_agromet_station(con)
+    agro = fetch_agromet(con, sid)
+    con.close()
 
-    print(f"El Colorado 2750 m — DMC {DMC_CODE} vs agromet/INIA {AGROMET_ID}\n")
+    print(f"El Colorado 2750 m — DMC {DMC_CODE} vs agromet «{nombre}» [{sid}]\n")
+    print(f"  agromet resolvió la estación por coordenadas: a {dkm*1000:.0f} m del "
+          f"punto esperado, institución «{inst}».")
+    if inst and "DMC" in inst.upper():
+        print("    → OJO: es la MISMA estación de la DMC, republicada. El cruce valida "
+              "la ruta de entrega,\n       no el sensor. Se espera coincidencia casi "
+              "exacta, no solo 'dentro de tolerancia'.")
 
-    dmc_min = fetch_dmc(usuario, token)
+    dmc_min, origen = load_dmc(args.desde, args.hasta)
+    if not dmc_min:
+        raise SystemExit(f"{origen}: no devolvió registros fechados.")
     dmc_h = dmc_hourly(dmc_min)
-    agro = fetch_agromet()
+    print(f"\n  origen DMC: {origen}")
     print(f"  DMC     : {len(dmc_min)} registros minutarios → {len(dmc_h)} horas "
           f"({min(dmc_min):%Y-%m-%d %H:%M} .. {max(dmc_min):%Y-%m-%d %H:%M})")
     print(f"  agromet : {len(agro)} horas "
@@ -226,7 +256,12 @@ def main():
           f"{'PP agro':>8s} {'PP DMC':>8s} {'dif':>7s}")
     print("  " + "-" * 70)
     ta_diffs, pp_diffs, rows = [], [], 0
-    for h in sorted(agro)[-args.horas * 2:]:
+    pp_win_a = pp_win_d = 0.0     # lluvia DENTRO de la ventana comparada
+    # Solo las horas de agromet que solapan con la ventana DMC: agromet trae años
+    # de serie y tomar "las últimas N" no funciona cuando se mira un evento pasado.
+    lo = min(dmc_h) - timedelta(hours=offset)
+    hi = max(dmc_h) - timedelta(hours=offset)
+    for h in [x for x in sorted(agro) if lo <= x <= hi][-args.horas * 2:]:
         d = dmc_h.get(h + timedelta(hours=offset))
         if not d:
             continue
@@ -239,6 +274,8 @@ def main():
             ta_diffs.append(abs(dta))
         if dpp is not None:
             pp_diffs.append(abs(dpp))
+        pp_win_a += pp_a or 0.0
+        pp_win_d += pp_d or 0.0
         rows += 1
         f = lambda v, u="": f"{v:{u}}" if v is not None else "    --"
         print(f"  {h:%Y-%m-%d %H:%M}   {f(ta_a,'8.1f')} {f(ta_d,'8.1f')} "
@@ -258,15 +295,19 @@ def main():
         ok &= mx <= TOL_TA_C
     if pp_diffs:
         mx = max(pp_diffs)
-        tot_a = sum(agro[h].get("pp") or 0 for h in agro)
-        print(f"  PP — dif máx {mx:.2f} mm (tolerancia {TOL_PP_MM}); "
-              f"acumulado agromet en toda su serie: {tot_a:.1f} mm")
-        if tot_a == 0 or not any(pp_diffs):
-            print("    AVISO: sin lluvia en la ventana común. La coincidencia en PP "
-                  "es de ceros y NO valida el pluviómetro; repetir tras un evento.")
+        print(f"  PP — dif máx {mx:.2f} mm (tolerancia {TOL_PP_MM}); acumulado EN LA "
+              f"VENTANA COMPARADA: agromet {pp_win_a:.1f} mm / DMC {pp_win_d:.1f} mm")
+        if pp_win_a == 0.0 and pp_win_d == 0.0:
+            print("    AVISO: sin lluvia en la ventana común. La coincidencia en PP es "
+                  "de ceros y no\n    dice nada de la entrega de precipitación; repetir "
+                  "tras un evento.\n    OJO: la API de la DMC solo sirve ~12 h, así que "
+                  "hay que correrlo DURANTE la\n    lluvia o pocas horas después — días "
+                  "más tarde la ventana ya no la contiene.")
         ok &= mx <= TOL_PP_MM
 
-    print("\n  " + ("FUENTES CONSISTENTES — agromet sirve de respaldo local de esta estación."
+    print("\n  " + ("RUTAS CONSISTENTES — agromet sirve de respaldo de ENTREGA de esta "
+                    "estación\n  (si cae la API o vence el token), no de verificación del "
+                    "sensor."
                     if ok else
                     "DIVERGEN — revisar antes de confiar en la fuente que usa el monitor."))
     return 0 if ok else 1

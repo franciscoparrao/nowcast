@@ -304,18 +304,43 @@ caer a uniforme. Autotest sin red: `python3 monitor/selftest.py`
 (`--fusion`, `--susc`). Es monitor de eventos, NO alerta temprana; requiere
 temporada en modo sombra antes de confiar.
 
-**Respaldo in-situ verificado (2026-08-29)**: `monitor/crosscheck_elcolorado.py`
-cruza El Colorado 2750 m —la ÚNICA estación de cordillera del dominio piloto—
-entre sus dos fuentes independientes: la API DMC (330077) que el monitor usa hoy
-con token, y el acumulador local `~/proyectos/agromet-scraper` (INIA, id 108).
-Son el mismo sensor: TA con MAE 0.03 °C sobre 8 horas comunes. O sea agromet
-sirve de respaldo si la API cae o el token vence. **HALLAZGO: agromet guarda hora
-LOCAL y la DMC UTC** — desfase +4 h hoy, pero el 2026-09-06 Chile pasa a UTC−3 y
-será +3 h; el script lo detecta solo vía `zoneinfo` y avisa con fecha, en vez de
-fijarlo a mano. La comparación de PP quedó en ceros (no llovió en la ventana
-común) y el script lo declara: **repetir tras un evento** antes de confiar en el
-pluviómetro. Límite honesto de agromet para nowcast: no sirve de feed en vivo
-(corre 2×/día vs 30 min) ni cubre el dominio (8 estaciones, 1 en cordillera).
+**Respaldo in-situ verificado (2026-08-29, corregido 2026-09-02)**:
+`monitor/crosscheck_elcolorado.py` cruza El Colorado 2750 m —la ÚNICA estación de
+cordillera del dominio piloto— entre la API DMC (330077) que el monitor usa hoy
+con token y el acumulador local `~/proyectos/agromet-scraper`. **CORRECCIÓN: NO
+son dos fuentes independientes.** Ahí la estación figura como `EXT-108` con
+`institucion='DMC'`, y `EXT-` es como ese acumulador marca lo REPUBLICADO de
+terceros (DMC 112, SERVIMET 42, CEAZA 34…) frente a su red propia `INIA-`. Es el
+mismo sensor y la misma cadena, por dos rutas de entrega — que es justo lo que
+mide el cruce: 6 de 7 horas de TA coinciden en el DECIMAL EXACTO (dif media
+0.03 °C), firma de republicación, no de dos instrumentos. Por lo tanto el cruce
+**valida la ruta** (agromet sirve si la API cae o el token vence) y **NO valida
+el sensor**: un pluviómetro tapado se ve igual por los dos caminos. Para eso hace
+falta IMERG/GOES o una estación vecina de otra institución.
+**HALLAZGO: agromet guarda hora LOCAL y la DMC UTC** — desfase +4 h hoy, pero el
+2026-09-06 Chile pasa a UTC−3 y será +3 h; el script lo detecta solo vía
+`zoneinfo` y avisa con fecha, en vez de fijarlo a mano.
+**El id NO se hardcodea**: era `108` hasta el 2026-08-31, cuando el scraper
+descubrió que los ids numéricos colisionan entre instituciones (INIA-78 Visviri
+vs EXT-78 Portezuelo) y los re-prefijó; el script pedía `108`, recibía cero filas
+y moría. Ahora resuelve la estación por COORDENADAS (±1 km) y falla ruidoso. Un
+id ajeno es un contrato que el otro repo puede renegociar.
+Límite honesto de agromet para nowcast: no sirve de feed en vivo (corre 2×/día vs
+30 min) ni cubre el dominio (8 estaciones, 1 en cordillera).
+
+**`monitor/archive_ema.py` — el minutario deja de perderse (2026-09-02)**: la API
+DMC sirve ~12 h y nada más, así que "repetir el cruce tras un evento" era
+irrealizable: cuando uno va a mirar la lluvia, la ventana ya avanzó (pasó con la
+lluvia del 31-ago). El archivador guarda el registro CRUDO por estación y mes en
+`monitor/data/ema/<code>-<YYYY-MM>.jsonl` (idempotente, escritura atómica,
+gitignored), con timer horario `:05` — la API da 12× redundancia, se pueden
+perder once corridas seguidas sin perder un dato. El crosscheck acepta
+`--desde/--hasta` y lee del archivo en vez de la API: verificado que el modo
+archivo reproduce el modo API en el decimal. Un evento NO archivado está perdido
+para siempre, así que el timer debe estar puesto ANTES de la lluvia. Autotest sin
+red: `python3 monitor/archive_ema.py --selftest`.
+**PENDIENTE:** el cruce de PP sigue sin validarse — nunca ha habido lluvia en una
+ventana común. Con el archivador puesto, se cierra solo con el próximo evento.
 
 **Fase A del plan EWS (2026-07-11) LISTA**: fusión multi-forzante de punta a
 punta. (1) CLI: `nowcast run --fuse-rasters <stack>` repetible + `--combine
