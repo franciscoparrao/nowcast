@@ -248,6 +248,64 @@ motores se enchufan como proveedores nativos en v0.2.
   noisy-OR. Tests: decaimiento Omori de la serie, causalidad (evento dentro de
   la ventana no afecta su propio paso), entradas hostiles, alerta sin lluvia.
   Adapter LISTO.
+- **agromet-scraper (H0)** → **modulador** de isoterma cero (2026-09-02). Crate
+  `nowcast-h0`: la altura de la isoterma decide qué fracción de la cuenca recibe
+  LLUVIA en vez de nieve, y es casi ortogonal a la intensidad (r=−0.069, n=356
+  días de tormenta) → aporta señal que el pluviómetro no lleva. Serie diaria
+  30-36 °S por regresión T-elevación sobre la red INIA, validada vs 3.301 sondeos
+  IGRA (hold-out 2023-26: sesgo +248 m, MAE 362 m, r=0.85).
+  **Índice de DOS VÍAS** porque el peligro llega por dos rutas físicas distintas
+  y un criterio único pierde la mitad: (a) VERANO, isoterma naturalmente alta +
+  lluvia inusual (aluvión San José de Maipo 30-ene-2021, H0 4783 m = p75 absoluto
+  pero ~p15 para un enero → un percentil mensual NO lo ve); (b) INVIERNO, isoterma
+  anómala (temporal 21-26-jun-2023 → un umbral absoluto NO lo ve). Dispara con
+  CUALQUIERA de las dos y `H0Signals` las reporta POR SEPARADO (`H0Via`), porque
+  son mecanismos distintos y ameritan mensajes distintos.
+  **MODULA, no vota**: medido sobre la serie, con umbral absoluto 4000 m el 100%
+  de los días de dic-ene-feb lo cruzan (89% a 4500 m) → fusionarlo con la lluvia
+  por noisy-OR daría alerta casi diaria en verano. Va por `Combine::Product`, y
+  por eso `MissingPolicy::Neutral` (hueco = 1.0) es el default: un día sin H0 es
+  «no sé» y debe dejar intacto el veredicto de la lluvia, jamás borrarlo (0.0
+  bajo Product mataría la alerta). Umbrales absolutos SOBRE LA ESCALA DE LA SERIE
+  (sesgo +250/+450 m), no de radiosonda. Solo 30-36 °S.
+  `MonthlyStormClimatology::from_series` recalcula el p90 mensual desde la serie
+  y el ejemplo `h0_two_way.rs` verifica que **reproduce los 12 meses del reporte
+  de río arriba** (bloque B de `h0_vs_eventos.txt`) — divergencia = fallo impreso,
+  no desacuerdo silencioso. Datos: `scripts/extract_h0_transecta.py`.
+  **La vía anomalía tiene DOS SUB-RUTAS porque la altura sola no bastaba.** Fijar
+  la anomalía en un percentil alto NO ve su propio caso testigo: el temporal de
+  junio-2023 está en p66-p84 de las tormentas de junio (medido: 65.9, 72.7, 78.4,
+  80.7, 83.0, 84.1) y el p90 de junio es 3802 m, POR ENCIMA de los seis días. Lo
+  que distingue al evento es que se SOSTIENE. Entonces la vía dispara con
+  cualquiera de: **pico** (un día sobre el p90) o **sostenido** (`Persistence`:
+  N días consecutivos sobre un p75). AGREGA una ruta en vez de bajar el listón
+  del pico — un solo día a p80 sigue sin ser alerta. Verificado sobre la serie
+  real: con p75/3 días el temporal se marca. **Costo honesto**: la racha tiene
+  que acumularse, así que dispara el 25-jun, dos días dentro de un temporal
+  documentado desde el 21 — rachas más largas compran especificidad y pagan
+  lead-time. Además la racha parte el 23 y no el 21 porque los días 21 (3446 m) y
+  22 (3314 m) están BAJO el p75 de junio (3466 m).
+  Invariantes de la racha, testeadas: **un hueco la ROMPE** (no se puede afirmar
+  persistencia sobre días no observados; romper es la dirección conservadora),
+  un día bajo la barra la rompe, y **solo mira hacia atrás** (nunca lee el futuro
+  — mismo invariante de causalidad que `nowcast-omori`).
+  **BARRIDO de `min_days` — RESULTADO NEGATIVO** (`examples/h0_persistence_sweep.rs`):
+  se barrió p70/p75/p80 × 2/3/4 días contra los 6 eventos fechados y **ninguna
+  configuración justifica elegirse**. La vía anomalía sola detecta 0-2/6 (el pico
+  p90 solo: 0/6) y el índice completo 1-3/6, siempre marcando 11-22% de los días
+  de tormenta de toda la serie. NO es artefacto de huecos: la serie cubre 23 de
+  los 25 días de evento. **La causa es que el catálogo casi no contiene el
+  mecanismo**: los cinco temporales de invierno tienen su H0 máximo ENTRE la
+  mediana y el p90 de su propio mes (son TIBIOS, ninguno cruza p90), y el único
+  claramente cálido es el aluvión de verano, cuyo mes ni siquiera tiene
+  climatología → lo cubre la vía absoluta. Bajar el umbral hasta alcanzarlos
+  marcaría por construcción una fracción enorme de los días de tormenta.
+  **Lección: H0 no es un detector de eventos mayores, es un discriminador de
+  MECANISMO**; calibrarlo contra un catálogo no estratificado por mecanismo es
+  ajustar ruido. Se mantiene p75×3d por especificidad (marca 14.9%, cerca del
+  11.2% del pico solo) y NO p70×2d (22.2% por un evento más, dentro del ruido de
+  n=6). Para elegirlo con evidencia hace falta un inventario que distinga aluvión
+  de crecida fría.
 - **firespread** → peligro paralelo (fuego): crate `nowcast-firespread` envuelve
   `firespread-core` (Rothermel + minimum-travel-time). `run_fire`→`FireField`
   (arrival/ROS/intensidad por celda, `fire_hazard` normalizado) y la **cascada

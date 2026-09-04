@@ -9,6 +9,7 @@ members = [
     "crates/nowcast-swarm",
     "crates/nowcast-insar",
     "crates/nowcast-omori",
+    "crates/nowcast-h0",
     "crates/nowcast-firespread",
     "crates/nowcast-cli",
     "crates/nowcast-python",
@@ -25,6 +26,7 @@ default-members = [
     "crates/nowcast-swarm",
     "crates/nowcast-insar",
     "crates/nowcast-omori",
+    "crates/nowcast-h0",
     "crates/nowcast-firespread",
     "crates/nowcast-cli",
 ]
