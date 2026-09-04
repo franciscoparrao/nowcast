@@ -69,6 +69,14 @@
 //! [`AbsoluteWay`] thresholds must be set **on the scale of this series**, not
 //! from radiosonde values.
 //!
+//! **Known misalignment, not yet corrected.** The series is stamped at 08:00 in
+//! **UTC−4 fixed** (verified 2026-09-04: 24 records/day across all 18 Chilean
+//! DST transitions 2018-2026, and a daily temperature maximum at 13:00 in every
+//! month — no summer shift). A nowcast driven by IMERG runs on **UTC**, so
+//! "day" here and "day" there are offset by 4 h. For a daily modulator that is
+//! a fraction of a step and it is left uncorrected on purpose rather than
+//! papered over; it would matter if the trigger ever ran on sub-daily H0.
+//!
 //! ```
 //! use nowcast_core::{Combine, GridDims, IdThreshold, IdTrigger, MultiNowcast,
 //!                    SusceptibilityMap, TriggerModel, UniformRain};

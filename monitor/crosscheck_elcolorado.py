@@ -174,13 +174,31 @@ def best_offset(dmc_h, agro):
     return best
 
 
-def check_dst(offset):
-    """¿El desfase medido es hora local de Chile? Y si lo es, ¿cuándo cambia?
+# agromet etiqueta sus horas en UTC−4 FIJO, no en hora local de Chile.
+AGROMET_FIXED_OFFSET_H = 4
 
-    Que agromet guarde hora LOCAL y no UTC no es un detalle de estilo: Chile
-    cambia de huso dos veces al año, así que un desfase fijado a mano se rompe
-    solo, en silencio, la madrugada del cambio. Esto lo detecta y avisa con
-    fecha, en vez de dejar una nota en un comentario que envejece.
+
+def check_dst(offset):
+    """¿El desfase de agromet sigue el horario de verano, o es fijo?
+
+    CORREGIDO 2026-09-04. Esto antes afirmaba que agromet guardaba hora LOCAL y
+    avisaba de que el desfase se rompería en el próximo cambio de huso. Era
+    falso, y falso de la manera más fácil de creer: el hallazgo se hizo en
+    agosto, cuando Chile está en UTC−4 y el offset fijo COINCIDE con el local.
+
+    Dos evidencias, ambas sobre la base histórica y no sobre la teoría:
+
+      1. En las 18 transiciones de huso entre 2018 y 2026 la estación tiene 24
+         registros por día, siempre. Con hora local habría un día de 23 h en
+         cada adelanto y uno de 25 h (o un colapso de PK) en cada atraso.
+      2. La hora etiquetada del máximo diario de temperatura es 13:00 todos los
+         meses del año. Con hora local se correría a 14:00 en los meses con
+         horario de verano; el sol no cambia de horario.
+
+    Consecuencia práctica: el desfase agromet↔DMC es constante (+4 h) y NO hay
+    que hacer nada en los cambios de huso. Lo que sí hay que vigilar es que
+    agromet no cambie de convención sin avisar, que es lo que esta función mide
+    ahora.
     """
     try:
         from zoneinfo import ZoneInfo
@@ -188,19 +206,27 @@ def check_dst(offset):
         return
     tz = ZoneInfo("America/Santiago")
     now = datetime.now()
-    cur = int(now.replace(tzinfo=tz).utcoffset().total_seconds() // 3600)
-    if offset != -cur:
-        print(f"    (el desfase NO coincide con America/Santiago, hoy UTC{cur:+d} — "
-              f"revisar: puede no ser hora local)")
+    local = int(now.replace(tzinfo=tz).utcoffset().total_seconds() // 3600)
+
+    if offset == AGROMET_FIXED_OFFSET_H:
+        print(f"    es el offset FIJO esperado (UTC−{AGROMET_FIXED_OFFSET_H}). agromet NO "
+              f"sigue el horario de verano:")
+        print("      · 24 registros/día en las 18 transiciones de huso 2018-2026;")
+        print("      · máximo diario de TA a las 13:00 todo el año, sin corrimiento estival.")
+        if local != -AGROMET_FIXED_OFFSET_H:
+            print(f"      (hoy Chile está en UTC{local:+d}, así que el desfase NO coincide "
+                  f"con la hora local — es lo esperado, no un error.)")
         return
-    print(f"    coincide con America/Santiago (hoy UTC{cur:+d}): agromet guarda hora LOCAL.")
-    for d in range(1, 400):
-        dt = now + timedelta(days=d)
-        nxt = int(dt.replace(tzinfo=tz).utcoffset().total_seconds() // 3600)
-        if nxt != cur:
-            print(f"    ⚠ el {dt:%Y-%m-%d} Chile pasa a UTC{nxt:+d}: el desfase será "
-                  f"{-nxt:+d} h, no {offset:+d}. Un valor fijado a mano se rompe ese día.")
-            break
+
+    print(f"    ⚠ el desfase es {offset:+d} h y se esperaba "
+          f"+{AGROMET_FIXED_OFFSET_H} (UTC−{AGROMET_FIXED_OFFSET_H} fijo).")
+    if offset == -local:
+        print(f"      Coincide con la hora local de Chile (UTC{local:+d}): agromet pudo "
+              f"haber CAMBIADO de convención\n      a hora local. Verificar contando "
+              f"registros por día en la próxima transición de huso.")
+    else:
+        print("      No coincide ni con el offset fijo ni con la hora local — revisar "
+              "antes de fusionar.")
 
 
 def main():

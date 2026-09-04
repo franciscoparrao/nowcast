@@ -375,9 +375,21 @@ mide el cruce: 6 de 7 horas de TA coinciden en el DECIMAL EXACTO (dif media
 **valida la ruta** (agromet sirve si la API cae o el token vence) y **NO valida
 el sensor**: un pluviómetro tapado se ve igual por los dos caminos. Para eso hace
 falta IMERG/GOES o una estación vecina de otra institución.
-**HALLAZGO: agromet guarda hora LOCAL y la DMC UTC** — desfase +4 h hoy, pero el
-2026-09-06 Chile pasa a UTC−3 y será +3 h; el script lo detecta solo vía
-`zoneinfo` y avisa con fecha, en vez de fijarlo a mano.
+**agromet va en UTC−4 FIJO y la DMC en UTC** — desfase constante +4 h.
+**CORREGIDO 2026-09-04**: el 29-ago se concluyó «agromet guarda hora LOCAL» y que
+el desfase se rompería el 2026-09-06 al pasar Chile a UTC−3. Era falso, y falso
+de la manera más fácil de creer: el hallazgo se hizo en agosto, cuando Chile está
+en UTC−4 y el offset fijo COINCIDE con el local. Dos evidencias sobre la base
+histórica, no sobre la teoría: (1) 24 registros/día en las **18 transiciones de
+huso 2018-2026** — con hora local habría un día de 23 h en cada adelanto y uno de
+25 h (o colapso de PK) en cada atraso; (2) el **máximo diario de TA cae a las
+13:00 todos los meses**, sin corrimiento en los meses con horario de verano — el
+sol no cambia de horario. Consecuencia: **en los cambios de huso no hay que hacer
+nada**, y el pendiente «revisar la base el 6-7-sep por la hora repetida» queda
+CERRADO sin acción (además el de septiembre ADELANTA el reloj: la hora local
+00:00 del 6-sep no existe, así que nunca hubo hora repetida — esa es la del
+cambio de abril). `check_dst()` ahora verifica el offset fijo y solo avisa si
+agromet CAMBIA de convención.
 **El id NO se hardcodea**: era `108` hasta el 2026-08-31, cuando el scraper
 descubrió que los ids numéricos colisionan entre instituciones (INIA-78 Visviri
 vs EXT-78 Portezuelo) y los re-prefijó; el script pedía `108`, recibía cero filas
