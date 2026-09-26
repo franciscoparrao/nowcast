@@ -96,6 +96,13 @@ install -Dm755 target/release/nowcast ~/nowcast-monitor/bin/nowcast
 #    clean. Contrapartida: tras recompilar hay que volver a instalar, o el
 #    monitor sigue con el binario viejo (y un flag nuevo en config → error de
 #    uso, exit 1, aviso "ERROR del motor", no una alerta falsa).
+#    La cadena de PRONÓSTICO (forecast_all.sh + analysis_all.sh) corre en su
+#    propio venv con versiones fijas — distinto del venv del monitor del paso 0:
+python3 -m venv ~/nowcast-monitor/venv-forecast
+~/nowcast-monitor/venv-forecast/bin/pip install -r monitor/requirements-forecast.txt
+#    Lección (2026-09-26): el wheel de geostat-rs subió numpy a 2.5.3 en
+#    ~/.local el 7-sep y el geopandas 0.14 del sistema abortó comuna_impact.
+#    Sin el venv, los dos scripts ABORTAN en vez de caer al python3 del sistema.
 
 # 1b. Generar la susceptibilidad de terreno EN EL ORQUESTADOR — no en el nodo:
 #     lee los modelos por cuenca de 30 m del disco KINGSTON, que el nodo no

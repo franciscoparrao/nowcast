@@ -33,6 +33,20 @@ LOG="$FORECAST_WORKDIR/forecast.log"
 
 log() { echo "[$(date -u +%FT%TZ)] $*" | tee -a "$LOG"; }
 
+# Python AISLADO (2026-09-26): la cadena corre en SU venv (venv-forecast, no el
+# venv del monitor de los nodos) con versiones fijas
+# (requirements-forecast.txt), nunca con el python3 de ~/.local/dist-packages —
+# el 7-sep otro proyecto subió numpy a 2.5.3 en ~/.local y el geopandas del
+# sistema rompió comuna_impact. PATH antepuesto y no una variable PY porque
+# run_localidades.py lanza sus hijos como "python3" por nombre. Sin venv se
+# ABORTA: caer al python del sistema es reproducir la falla en silencio.
+FORECAST_VENV="${FORECAST_VENV:-$HOME/nowcast-monitor/venv-forecast}"
+if [[ ! -x "$FORECAST_VENV/bin/python3" ]]; then
+    log "analysis_all: ABORTA — falta el venv $FORECAST_VENV. Crearlo: python3 -m venv $FORECAST_VENV && $FORECAST_VENV/bin/pip install -r $HERE/requirements-forecast.txt"
+    exit 1
+fi
+export PATH="$FORECAST_VENV/bin:$PATH"
+
 if [[ "$(readlink -f "$FORECAST_WORKDIR")" != "$(readlink -f "$HOME/nowcast-forecast")" ]]; then
     log "analysis_all: ABORTA — workdir '$FORECAST_WORKDIR' != ~/nowcast-forecast, y"
     log "analysis_all: comuna_vulnerability/select_watchlist tienen esa ruta hardcodeada"

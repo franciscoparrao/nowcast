@@ -383,6 +383,18 @@ temporada en modo sombra antes de confiar.
 salió cada 6 h y nadie lo leyó como «el monitor no existe». Tras compilar:
 `install -Dm755 target/release/nowcast ~/nowcast-monitor/bin/nowcast` (copia,
 sobrevive a `cargo clean`; hay que reinstalar tras cada build release).
+**Y el Python del pronóstico vive en `~/nowcast-monitor/venv-forecast`**
+(`monitor/requirements-forecast.txt`, versiones del último análisis sano del
+3-sep: numpy 1.26.4, geopandas 0.14.3, fiona 1.9.5…). El 7-sep el wheel de
+geostat-rs subió numpy a 2.5.3 en `~/.local` y el geopandas del sistema rompió
+`comuna_impact` (`np.array(copy=False)`); quedó oculto porque el pronóstico ya
+moría antes por el binario. Mismo patrón que `target/`: dependencia COMPARTIDA
+que otro proyecto cambia sin avisar. `forecast_all.sh`/`analysis_all.sh`
+anteponen el venv al PATH (no una variable: `run_localidades` lanza hijos como
+`python3`) y ABORTAN si falta. NO es el `~/nowcast-monitor/venv` del README de
+nodos (earthaccess/h5py). El monitor en esta máquina sigue con el python del
+sistema: `h5py` del sistema también está roto por numpy 2.5.3, IMERG se salva
+porque xarray abre con netCDF4.
 
 **Respaldo in-situ verificado (2026-08-29, corregido 2026-09-02)**:
 `monitor/crosscheck_elcolorado.py` cruza El Colorado 2750 m —la ÚNICA estación de

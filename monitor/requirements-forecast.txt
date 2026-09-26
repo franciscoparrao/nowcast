@@ -1,0 +1,33 @@
+# Entorno FIJO de la cadena de pronóstico (forecast_all.sh + analysis_all.sh).
+#
+# Vive en ~/nowcast-monitor/venv-forecast (NO en ~/nowcast-monitor/venv, que el
+# README reserva al monitor de los nodos con earthaccess/h5py), aislado de
+# ~/.local y de dist-packages. Por qué (2026-09-26): el 2026-09-07 el wheel de geostat-rs arrastró numpy 2.5.3 a
+# ~/.local, y el geopandas 0.14.3 del sistema —compilado para numpy 1— rompe con
+# `np.array(copy=False)`: comuna_impact.py abortaba el análisis entero. Mismo
+# patrón que el binario en target/: una dependencia COMPARTIDA que otro proyecto
+# puede cambiar sin avisar. Las versiones son exactamente las que corrían hasta
+# el 2026-09-03 (último análisis sano), no las más nuevas: reproducir primero,
+# actualizar después y a propósito.
+#
+#   python3 -m venv ~/nowcast-monitor/venv-forecast
+#   ~/nowcast-monitor/venv-forecast/bin/pip install -r monitor/requirements-forecast.txt
+numpy==1.26.4
+pandas==3.0.1
+geopandas==0.14.3
+fiona==1.9.5
+pyogrio==0.12.1
+shapely==2.1.2
+pyproj==3.6.1
+rasterio==1.4.3
+rasterstats==0.20.0
+xarray==2025.9.0
+netCDF4==1.7.2
+cfgrib==0.9.15.1
+eccodes==2.47.0
+eccodeslib==2.47.3.22
+duckdb==1.5.1
+scipy==1.16.3
+matplotlib==3.10.9
+cartopy==0.25.0
+adjustText==1.3.0
