@@ -116,7 +116,7 @@ python3 monitor/make_susc_grid.py --out /tmp/susc_0p1.tif   # BBOX del config.en
 ssh sentinel "mkdir -p ~/nowcast-monitor/bin ~/nowcast-monitor/monitor"
 scp target/release/nowcast sentinel:~/nowcast-monitor/bin/
 scp /tmp/susc_0p1.tif sentinel:~/nowcast-monitor/          # $WORK_DIR/susc_0p1.tif
-scp monitor/{config.env,fetch_imerg_early.py,fetch_goes_qpe.py,fetch_dga.py,prepare_fusion.py,monitor.sh} \
+scp monitor/{config.env,fetch_imerg_early.py,fetch_goes_qpe.py,fetch_dga.py,prepare_fusion.py,monitor.sh,lib_notify.sh,h0_guard.py,watchdog.sh} \
     sentinel:~/nowcast-monitor/monitor/
 ssh sentinel "chmod +x ~/nowcast-monitor/monitor/monitor.sh && ls -la ~/nowcast-monitor/bin"  # verificar bytes
 
@@ -143,6 +143,14 @@ ssh sentinel "cd ~/nowcast-monitor/monitor && ./monitor.sh"
 # 5. Programar (systemd de usuario):
 scp monitor/systemd/nowcast-monitor.{service,timer} sentinel:~/.config/systemd/user/
 ssh sentinel "systemctl --user daemon-reload && systemctl --user enable --now nowcast-monitor.timer && loginctl enable-linger $USER"
+
+# 6. Vigía de servicios detenidos (OBLIGATORIO, no opcional): avisa URGENTE si
+#    un monitor/pronóstico con timer habilitado no completa un ciclo en
+#    WATCHDOG_MONITOR_HOURS (3) / WATCHDOG_FORECAST_HOURS (14), y "RECUPERADO"
+#    al volver. monitor.sh y lib_notify.sh van juntos: sin lib_notify.sh el
+#    ciclo aborta al arrancar (y el vigía es quien lo delata).
+scp monitor/systemd/nowcast-watchdog.{service,timer} sentinel:~/.config/systemd/user/
+ssh sentinel "systemctl --user daemon-reload && systemctl --user enable --now nowcast-watchdog.timer"
 ```
 
 Cadencia: el timer corre a los minutos :12 y :42 (IMERG Early publica cada
@@ -155,6 +163,9 @@ media hora con ~4 h de retraso; el desfase evita pedir justo al filo).
 python3 monitor/selftest.py         # crea /tmp/nowcast-monitor-selftest
 SKIP_FETCH=1 CONFIG=/tmp/nowcast-monitor-selftest/config.env monitor/monitor.sh
 # Debe terminar en NOTIFY[urgent] ALERTA con el detalle del cruce.
+
+# Vigía de servicios detenidos (canal ntfy local, sin systemd):
+python3 monitor/selftest.py --watchdog
 
 # Modo fusión (fase A) — IMERG rezagado 5 h con llovizna, ráfaga SOLO en GOES:
 python3 monitor/selftest.py --fusion

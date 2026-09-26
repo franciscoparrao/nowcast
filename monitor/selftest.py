@@ -582,6 +582,79 @@ def h0_selftest():
     return 0 if not fallos else 1
 
 
+def watchdog_selftest():
+    """El vigía de servicios detenidos (2026-09-26), sin systemd ni red.
+
+    Motivo: 23 días con monitor y pronóstico caídos sin que se notara. Casos:
+    fresco → calla; viejo → URGENTE entregado; segunda pasada → histéresis;
+    sin last_ok pero visto hace mucho → también DETENIDO; vuelve → RECUPERADO
+    una sola vez. Canal local, nunca el ntfy real.
+    """
+    import http.server
+    import subprocess
+    import threading
+    import time
+
+    recibidos = []
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            recibidos.append((self.headers.get("Priority", ""), self.headers.get("Title", "")))
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    wd = os.path.join(BASE, "watchdog")
+    shutil.rmtree(wd, ignore_errors=True)
+    os.makedirs(wd)
+    ok_mon = os.path.join(wd, "mon_last_ok")
+    ok_fc = os.path.join(wd, "fc_last_ok")   # nunca se crea: caso "sin last_ok"
+    ahora = int(time.time())
+
+    def correr():
+        antes = len(recibidos)
+        env = {**os.environ, "LOCAL_CONFIG": "/nonexistent", "WATCHDOG_DIR": wd,
+               "NTFY_TOPIC": "selftest", "NTFY_URL": f"http://127.0.0.1:{srv.server_address[1]}",
+               "WATCHDOG_TARGETS": f"monitor@x|{ok_mon}|3;forecast|{ok_fc}|14"}
+        # config.env deja NTFY_TOPIC vacío: se inyecta DESPUÉS vía un config propio
+        cfg = os.path.join(wd, "cfg.env")
+        with open(cfg, "w") as f:
+            f.write(f'NTFY_TOPIC="selftest"\nNTFY_URL="{env["NTFY_URL"]}"\n')
+        env["CONFIG"] = cfg
+        subprocess.run([os.path.join(REPO, "monitor", "watchdog.sh")], env=env,
+                       capture_output=True, text=True, timeout=120, check=True)
+        return recibidos[antes:]
+
+    fallos = []
+
+    def caso(nombre, got, esperado):
+        ok = got == esperado
+        print(f"  {'ok  ' if ok else 'FALLA'} {nombre:44s} {got}")
+        if not ok:
+            fallos.append(nombre)
+
+    open(ok_mon, "w").write(str(ahora - 600))          # hace 10 min
+    caso("fresco → silencio (y registra first_seen)", correr(), [])
+    open(ok_mon, "w").write(str(ahora - 5 * 3600))     # hace 5 h > 3 h
+    caso("monitor viejo → URGENTE", correr(), [("urgent", "nowcast: monitor@x DETENIDO")])
+    caso("segunda pasada → histéresis", correr(), [])
+    # forecast sin last_ok: se envejece su first_seen más allá de 14 h
+    open(os.path.join(wd, "first_seen_forecast"), "w").write(str(ahora - 15 * 3600))
+    caso("sin last_ok, visto hace 15 h → URGENTE", correr(),
+         [("urgent", "nowcast: forecast DETENIDO")])
+    open(ok_mon, "w").write(str(ahora))
+    caso("monitor vuelve → RECUPERADO una vez", correr(),
+         [("default", "nowcast: monitor@x RECUPERADO")])
+    caso("…y no lo repite", [r for r in correr() if "monitor" in r[1]], [])
+    srv.shutdown()
+    print(f"\n[selftest watchdog] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 if __name__ == "__main__":
     if "--susc" in sys.argv:
         sys.exit(susc_selftest())
@@ -595,4 +668,6 @@ if __name__ == "__main__":
         sys.exit(flood_selftest())
     if "--h0" in sys.argv:
         sys.exit(h0_selftest())
+    if "--watchdog" in sys.argv:
+        sys.exit(watchdog_selftest())
     main(fusion="--fusion" in sys.argv)

@@ -1,0 +1,13 @@
+[Unit]
+Description=nowcast-watchdog cada hora
+
+[Timer]
+# Al minuto :25, fuera de los ticks del monitor (:12/:42) y del archivador (:05).
+# Con umbral de 3 h para el monitor, un caído se nota en ≤ 4 h. Persistent=true
+# para que tras apagar la máquina el primer chequeo no espere una hora.
+OnCalendar=*-*-* *:25:00
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

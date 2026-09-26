@@ -31,7 +31,26 @@ FORECAST_WORKDIR="${FORECAST_WORKDIR:-${FORECAST_DIR:-$HOME/nowcast-forecast}}"
 WATCHLIST_TOP_N="${WATCHLIST_TOP_N:-20}"
 LOG="$FORECAST_WORKDIR/forecast.log"
 
-log() { echo "[$(date -u +%FT%TZ)] $*" | tee -a "$LOG"; }
+# LAST_MSG guarda la última línea de log: en un aborto es el MOTIVO, y es lo
+# que el aviso lleva (hasta el 26-sep estas cadenas solo escribían al log y 90
+# corridas fallidas seguidas pasaron sin que nadie lo supiera).
+LAST_MSG=""
+log() { LAST_MSG="$*"; echo "[$(date -u +%FT%TZ)] $*" | tee -a "$LOG"; }
+
+NOTIFY_STATE_DIR="$FORECAST_WORKDIR/state"
+# shellcheck source=lib_notify.sh
+source "$HERE/lib_notify.sh"
+# Cualquier salida != 0 avisa, cubra el camino que cubra (incluido el venv
+# ausente). Los WARN que solo DEGRADAN el ciclo no pasan por aquí: van al log.
+on_exit() {
+    local rc=$?
+    if (( rc != 0 )); then
+        notify "nowcast-forecast: analysis_all FALLÓ" \
+            "${LAST_MSG:-salió $rc sin mensaje}. Ver $LOG en $(hostname)." \
+            high forecast_fail.hyst 12
+    fi
+}
+trap on_exit EXIT
 
 # Python AISLADO (2026-09-26): la cadena corre en SU venv (venv-forecast, no el
 # venv del monitor de los nodos) con versiones fijas
@@ -166,4 +185,5 @@ case "${PRUNE_MODE:-report}" in
         ;;
 esac
 
+mark_ok "$FORECAST_WORKDIR/state"   # cadena completa: lo lee watchdog.sh
 log "analysis_all: fin"

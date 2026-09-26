@@ -396,6 +396,22 @@ nodos (earthaccess/h5py). El monitor en esta máquina sigue con el python del
 sistema: `h5py` del sistema también está roto por numpy 2.5.3, IMERG se salva
 porque xarray abre con netCDF4.
 
+**Vigía de servicios detenidos (`monitor/watchdog.sh`, timer propio :25,
+2026-09-26)** — la lección de fondo de los 23 días no fue `target/` ni numpy,
+fue que NADIE SE ENTERÓ: el monitor avisó "CONFIG INVÁLIDA" cada 6 h y se leyó
+como ruido; el pronóstico solo escribía al journal. Ahora: (1) `notify()` vive
+en `monitor/lib_notify.sh`, UNA copia compartida por monitor, pronóstico y
+vigía (con el contrato «histéresis solo tras entrega confirmada»); (2)
+`forecast_all.sh`/`analysis_all.sh` avisan `high` en cualquier salida ≠ 0 vía
+`trap EXIT`, con la última línea de log como motivo; (3) monitor y
+`analysis_all` estampan `state/last_ok` al COMPLETAR un ciclo (`mark_ok`); (4)
+el vigía descubre los timers HABILITADOS y avisa `urgent` "DETENIDO" si
+`last_ok` pasa de `WATCHDOG_MONITOR_HOURS`=3 / `WATCHDOG_FORECAST_HOURS`=14
+(insiste cada 6 h) y "RECUPERADO" una vez al volver; sin `last_ok` cuenta desde
+la primera vez que lo vio. Cubre el caso que un aviso desde el ciclo no puede:
+el ciclo que ni parte. Autotest `selftest.py --watchdog`. OJO nodos: `monitor.sh`
+ya NO funciona sin `lib_notify.sh` al lado (README paso 2).
+
 **Respaldo in-situ verificado (2026-08-29, corregido 2026-09-02)**:
 `monitor/crosscheck_elcolorado.py` cruza El Colorado 2750 m —la ÚNICA estación de
 cordillera del dominio piloto— entre la API DMC (330077) que el monitor usa hoy

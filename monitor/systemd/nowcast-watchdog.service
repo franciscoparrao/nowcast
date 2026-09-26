@@ -1,0 +1,14 @@
+[Unit]
+Description=nowcast: vigía de servicios detenidos (monitor y pronóstico)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Mira cuánto hace que cada monitor/pronóstico con timer habilitado COMPLETÓ un
+# ciclo (state/last_ok) y avisa urgente si pasa del umbral. Existe porque el
+# 2026-09 ambos estuvieron 23 días caídos sin que se notara: un aviso emitido
+# DESDE el ciclo no cubre el ciclo que no parte. NTFY_* sale de config.local.env.
+ExecStart=%h/proyectos/nowcast/monitor/watchdog.sh
+TimeoutStartSec=2min
+Nice=15
