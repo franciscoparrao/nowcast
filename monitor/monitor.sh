@@ -312,6 +312,29 @@ if (( ${#FUSE_LISTS[@]} > 0 )); then
     FUSE_ARGS+=(--combine "${COMBINE:-noisy-or}")
 fi
 
+# Isoterma cero (H0) en SOMBRA: se reporta junto a cada paso y NO toca el
+# peligro. h0_guard.py decide si este ciclo puede usarla; si no (serie vieja,
+# dominio fuera de 30–36 °S, archivo ausente) H0 se apaga y la lluvia corre
+# igual — un diagnóstico nunca puede tumbar el ciclo. Aviso una vez al día.
+H0_ARGS=()
+H0_NOTE=""
+if [[ -n "${H0_CSV:-}" ]]; then
+    read -r H0_STATE H0_DETAIL < <(python3 "$HERE/h0_guard.py" --csv "$H0_CSV" \
+        --bbox="$BBOX" --fusion-json "$FUSION_JSON" \
+        --stale-days "${H0_STALE_DAYS:-3}" 2>>"$LOG" || echo "off h0_guard.py falló (ver log)")
+    if [[ "$H0_STATE" == "ok" ]]; then
+        H0_ARGS=(--h0-csv "$H0_CSV" --start "$H0_DETAIL")
+        [[ -n "${H0_ABS_M:-}" ]] && H0_ARGS+=(--h0-abs-m "$H0_ABS_M")
+        rm -f "$WORK_DIR/state/h0_off.hyst"
+    else
+        log "WARN: H0 (sombra) apagado este ciclo: $H0_DETAIL"
+        H0_NOTE=" [H0 apagado: $H0_DETAIL]"
+        notify "nowcast-monitor: H0 apagado" \
+            "La isoterma cero no se reporta: $H0_DETAIL. Las alertas de lluvia NO cambian (H0 va en sombra)." \
+            default h0_off.hyst 24
+    fi
+fi
+
 RUN_JSON="$WORK_DIR/out/last_run.json"
 if [[ "${ARCHIVE_STEPS:-0}" == "1" ]]; then
     mkdir -p "$WORK_DIR/out/history"
@@ -322,7 +345,7 @@ fi
     --dt-hours "$DT_HOURS" --max-window "$MAX_WINDOW" \
     --id-a "$ID_A" --id-b "$ID_B" --k "$K" \
     --alert-level "$ALERT_LEVEL" \
-    "${CAL_ARGS[@]}" "${OUT_ARGS[@]}" \
+    "${CAL_ARGS[@]}" "${OUT_ARGS[@]}" "${H0_ARGS[@]}" \
     --format json > "$RUN_JSON" 2>>"$LOG"
 RC=$?
 if [[ "${ARCHIVE_STEPS:-0}" == "1" && -s "$RUN_JSON" ]]; then
@@ -405,9 +428,19 @@ r = json.load(open(sys.argv[1]))
 steps = [s for s in r["steps"] if s.get("alert")]
 last = steps[-1]
 peak = max(s["max_probability"] for s in r["steps"])
-print(f"{r['n_alerts']} paso(s) en alerta (nivel {r['alert_level']}); "
-      f"último: paso {last['step']} con {last['alert']['n_cells']} celda(s) "
-      f"({100*last['alert']['fraction']:.0f}% del dominio), pico de la ventana {peak:.2f}")
+msg = (f"{r['n_alerts']} paso(s) en alerta (nivel {r['alert_level']}); "
+       f"último: paso {last['step']} con {last['alert']['n_cells']} celda(s) "
+       f"({100*last['alert']['fraction']:.0f}% del dominio), pico de la ventana {peak:.2f}")
+h = last.get("h0")
+if h:  # sombra: informa el MECANISMO, no cambió el peligro
+    via = {"absolute": "vía absoluta (patrón de verano)",
+           "anomalous": "anomalía mensual (temporal cálido)",
+           "both": "ambas vías", "quiet": "sin señal",
+           "missing": "sin dato ese día"}.get(h["via"], h["via"])
+    alt = f"{h['h0_m']:.0f} m, " if h.get("h0_m") is not None else ""
+    racha = f", racha {h['run_days']} d" if h.get("run_days") else ""
+    msg += f". H0 (sombra): {alt}{via}{racha}"
+print(msg)
 EOF
 )
     # Defensa en profundidad: exit 2 sin JSON parseable NO es una alerta — es
@@ -420,7 +453,7 @@ EOF
         exit 1
     fi
     notify "nowcast-monitor: ALERTA I-D en el dominio" \
-        "$DETAIL. Último dato IMERG: $NEWEST (~4 h de latencia)$DEGRADED$FUSION_NOTE$FLOOD_NOTE. Feeds: $FUSE_SUMMARY. Detalle: $RUN_JSON" \
+        "$DETAIL. Último dato IMERG: $NEWEST (~4 h de latencia)$DEGRADED$FUSION_NOTE$FLOOD_NOTE$H0_NOTE. Feeds: $FUSE_SUMMARY. Detalle: $RUN_JSON" \
         urgent alert "${REALERT_HOURS:-6}"
     ;;
 *)

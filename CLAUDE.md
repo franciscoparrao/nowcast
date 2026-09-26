@@ -261,13 +261,26 @@ motores se enchufan como proveedores nativos en v0.2.
   anómala (temporal 21-26-jun-2023 → un umbral absoluto NO lo ve). Dispara con
   CUALQUIERA de las dos y `H0Signals` las reporta POR SEPARADO (`H0Via`), porque
   son mecanismos distintos y ameritan mensajes distintos.
-  **MODULA, no vota**: medido sobre la serie, con umbral absoluto 4000 m el 100%
-  de los días de dic-ene-feb lo cruzan (89% a 4500 m) → fusionarlo con la lluvia
-  por noisy-OR daría alerta casi diaria en verano. Va por `Combine::Product`, y
-  por eso `MissingPolicy::Neutral` (hueco = 1.0) es el default: un día sin H0 es
-  «no sé» y debe dejar intacto el veredicto de la lluvia, jamás borrarlo (0.0
-  bajo Product mataría la alerta). Umbrales absolutos SOBRE LA ESCALA DE LA SERIE
-  (sesgo +250/+450 m), no de radiosonda. Solo 30-36 °S.
+  **NO VOTA, y tampoco modula todavía — va en SOMBRA** (2026-09-25): con umbral
+  absoluto 4000 m el 100% de los días de dic-ene-feb lo cruzan (89% a 4500 m) →
+  por noisy-OR daría alerta casi diaria en verano. Se había escrito que por
+  `Combine::Product` «solo amplifica»: **FALSO** — dos factores en [0,1]
+  multiplicados solo pueden BAJAR. Medido en los 356 días de tormenta: factor
+  mediano 0.32 y en may-ago el 88% bajo 0.5 → Product hundía casi todas las
+  alertas de invierno (incluidos los 5 temporales, que son tibios). Por eso
+  `nowcast run --h0-csv --start <UTC paso 0>` REPORTA `H0Signals` por paso
+  (JSON `steps[].h0` + cabecera `h0` con `series_last_date`) sin tocar el peligro,
+  y el monitor lo pasa con `H0_CSV` (vacío por defecto) detrás de
+  `monitor/h0_guard.py`: serie vieja (>`H0_STALE_DAYS`), dominio fuera de
+  30-36 °S o archivo ausente → H0 se apaga y avisa 1×/día, la lluvia sigue igual
+  (un diagnóstico nunca tumba el ciclo). Autotest `selftest.py --h0` verifica
+  peligro idéntico con/sin/viejo. `with_start_hour` existe porque el trigger
+  asumía paso 0 a medianoche y con ventanas semihorarias desde la tarde asignaba
+  mal el día. **La serie NO se regenera a diario** (termina 2026-08-31): hasta
+  que agromet-scraper la produzca, activarlo solo da el aviso de serie vieja.
+  `MissingPolicy::Neutral` (hueco = 1.0) queda para experimentos con Product.
+  Umbrales absolutos SOBRE LA ESCALA DE LA SERIE (sesgo +250/+450 m), no de
+  radiosonda. Solo 30-36 °S.
   `MonthlyStormClimatology::from_series` recalcula el p90 mensual desde la serie
   y el ejemplo `h0_two_way.rs` verifica que **reproduce los 12 meses del reporte
   de río arriba** (bloque B de `h0_vs_eventos.txt`) — divergencia = fallo impreso,

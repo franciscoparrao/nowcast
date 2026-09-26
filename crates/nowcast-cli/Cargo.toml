@@ -14,6 +14,7 @@ path = "src/main.rs"
 [dependencies]
 nowcast-core = { path = "../nowcast-core", features = ["serde"] }
 nowcast-surtgis = { path = "../nowcast-surtgis" }
+nowcast-h0 = { path = "../nowcast-h0" }
 surtgis-core = { path = "../../../surtgis/crates/core" }
 clap.workspace = true
 anyhow.workspace = true

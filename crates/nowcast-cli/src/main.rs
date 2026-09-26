@@ -33,6 +33,10 @@ use nowcast_core::{
     MultiNowcast, Nowcast, SusceptibilityMap, Trigger, TriggerModel, UniformRain, csv_column,
     csv_events, csv_month_keys, csv_pairs, monthly_contingency, reliability,
 };
+use nowcast_h0::{
+    AbsoluteWay, H0Signals, MonthlyStormClimatology, Persistence, TwoWayH0Trigger,
+    ZeroIsothermSeries,
+};
 use nowcast_surtgis::{
     Georef, Raster, gridded_rain_from_rasters, read_susceptibility, same_grid,
     write_hazard_geotiff,
@@ -167,6 +171,8 @@ struct RunArgs {
     /// Default when fusing: noisy-or.
     #[arg(long, value_enum)]
     combine: Option<CombineArg>,
+    #[command(flatten)]
+    h0: H0Args,
     /// Alert when peak hazard ≥ this level.
     #[arg(long, default_value_t = 0.5)]
     alert_level: f64,
@@ -180,6 +186,125 @@ struct RunArgs {
     /// Output format.
     #[arg(long, value_enum, default_value_t = Format::Table)]
     format: Format,
+}
+
+/// Zero-isotherm (H0) signals in SHADOW mode: reported next to every step,
+/// never fused into the hazard. On the series' storm days the two-way factor
+/// has median 0.32 (88 % below 0.5 in winter), so fusing it by `product`
+/// would suppress most winter rain alerts; see the nowcast-h0 crate docs.
+#[derive(Args)]
+struct H0Args {
+    /// Daily H0 series CSV (`fecha,h0_m,tormenta`, e.g. h0_centro_diaria_v3.csv).
+    /// Valid only for 30–36 °S.
+    #[arg(long)]
+    h0_csv: Option<PathBuf>,
+    /// UTC time of step 0, `YYYY-MM-DDTHH:MM` (required with --h0-csv, so each
+    /// step maps to the right calendar day).
+    #[arg(long)]
+    start: Option<String>,
+    /// Absolute-route threshold in metres, on the scale of the series
+    /// (default 4500; an order-of-magnitude value, not calibrated).
+    #[arg(long)]
+    h0_abs_m: Option<f64>,
+    /// Consecutive days for the sustained anomaly sub-route (default 3).
+    #[arg(long)]
+    h0_persist_days: Option<usize>,
+    /// Monthly storm-day percentile for the sustained sub-route (default 75).
+    #[arg(long)]
+    h0_persist_pct: Option<f64>,
+}
+
+/// H0 shadow reporter: the trigger plus what the JSON header says about it.
+struct H0Shadow {
+    trigger: TwoWayH0Trigger,
+    series: PathBuf,
+    last_date: Option<String>,
+    abs_m: f64,
+    persist_days: usize,
+    persist_pct: f64,
+}
+
+impl H0Shadow {
+    fn signals_json(s: &H0Signals) -> serde_json::Value {
+        serde_json::json!({
+            "via": s.via.as_str(),
+            "h0_m": s.h0_m,
+            "absolute": s.absolute,
+            "anomaly": s.anomaly,
+            "anomaly_spike": s.anomaly_spike,
+            "anomaly_sustained": s.anomaly_sustained,
+            "run_days": s.run_days,
+            "month": s.month,
+            "month_p90_m": s.month_p90_m,
+        })
+    }
+
+    fn header_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "mode": "shadow",
+            "series": self.series.display().to_string(),
+            "series_last_date": self.last_date,
+            "abs_threshold_m": self.abs_m,
+            "persistence": {"min_days": self.persist_days, "percentile": self.persist_pct},
+        })
+    }
+}
+
+/// `YYYY-MM-DDTHH:MM` (or with a space) → (`YYYY-MM-DD`, hour as f64). The date
+/// itself is validated by nowcast-h0; this only splits off and checks the time.
+fn parse_start(s: &str) -> Result<(String, f64)> {
+    let s = s.trim();
+    let bad = || anyhow::anyhow!("--start must be YYYY-MM-DDTHH:MM (UTC), got {s:?}");
+    if s.len() != 16 || !matches!(s.as_bytes()[10], b'T' | b' ') || s.as_bytes()[13] != b':' {
+        return Err(bad());
+    }
+    let hh: u32 = s[11..13].parse().map_err(|_| bad())?;
+    let mm: u32 = s[14..16].parse().map_err(|_| bad())?;
+    if hh > 23 || mm > 59 {
+        return Err(bad());
+    }
+    Ok((s[..10].to_string(), hh as f64 + mm as f64 / 60.0))
+}
+
+fn build_h0_shadow(h: &H0Args, dims: GridDims, dt_hours: f64, n_steps: usize) -> Result<Option<H0Shadow>> {
+    let Some(path) = &h.h0_csv else {
+        // Contradictory flags must not pass as a silent no-op.
+        if h.start.is_some() || h.h0_abs_m.is_some() || h.h0_persist_days.is_some()
+            || h.h0_persist_pct.is_some()
+        {
+            bail!("--start / --h0-abs-m / --h0-persist-* only apply with --h0-csv");
+        }
+        return Ok(None);
+    };
+    let start = h.start.as_deref().context("--h0-csv needs --start (UTC time of step 0)")?;
+    let (date, hour) = parse_start(start)?;
+    let text = std::fs::read_to_string(path)
+        .with_context(|| format!("reading H0 series {}", path.display()))?;
+    let series = ZeroIsothermSeries::from_csv(&text)
+        .with_context(|| format!("parsing H0 series {}", path.display()))?;
+    if series.is_empty() {
+        bail!("H0 series {} has no usable days", path.display());
+    }
+    let abs_m = h.h0_abs_m.unwrap_or(4500.0);
+    let persist_days = h.h0_persist_days.unwrap_or(3);
+    let persist_pct = h.h0_persist_pct.unwrap_or(75.0);
+    let spike = MonthlyStormClimatology::from_series(&series);
+    let sustained = MonthlyStormClimatology::from_series_at(&series, persist_pct)?;
+    let last_date = series.last_date();
+    let trigger = TwoWayH0Trigger::new(
+        dims, series, spike, AbsoluteWay::new(abs_m)?, &date, dt_hours, n_steps,
+        TriggerModel::default(),
+    )?
+    .with_start_hour(hour)?
+    .with_persistence(Persistence::new(sustained, persist_days)?);
+    Ok(Some(H0Shadow {
+        trigger,
+        series: path.clone(),
+        last_date,
+        abs_m,
+        persist_days,
+        persist_pct,
+    }))
 }
 
 #[derive(Args)]
@@ -495,6 +620,13 @@ fn cmd_run(a: RunArgs) -> Result<bool> {
         bail!("--combine only applies when fusing extra sources with --fuse-rasters");
     }
     let (susc, mut georef, forcing) = resolve_inputs(&a.susc, &a.rain)?;
+    // Built BEFORE the engine runs: a bad --h0-* flag must fail fast, not after
+    // a full run whose output is then thrown away.
+    let n_steps = match &forcing {
+        ForcingKind::Uniform(f) => f.n_steps(),
+        ForcingKind::Gridded(f) => f.n_steps(),
+    };
+    let h0 = build_h0_shadow(&a.h0, susc.dims(), a.rain.dt_hours, n_steps)?;
     let mut fields = if a.fuse_rasters.is_empty() {
         match forcing {
             ForcingKind::Uniform(f) => make_nowcast(susc, f, &a.engine)?.run(),
@@ -543,7 +675,7 @@ fn cmd_run(a: RunArgs) -> Result<bool> {
     if let Some(cal) = load_calibrator(a.calibrator.as_deref())? {
         fields = fields.into_iter().map(|f| calibrate_field(f, &cal)).collect();
     }
-    report_run(&fields, georef.as_ref(), a.alert_level, a.out_dir.as_deref(), a.format)
+    report_run(&fields, georef.as_ref(), a.alert_level, a.out_dir.as_deref(), a.format, h0.as_ref())
 }
 
 fn report_run(
@@ -552,6 +684,7 @@ fn report_run(
     alert_level: f64,
     out_dir: Option<&Path>,
     format: Format,
+    h0: Option<&H0Shadow>,
 ) -> Result<bool> {
     if let Some(dir) = out_dir {
         if georef.is_none() {
@@ -562,7 +695,7 @@ fn report_run(
     }
 
     if format == Format::Table {
-        println!("step  alert  n_cells  fraction  max_prob");
+        println!("step  alert  n_cells  fraction  max_prob{}", if h0.is_some() { "  h0 (shadow)" } else { "" });
     }
     let mut n_alert = 0usize;
     let mut steps_json = Vec::new();
@@ -576,8 +709,17 @@ fn report_run(
             Format::Table => {
                 let (n_cells, fraction) =
                     alert.map(|al| (al.n_cells, al.fraction)).unwrap_or((0, 0.0));
+                let h0_col = h0
+                    .map(|h| {
+                        let s = h.trigger.signals(f.step);
+                        match s.h0_m {
+                            Some(m) => format!("  {} {m:.0} m", s.via.as_str()),
+                            None => "  missing".to_string(),
+                        }
+                    })
+                    .unwrap_or_default();
                 println!(
-                    "{:>4}  {:>5}  {:>7}  {:>7.3}  {:>7.3}",
+                    "{:>4}  {:>5}  {:>7}  {:>7.3}  {:>7.3}{h0_col}",
                     f.step,
                     if fired { "  *" } else { "  ." },
                     n_cells,
@@ -585,11 +727,17 @@ fn report_run(
                     f.max_probability(),
                 );
             }
-            Format::Json => steps_json.push(serde_json::json!({
-                "step": f.step,
-                "max_probability": f.max_probability(),
-                "alert": alert,
-            })),
+            Format::Json => {
+                let mut step = serde_json::json!({
+                    "step": f.step,
+                    "max_probability": f.max_probability(),
+                    "alert": alert,
+                });
+                if let Some(h) = h0 {
+                    step["h0"] = H0Shadow::signals_json(&h.trigger.signals(f.step));
+                }
+                steps_json.push(step)
+            }
         }
         if let (Some(dir), Some(gr)) = (out_dir, georef) {
             let path = dir.join(format!("hazard_{:04}.tif", f.step));
@@ -608,16 +756,19 @@ fn report_run(
                 None => String::new(),
             }
         ),
-        Format::Json => println!(
-            "{}",
-            serde_json::json!({
+        Format::Json => {
+            let mut out = serde_json::json!({
                 "alert_level": alert_level,
                 "n_steps": fields.len(),
                 "n_alerts": n_alert,
                 "out_dir": out_dir.map(|d| d.display().to_string()),
                 "steps": steps_json,
-            })
-        ),
+            });
+            if let Some(h) = h0 {
+                out["h0"] = h.header_json();
+            }
+            println!("{out}")
+        }
     }
     Ok(n_alert > 0)
 }
@@ -944,4 +1095,45 @@ fn parse_sweep(spec: &str) -> Result<(f64, f64, f64)> {
 
 fn fmt(x: Option<f64>) -> String {
     x.map(|v| format!("{v:.2}")).unwrap_or_else(|| " -  ".into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_start_accepts_t_or_space_and_rejects_the_rest() {
+        assert_eq!(parse_start("2023-06-21T14:30").unwrap(), ("2023-06-21".into(), 14.5));
+        assert_eq!(parse_start("2023-06-21 00:00").unwrap(), ("2023-06-21".into(), 0.0));
+        for bad in ["2023-06-21", "2023-06-21T24:00", "2023-06-21T12:60", "2023-06-21X00:00",
+                    "2023-06-21T1:00", "2023-06-21T12-00", "2023-06-21T12:00Z", ""] {
+            assert!(parse_start(bad).is_err(), "{bad:?}");
+        }
+    }
+
+    fn no_h0() -> H0Args {
+        H0Args { h0_csv: None, start: None, h0_abs_m: None, h0_persist_days: None, h0_persist_pct: None }
+    }
+
+    #[test]
+    fn h0_is_off_without_csv_and_stray_flags_are_errors() {
+        let dims = GridDims::new(1, 1);
+        assert!(build_h0_shadow(&no_h0(), dims, 24.0, 3).unwrap().is_none());
+        let strays = [
+            H0Args { start: Some("2023-06-21T00:00".into()), ..no_h0() },
+            H0Args { h0_abs_m: Some(4000.0), ..no_h0() },
+            H0Args { h0_persist_days: Some(3), ..no_h0() },
+            H0Args { h0_persist_pct: Some(75.0), ..no_h0() },
+        ];
+        for a in &strays {
+            assert!(build_h0_shadow(a, dims, 24.0, 3).is_err());
+        }
+    }
+
+    #[test]
+    fn h0_csv_without_start_is_an_error() {
+        let a = H0Args { h0_csv: Some("/does/not/matter.csv".into()), ..no_h0() };
+        let e = build_h0_shadow(&a, GridDims::new(1, 1), 24.0, 3).err().unwrap();
+        assert!(e.to_string().contains("--start"), "{e}");
+    }
 }

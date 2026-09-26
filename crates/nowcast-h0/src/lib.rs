@@ -44,21 +44,34 @@
 //! into a storm documented from the 21st. Longer runs buy specificity and pay
 //! in lead time.
 //!
-//! ## This modulates rain — it does not vote alongside it
+//! ## Neither fusion rule works yet — the operational use is shadow mode
 //!
 //! A high isotherm with no rain is not a hazard, and the record is blunt about
 //! it: with a 4000 m absolute threshold, **100 % of January and February days**
 //! in the series clear it (95 % / 87 % at 4500 m). Restricted to storm days it
 //! is 46/356 and 16/356. Fusing this trigger with the rainfall I–D by
 //! [`Combine::NoisyOr`](nowcast_core::Combine) would therefore alarm every
-//! summer day. Fuse it **multiplicatively**
-//! ([`Combine::Product`](nowcast_core::Combine)) so it can only amplify a
-//! trigger the rain already supports.
+//! summer day.
 //!
-//! That choice is what makes [`MissingPolicy::Neutral`] the default: under
-//! `Product` a gap must contribute `1.0` (change nothing), never `0.0` (which
-//! would silently *erase* a rainfall alert on a day we simply have no isotherm
-//! for). A day without `H0` means "don't know", never "isotherm low".
+//! An earlier version of this note said the fix was
+//! [`Combine::Product`](nowcast_core::Combine) "so it can only amplify a
+//! trigger the rain already supports". **That is false**: both factors lie in
+//! `[0, 1]`, so their product can only *lower* the rain. Measured on the 356
+//! storm days of the series (4500 m absolute, p90 spike, `k = 4`), the fused
+//! factor has median 0.32 (p10 0.14, p90 0.53); in May–August it is below 0.5
+//! on **88 %** of storm days — including the five documented winter storms,
+//! which are warm-ish, not warm. Under `Product` this trigger acts as a
+//! snow-line *damper* and would suppress most winter rainfall alerts. That is
+//! physically arguable (snow does not run off) but uncalibrated, and the
+//! persistence sweep already showed the index cannot be calibrated against an
+//! inventory that does not separate mechanisms.
+//!
+//! So the CLI (`nowcast run --h0-csv`) uses it in **shadow mode**: the
+//! [`H0Signals`] are reported next to every step and the hazard is left
+//! untouched. [`Trigger::factor`] is still provided for experiments; if you
+//! fuse it by `Product`, [`MissingPolicy::Neutral`] (the default) keeps a gap
+//! from erasing a rainfall alert — a day without `H0` means "don't know",
+//! never "isotherm low".
 //!
 //! ## Scope and honesty about the input
 //!
@@ -127,6 +140,19 @@ fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
     let doy = (153 * mp + 2) / 5 + d - 1;
     let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
     era * 146097 + doe - 719468
+}
+
+/// Inverse of [`days_from_civil`] (Hinnant's algorithm): epoch day → `(y, m, d)`.
+fn civil_from_days(z: i64) -> (i64, i64, i64) {
+    let z = z + 719468;
+    let era = if z >= 0 { z } else { z - 146096 } / 146097;
+    let doe = z - era * 146097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    (yoe + era * 400 + i64::from(m <= 2), m, d)
 }
 
 /// Length of month `m` in year `y`. Without this, `2021-02-31` parses and
@@ -272,6 +298,15 @@ impl ZeroIsothermSeries {
 
     pub fn is_empty(&self) -> bool {
         self.days.is_empty()
+    }
+
+    /// Last day present, as `YYYY-MM-DD` — what an operator checks to know
+    /// whether the series is still being produced. `None` on an empty series.
+    pub fn last_date(&self) -> Option<String> {
+        self.days.last().map(|d| {
+            let (y, m, dd) = civil_from_days(d.epoch_day);
+            format!("{y:04}-{m:02}-{dd:02}")
+        })
     }
 }
 
@@ -517,6 +552,19 @@ pub enum H0Via {
     Both,
 }
 
+impl H0Via {
+    /// Stable lowercase label for machine output (JSON, logs).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            H0Via::Missing => "missing",
+            H0Via::Quiet => "quiet",
+            H0Via::Absolute => "absolute",
+            H0Via::Anomalous => "anomalous",
+            H0Via::Both => "both",
+        }
+    }
+}
+
 /// The two routes reported **separately**, plus the inputs behind them.
 #[derive(Debug, Clone, Copy)]
 pub struct H0Signals {
@@ -576,6 +624,7 @@ pub struct TwoWayH0Trigger {
     clim: MonthlyStormClimatology,
     absolute: AbsoluteWay,
     start_day: i64,
+    start_hour: f64,
     dt_hours: f64,
     n_steps: usize,
     model: TriggerModel,
@@ -616,12 +665,28 @@ impl TwoWayH0Trigger {
             clim,
             absolute,
             start_day,
+            start_hour: 0.0,
             dt_hours,
             n_steps,
             model,
             missing: MissingPolicy::default(),
             persistence: None,
         })
+    }
+
+    /// Hour of `start_date` at which step 0 begins, in `[0, 24)`. Defaults to
+    /// `0.0` (midnight). Without it a sub-daily window that starts in the
+    /// afternoon maps its evening steps onto the wrong day: at 30-min steps
+    /// from 14:00, step 20 is 00:00 of the next day, not "still day 0".
+    pub fn with_start_hour(mut self, hour: f64) -> Result<Self> {
+        if !hour.is_finite() || !(0.0..24.0).contains(&hour) {
+            return Err(Error::InvalidParameter {
+                name: "start_hour",
+                reason: format!("must be in [0, 24), got {hour}"),
+            });
+        }
+        self.start_hour = hour;
+        Ok(self)
     }
 
     /// Override how gap days contribute. See [`MissingPolicy`].
@@ -657,7 +722,7 @@ impl TwoWayH0Trigger {
 
     /// Calendar day (epoch days) and month for a step.
     fn day_of(&self, step: usize) -> (i64, usize) {
-        let offset = (step as f64 * self.dt_hours / 24.0).floor() as i64;
+        let offset = ((self.start_hour + step as f64 * self.dt_hours) / 24.0).floor() as i64;
         let day = self.start_day + offset;
         let month = self
             .series
@@ -735,13 +800,7 @@ impl TwoWayH0Trigger {
 /// Month for a day the series does not contain (needed to look up climatology
 /// even on a gap day).
 fn month_of_epoch_day(z: i64) -> usize {
-    let z = z + 719468;
-    let era = if z >= 0 { z } else { z - 146096 } / 146097;
-    let doe = z - era * 146097;
-    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    (if mp < 10 { mp + 3 } else { mp - 9 }) as usize
+    civil_from_days(z).1 as usize
 }
 
 impl Trigger for TwoWayH0Trigger {
@@ -1182,5 +1241,61 @@ mod tests {
         let c = MonthlyStormClimatology::from_series(&ZeroIsothermSeries::from_csv(&csv).unwrap());
         assert_eq!(c.p90(6), Some(3000.0), "dry days must not inflate the p90");
         assert_eq!(c.n_storm_days(6), 8);
+    }
+
+    #[test]
+    fn civil_round_trip_every_day_across_leap_years() {
+        for z in days_from_civil(1999, 12, 25)..days_from_civil(2101, 3, 5) {
+            let (y, m, d) = civil_from_days(z);
+            assert_eq!(days_from_civil(y, m, d), z, "{y}-{m}-{d}");
+        }
+    }
+
+    #[test]
+    fn last_date_is_the_newest_present_day() {
+        let s = ZeroIsothermSeries::from_csv(CSV).unwrap(); // rows out of order
+        assert_eq!(s.last_date().as_deref(), Some("2023-06-23"));
+        assert_eq!(ZeroIsothermSeries::default().last_date(), None);
+    }
+
+    #[test]
+    fn start_hour_moves_evening_steps_to_the_next_day() {
+        // 2023-06-21 present, 2023-06-22 a gap: which day a step lands on is
+        // visible as present-vs-missing.
+        let s = ZeroIsothermSeries::from_csv(CSV).unwrap();
+        let clim = MonthlyStormClimatology::from_series(&s);
+        let t = TwoWayH0Trigger::new(
+            GridDims::new(1, 1), s, clim, AbsoluteWay::new(4500.0).unwrap(),
+            "2023-06-21", 0.5, 48, TriggerModel::default(),
+        )
+        .unwrap();
+        // From midnight, step 20 (10:00) is still the 21st.
+        assert!(t.signals(20).h0_m.is_some());
+        // From 14:00, step 19 is 23:30 of the 21st and step 20 is 00:00 of the 22nd.
+        let t = t.with_start_hour(14.0).unwrap();
+        assert!(t.signals(19).h0_m.is_some());
+        assert_eq!(t.signals(20).via, H0Via::Missing);
+    }
+
+    #[test]
+    fn start_hour_rejects_hostile_values() {
+        let s = ZeroIsothermSeries::from_csv(CSV).unwrap();
+        let clim = MonthlyStormClimatology::from_series(&s);
+        let t = TwoWayH0Trigger::new(
+            GridDims::new(1, 1), s, clim, AbsoluteWay::new(4500.0).unwrap(),
+            "2023-06-21", 0.5, 4, TriggerModel::default(),
+        )
+        .unwrap();
+        for h in [-0.5, 24.0, f64::NAN, f64::INFINITY] {
+            assert!(t.clone().with_start_hour(h).is_err(), "{h}");
+        }
+        assert!(t.with_start_hour(23.5).is_ok());
+    }
+
+    #[test]
+    fn via_labels_are_stable() {
+        let all = [H0Via::Missing, H0Via::Quiet, H0Via::Absolute, H0Via::Anomalous, H0Via::Both];
+        let labels: Vec<_> = all.iter().map(|v| v.as_str()).collect();
+        assert_eq!(labels, ["missing", "quiet", "absolute", "anomalous", "both"]);
     }
 }

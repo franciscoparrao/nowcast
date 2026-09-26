@@ -523,6 +523,65 @@ def main(fusion=False):
     print(f"correr: SKIP_FETCH=1 CONFIG={BASE}/config.env {REPO}/monitor/monitor.sh")
 
 
+def h0_selftest():
+    """H0 en sombra de punta a punta (2026-09-25): el ciclo base con ráfaga debe
+    ALERTAR igual con H0 encendido, con H0 viejo y sin H0, y el peligro debe ser
+    idéntico en los tres — H0 informa el mecanismo, nunca mueve el veredicto.
+
+    · serie fresca → la alerta lleva "H0 (sombra):" y last_run.json trae h0;
+    · serie vieja  → WARN "H0 (sombra) apagado", la alerta sale sin H0.
+    """
+    import subprocess
+
+    fallos = []
+    now = datetime.now(timezone.utc).date()
+    serie = os.path.join(BASE, "h0.csv")
+
+    def ciclo(h0_csv, dias_atras):
+        main(fusion=False)
+        with open(serie, "w") as f:
+            f.write("fecha,h0_m,tormenta\n")
+            for d in range(90, dias_atras - 1, -1):
+                f.write(f"{now - timedelta(days=d)},{3000 + 10 * (d % 7)},{int(d % 3 == 0)}\n")
+        with open(os.path.join(BASE, "config.env"), "a") as f:
+            f.write(f'H0_CSV="{h0_csv}"\nH0_STALE_DAYS=3\nH0_ABS_M=""\n')
+        log = os.path.join(BASE, "monitor.log")
+        if os.path.exists(log):
+            os.remove(log)
+        r = subprocess.run([os.path.join(REPO, "monitor", "monitor.sh")],
+                           env={**os.environ, "SKIP_FETCH": "1",
+                                "CONFIG": os.path.join(BASE, "config.env")},
+                           capture_output=True, text=True, timeout=600)
+        run = json.load(open(os.path.join(BASE, "out", "last_run.json")))
+        return r.returncode, open(log).read(), run
+
+    casos = {}
+    for nombre, csv_, atras in [("fresca", serie, 0), ("vieja", serie, 10), ("sin H0", "", 0)]:
+        rc, log, run = ciclo(csv_, atras)
+        casos[nombre] = run
+        alerta = "NOTIFY[urgent] nowcast-monitor: ALERTA I-D" in log
+        con_h0 = "H0 (sombra):" in log
+        apagado = "H0 (sombra) apagado" in log
+        esperado = {"fresca": (True, True, False), "vieja": (True, False, True),
+                    "sin H0": (True, False, False)}[nombre]
+        ok = rc == 0 and (alerta, con_h0, apagado) == esperado
+        print(f"  {'ok  ' if ok else 'FALLA'} serie {nombre:7s} rc={rc} alerta={alerta} "
+              f"H0 en aviso={con_h0} apagado={apagado}")
+        if not ok:
+            fallos.append(nombre)
+    tiene = "h0" in casos["fresca"] and all("h0" in s for s in casos["fresca"]["steps"])
+    print(f"  {'ok  ' if tiene else 'FALLA'} last_run.json trae h0 en cabecera y en cada paso")
+    if not tiene:
+        fallos.append("json sin h0")
+    quita = lambda r: [(s["step"], s["max_probability"], s["alert"]) for s in r["steps"]]
+    igual = quita(casos["fresca"]) == quita(casos["vieja"]) == quita(casos["sin H0"])
+    print(f"  {'ok  ' if igual else 'FALLA'} peligro idéntico con H0, con H0 viejo y sin H0")
+    if not igual:
+        fallos.append("H0 movió el peligro")
+    print(f"\n[selftest h0] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 if __name__ == "__main__":
     if "--susc" in sys.argv:
         sys.exit(susc_selftest())
@@ -534,4 +593,6 @@ if __name__ == "__main__":
         sys.exit(notify_contract_selftest())
     if "--flood" in sys.argv:
         sys.exit(flood_selftest())
+    if "--h0" in sys.argv:
+        sys.exit(h0_selftest())
     main(fusion="--fusion" in sys.argv)
