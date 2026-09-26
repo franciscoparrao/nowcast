@@ -287,7 +287,13 @@ def main():
     # de serie y tomar "las últimas N" no funciona cuando se mira un evento pasado.
     lo = min(dmc_h) - timedelta(hours=offset)
     hi = max(dmc_h) - timedelta(hours=offset)
-    for h in [x for x in sorted(agro) if lo <= x <= hi][-args.horas * 2:]:
+    # --horas solo acota el modo API; con --desde/--hasta la ventana ya la fijó el
+    # usuario y recortarla a las últimas N horas botaba en silencio el evento que
+    # se quería mirar (le pasó a la lluvia del 11-sep: se comparaba solo el 12-13).
+    ventana = [x for x in sorted(agro) if lo <= x <= hi]
+    if not (args.desde or args.hasta):
+        ventana = ventana[-args.horas * 2:]
+    for h in ventana:
         d = dmc_h.get(h + timedelta(hours=offset))
         if not d:
             continue

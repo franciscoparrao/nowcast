@@ -26,6 +26,7 @@ Uso:
 """
 
 import argparse
+import contextlib
 import json
 import os
 import sys
@@ -188,9 +189,16 @@ def archive(code, recs):
         body = "\n".join(sorted(previas + agregar,
                                 key=lambda s: json.loads(s)["momento"])) + "\n"
         fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
-        with os.fdopen(fd, "w") as f:
-            f.write(body)
-        os.replace(tmp, path)
+        try:
+            with os.fdopen(fd, "w") as f:
+                f.write(body)
+            os.replace(tmp, path)
+        except BaseException:
+            # el original queda intacto, pero el temporal a medio escribir no debe
+            # quedarse ocupando el disco que justo se acabó (pasó el 13-sep: ENOSPC)
+            with contextlib.suppress(OSError):
+                os.unlink(tmp)
+            raise
     return nuevos, repetidos
 
 

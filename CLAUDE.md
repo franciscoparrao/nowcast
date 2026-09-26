@@ -409,8 +409,14 @@ perder once corridas seguidas sin perder un dato. El crosscheck acepta
 archivo reproduce el modo API en el decimal. Un evento NO archivado está perdido
 para siempre, así que el timer debe estar puesto ANTES de la lluvia. Autotest sin
 red: `python3 monitor/archive_ema.py --selftest`.
-**PENDIENTE:** el cruce de PP sigue sin validarse — nunca ha habido lluvia en una
-ventana común. Con el archivador puesto, se cierra solo con el próximo evento.
+**Cruce de PP VALIDADO (2026-09-25)** desde el archivo: chubasco del 11-sep 1.6 vs
+1.6 mm hora a hora, septiembre 4.2 vs 4.2 mm en 474 h. Llevaba días "sin lluvia en
+la ventana común" por un BUG del cruce, no por falta de lluvia: `--horas` (24 h)
+recortaba también el modo archivo y botaba el evento. Huecos de agromet en
+EXT-108: 97.2% 2018-2026 (100% 2023-25); los grandes son caídas de la ESTACIÓN
+(la DMC tampoco los tiene, p.ej. 6-9 sep), salvo el 12-sep, caída de DNS local
+que agromet no recupera y el archivador sí → agromet respalda ante API/token
+caído, no ante un corte de red de este equipo de más de ~12 h.
 
 **Fase A del plan EWS (2026-07-11) LISTA**: fusión multi-forzante de punta a
 punta. (1) CLI: `nowcast run --fuse-rasters <stack>` repetible + `--combine
