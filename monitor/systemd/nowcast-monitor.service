@@ -12,7 +12,7 @@ Type=oneshot
 # primer ciclo; si se quiere otro sitio, sobrescribir WORK_DIR abajo.
 ExecStart=%h/proyectos/nowcast/monitor/monitor.sh
 Environment=CONFIG=%h/proyectos/nowcast/monitor/config.env
-Environment=NOWCAST_BIN=%h/proyectos/nowcast/target/release/nowcast
+Environment=NOWCAST_BIN=%h/nowcast-monitor/bin/nowcast
 # El ciclo baja ~2-8 gránulos y corre el motor: minutos, no horas.
 TimeoutStartSec=30min
 Nice=10

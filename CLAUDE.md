@@ -375,6 +375,15 @@ caer a uniforme. Autotest sin red: `python3 monitor/selftest.py`
 (`--fusion`, `--susc`). Es monitor de eventos, NO alerta temprana; requiere
 temporada en modo sombra antes de confiar.
 
+**El binario operacional vive en `~/nowcast-monitor/bin/nowcast`, NUNCA en
+`target/`** (2026-09-25). Las units y la config de atacama apuntaban a
+`target/release/nowcast`; alguien borró `target/` para liberar disco y
+`monitor@atacama` + `nowcast-forecast` quedaron caídos **23 días** (3-sep →
+25-sep; 1144 ciclos en FATAL config, 90 pronósticos fallidos). El aviso ntfy
+salió cada 6 h y nadie lo leyó como «el monitor no existe». Tras compilar:
+`install -Dm755 target/release/nowcast ~/nowcast-monitor/bin/nowcast` (copia,
+sobrevive a `cargo clean`; hay que reinstalar tras cada build release).
+
 **Respaldo in-situ verificado (2026-08-29, corregido 2026-09-02)**:
 `monitor/crosscheck_elcolorado.py` cruza El Colorado 2750 m —la ÚNICA estación de
 cordillera del dominio piloto— entre la API DMC (330077) que el monitor usa hoy

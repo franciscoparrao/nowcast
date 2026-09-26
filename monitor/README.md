@@ -87,6 +87,15 @@ Principios heredados de las auditorías:
 
 # 1. Compilar el binario (en el orquestador; el nodo no necesita toolchain):
 cargo build --release -p nowcast-cli
+#    En el propio orquestador, INSTALARLO fuera de target/ — el monitor y el
+#    pronóstico lo leen de ~/nowcast-monitor/bin/nowcast, nunca de target/:
+install -Dm755 target/release/nowcast ~/nowcast-monitor/bin/nowcast
+#    Lección (2026-09-25): con NOWCAST_BIN apuntando a target/release, un borrado
+#    de target/ (liberando disco) dejó monitor@atacama Y nowcast-forecast caídos
+#    23 días (3-sep → 25-sep). Es una COPIA, no un symlink: sobrevive a cargo
+#    clean. Contrapartida: tras recompilar hay que volver a instalar, o el
+#    monitor sigue con el binario viejo (y un flag nuevo en config → error de
+#    uso, exit 1, aviso "ERROR del motor", no una alerta falsa).
 
 # 1b. Generar la susceptibilidad de terreno EN EL ORQUESTADOR — no en el nodo:
 #     lee los modelos por cuenca de 30 m del disco KINGSTON, que el nodo no

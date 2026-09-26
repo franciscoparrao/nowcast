@@ -15,7 +15,7 @@ ExecStart=%h/proyectos/nowcast/monitor/monitor.sh
 # config.local.env del directorio monitor/ del repo (LOCAL_CONFIG las inyecta).
 Environment=CONFIG=%h/nowcast-monitor/domains/%i/config.env
 Environment=LOCAL_CONFIG=%h/proyectos/nowcast/monitor/config.local.env
-Environment=NOWCAST_BIN=%h/proyectos/nowcast/target/release/nowcast
+Environment=NOWCAST_BIN=%h/nowcast-monitor/bin/nowcast
 # Arranques en frío bajan la ventana completa: minutos-decenas de minutos.
 TimeoutStartSec=45min
 Nice=10

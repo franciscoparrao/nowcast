@@ -11,7 +11,7 @@ Type=oneshot
 # un layout de despliegue que NO existe acá — por eso la unidad nunca pudo
 # haber corrido aunque se hubiese instalado.
 Environment=FORECAST_WORKDIR=%h/nowcast-forecast
-Environment=NOWCAST_BIN=%h/proyectos/nowcast/target/release/nowcast
+Environment=NOWCAST_BIN=%h/nowcast-monitor/bin/nowcast
 
 # Dos pasos encadenados y en este orden. Si el pronóstico falla, systemd no
 # ejecuta el segundo: no tiene sentido analizar un ciclo que no bajó. Si el

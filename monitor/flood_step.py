@@ -117,8 +117,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--work", default=os.environ.get(
         "WORK_DIR", os.path.expanduser("~/nowcast-monitor-atacama")))
-    ap.add_argument("--runner", default=os.path.join(
-        os.path.dirname(HERE), "target", "release", "nowcast-flood"))
+    ap.add_argument("--runner", default=os.environ.get(
+        # instalado fuera de target/ (un borrado de target/ tumbó el monitor
+        # 23 días en sep-2026): install -Dm755 target/release/nowcast-flood ~/nowcast-monitor/bin/
+        "NOWCAST_FLOOD_BIN", os.path.expanduser("~/nowcast-monitor/bin/nowcast-flood")))
     ap.add_argument("--baldes", type=int, default=2,
                     help="baldes de 24 h a evaluar (la ventana de 54 h da 2)")
     ap.add_argument("--cola", type=int, default=3,

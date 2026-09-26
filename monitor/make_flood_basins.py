@@ -119,8 +119,10 @@ def main():
     ap.add_argument("--work", default=os.path.expanduser("~/nowcast-monitor-atacama"))
     ap.add_argument("--grid", default=None, help="GeoTIFF que define la grilla 0.1° "
                                                 "(default: <work>/susc_0p1.tif)")
-    ap.add_argument("--runner", default=os.path.join(
-        os.path.dirname(HERE), "target", "release", "nowcast-flood"))
+    ap.add_argument("--runner", default=os.environ.get(
+        # instalado fuera de target/ (un borrado de target/ tumbó el monitor
+        # 23 días en sep-2026): install -Dm755 target/release/nowcast-flood ~/nowcast-monitor/bin/
+        "NOWCAST_FLOOD_BIN", os.path.expanduser("~/nowcast-monitor/bin/nowcast-flood")))
     a = ap.parse_args()
 
     grid = a.grid or os.path.join(a.work, "susc_0p1.tif")

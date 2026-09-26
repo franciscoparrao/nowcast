@@ -954,7 +954,7 @@ dependencies = [
  "roxmltree",
  "serde",
  "serde_json",
- "surtgis-core 1.3.0",
+ "surtgis-core 1.4.0",
  "thiserror",
 ]
 
@@ -1153,7 +1153,7 @@ dependencies = [
  "nowcast-h0",
  "nowcast-surtgis",
  "serde_json",
- "surtgis-core 1.3.0",
+ "surtgis-core 1.4.0",
 ]
 
 [[package]]
@@ -1193,7 +1193,7 @@ dependencies = [
  "serde_json",
  "surtgis-algorithms",
  "surtgis-cloud",
- "surtgis-core 1.3.0",
+ "surtgis-core 1.4.0",
 ]
 
 [[package]]
@@ -1247,7 +1247,7 @@ version = "0.1.0"
 dependencies = [
  "ndarray",
  "nowcast-core",
- "surtgis-core 1.3.0",
+ "surtgis-core 1.4.0",
  "thiserror",
 ]
 
@@ -1263,7 +1263,7 @@ dependencies = [
  "serde_json",
  "surtgis-algorithms",
  "surtgis-cloud",
- "surtgis-core 1.3.0",
+ "surtgis-core 1.4.0",
  "swarm-abm",
 ]
 
@@ -1934,7 +1934,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "surtgis-algorithms"
-version = "1.3.0"
+version = "1.4.0"
 dependencies = [
  "anyhow",
  "csv",
@@ -1946,14 +1946,14 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
- "surtgis-core 1.3.0",
+ "surtgis-core 1.4.0",
  "surtgis-parallel",
  "thiserror",
 ]
 
 [[package]]
 name = "surtgis-cloud"
-version = "1.3.0"
+version = "1.4.0"
 dependencies = [
  "byteorder",
  "flate2",
@@ -1964,7 +1964,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "surtgis-core 1.3.0",
+ "surtgis-core 1.4.0",
  "thiserror",
  "tokio",
  "weezl",
@@ -1989,7 +1989,7 @@ dependencies = [
 
 [[package]]
 name = "surtgis-core"
-version = "1.3.0"
+version = "1.4.0"
 dependencies = [
  "anyhow",
  "flate2",
@@ -2007,12 +2007,12 @@ dependencies = [
 
 [[package]]
 name = "surtgis-parallel"
-version = "1.3.0"
+version = "1.4.0"
 dependencies = [
  "crossbeam",
  "ndarray",
  "rayon",
- "surtgis-core 1.3.0",
+ "surtgis-core 1.4.0",
  "thiserror",
 ]
 
