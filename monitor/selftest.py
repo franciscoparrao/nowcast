@@ -31,6 +31,10 @@ import rasterio
 from rasterio.transform import from_origin
 
 BASE = "/tmp/nowcast-monitor-selftest"
+# El python con que PRODUCCIÓN corre los fetchers (venv del monitor, 2026-09-27);
+# probar el contrato con el python del autotest sería probar otro entorno.
+_VENV_PY = os.path.expanduser(os.environ.get("MONITOR_VENV", "~/nowcast-monitor/venv") + "/bin/python3")
+MONITOR_PY = _VENV_PY if os.path.exists(_VENV_PY) else sys.executable
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Convenio de grilla IMERG del dominio piloto (idéntico a los fetchers).
 TRANSFORM = from_origin(-70.80, -33.20, 0.1, 0.1)
@@ -468,7 +472,7 @@ def exit_contract_selftest():
         ("fetch_goes_qpe.py", "falta BBOX", {k: v for k, v in base.items() if k != "BBOX"}, 1),
     ]
     for script, nombre, env_, esperado in casos:
-        r = subprocess.run([sys.executable, os.path.join(mdir, script)],
+        r = subprocess.run([MONITOR_PY, os.path.join(mdir, script)],
                            env=env_, capture_output=True, text=True, timeout=600)
         ok = (r.returncode == 0) if esperado == 0 else (r.returncode != 0)
         print(f"  {'ok  ' if ok else 'FALLA'} {script:24s} {nombre:16s} "

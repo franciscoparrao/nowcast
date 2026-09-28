@@ -76,12 +76,15 @@ Principios heredados de las auditorías:
 # 0. En el nodo destino (Ubuntu 24.04+ es PEP 668: usar venv):
 #      python3 -m venv ~/nowcast-monitor/venv
 #      ~/nowcast-monitor/venv/bin/pip install --no-cache-dir \
-#          earthaccess xarray rasterio h5netcdf h5py cftime
-#    (h5py y cftime NO son opcionales: sin h5py el backend HDF5 no abre los
-#    gránulos IMERG y sin cftime xarray no decodifica su calendario juliano —
-#    lección del primer despliegue real. ~370 MB en disco.)
-#    En config.local.env del nodo, prepender el venv al PATH:
-#      PATH="$HOME/nowcast-monitor/venv/bin:$PATH"
+#          -r monitor/requirements-monitor.txt
+#    (versiones FIJAS, las mismas del orquestador; ~320 MB. cftime NO es
+#    opcional: sin él xarray no decodifica el calendario juliano de IMERG.
+#    Hasta 2026-09-27 aquí se instalaba una lista suelta sin versiones con
+#    h5py/h5netcdf; el archivo usa netCDF4 como motor — el que de verdad abre
+#    IMERG y GOES en producción — y deja fuera la segunda copia de HDF5.)
+#    monitor.sh antepone ~/nowcast-monitor/venv/bin al PATH solo (MONITOR_VENV
+#    para otra ruta) y ABORTA con "CONFIG INVÁLIDA" si el venv no existe: ya
+#    no hace falta prependerlo en config.local.env.
 #    y ~/.netrc con las credenciales Earthdata (app "NASA GESDISC DATA ARCHIVE"
 #    autorizada — la misma cuenta ya usada por scripts/extract_event_imerg.py).
 

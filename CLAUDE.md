@@ -391,10 +391,15 @@ geostat-rs subió numpy a 2.5.3 en `~/.local` y el geopandas del sistema rompió
 moría antes por el binario. Mismo patrón que `target/`: dependencia COMPARTIDA
 que otro proyecto cambia sin avisar. `forecast_all.sh`/`analysis_all.sh`
 anteponen el venv al PATH (no una variable: `run_localidades` lanza hijos como
-`python3`) y ABORTAN si falta. NO es el `~/nowcast-monitor/venv` del README de
-nodos (earthaccess/h5py). El monitor en esta máquina sigue con el python del
-sistema: `h5py` del sistema también está roto por numpy 2.5.3, IMERG se salva
-porque xarray abre con netCDF4.
+`python3`) y ABORTAN si falta. **El monitor tiene el suyo, `~/nowcast-monitor/venv`**
+(`monitor/requirements-monitor.txt`, 2026-09-27): cierre completo de dependencias
+de earthaccess/xarray/netCDF4/rasterio/numpy/cftime con las versiones con que
+funcionaba ese día (numpy 2.5.3 — reproducir lo que anda, no volver a 1.26).
+Hasta entonces corría con el python del sistema, cuyo `h5py` ya estaba roto por
+numpy 2.5.3: IMERG se salvaba solo porque xarray abre con netCDF4. Sin
+h5py/h5netcdf a propósito (segunda copia de HDF5 = segfault de teardown).
+`monitor.sh` valida el venv en el bloque 0 (CONFIG INVÁLIDA si falta) y lo
+antepone al PATH; `selftest --exit-contract` prueba los fetchers con ESE python.
 
 **Vigía de servicios detenidos (`monitor/watchdog.sh`, timer propio :25,
 2026-09-26)** — la lección de fondo de los 23 días no fue `target/` ni numpy,

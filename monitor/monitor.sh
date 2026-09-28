@@ -60,12 +60,18 @@ source "$HERE/lib_notify.sh"
 # Barrido de hermanas: SUSC_TIF, NOWCAST_BIN y CALIBRATOR son las tres rutas de
 # config que se consumían tarde (223, 241 y 228 respectivamente).
 CONFIG_ERR=""
+# Python AISLADO (2026-09-27): los fetchers y el paso de crecidas corren en el
+# venv del monitor con versiones fijas (requirements-monitor.txt). PATH
+# antepuesto, no una variable, para cubrir también los heredocs `python3 -`.
+MONITOR_VENV="${MONITOR_VENV:-$HOME/nowcast-monitor/venv}"
 if [[ -n "${SUSC_TIF:-}" && ! -f "$SUSC_TIF" ]]; then
     CONFIG_ERR="SUSC_TIF apunta a un ráster inexistente ($SUSC_TIF). Generarlo una vez en este nodo: python3 $HERE/make_susc_grid.py --out \"$SUSC_TIF\" — o vaciar SUSC_TIF y volver a ALERT_LEVEL=0.5 (monitor de timing). NO se cae a uniforme 1.0: el ALERT_LEVEL del config está derivado PARA la susceptibilidad y sin ella alertaría de más."
 elif [[ ! -x "$NOWCAST_BIN" ]]; then
     CONFIG_ERR="NOWCAST_BIN no existe o no es ejecutable ($NOWCAST_BIN). Compilar con: cargo build --release -p nowcast-cli"
 elif [[ -n "${CALIBRATOR:-}" && ! -f "$CALIBRATOR" ]]; then
     CONFIG_ERR="CALIBRATOR apunta a un JSON inexistente ($CALIBRATOR). Generarlo con 'nowcast calibrate' o vaciar la variable."
+elif [[ ! -x "$MONITOR_VENV/bin/python3" ]]; then
+    CONFIG_ERR="falta el venv del monitor ($MONITOR_VENV). Crearlo: python3 -m venv $MONITOR_VENV && $MONITOR_VENV/bin/pip install -r $HERE/requirements-monitor.txt — NO se cae al python3 del sistema: su entorno lo cambia cualquier otro proyecto (numpy 2.5.3 del 7-sep ya rompió su h5py)."
 fi
 if [[ -n "$CONFIG_ERR" ]]; then
     log "FATAL config: $CONFIG_ERR"
@@ -73,6 +79,8 @@ if [[ -n "$CONFIG_ERR" ]]; then
         high config_invalida.hyst 6
     exit 1
 fi
+
+export PATH="$MONITOR_VENV/bin:$PATH"
 
 # --- 1. Ingesta --------------------------------------------------------------
 # IMERG es el feed primario: si su ingesta falla, el ciclo aborta (como
