@@ -435,10 +435,13 @@ estado de servicios, el último ciclo por dominio y modelo, pequeños múltiplos
 30 días (pico I-D regional por GFS/ECMWF/ICON, huecos >24 h rotulados "sin
 ciclos" para que un apagón no se lea como calma) y la bitácora por día con el
 registro de cada ciclo. Paleta validada con el validador de dataviz en claro y
-oscuro. **OJO `build_registro.py`**: su título, bajada y narrativa del resumen
-están FIJOS en el evento de julio ("Evento 15–20 jul 2026", "río atmosférico
-extremo", ICON en el Huasco) y su "Hora Chile" usa UTC−4 fijo; los datos
-(tabla, mapa, comunas) sí son del ciclo. Pendiente corregirlo.
+oscuro. **`build_registro.py` corregido (2026-09-28)**: su título, bajada y narrativa
+del resumen estuvieron FIJOS en el evento de julio ("Evento 15–20 jul 2026", "río
+atmosférico extremo", ICON en el Huasco, footprints "a menos de 20 m", "81
+corridas, ningún miembro tranquilo") en cada registro desde julio, y su "Hora
+Chile" usaba UTC−4 fijo (corrida 1 h desde el 6-sep). Ahora todo sale del ciclo
+(`resumen_modelos`, `resumen_runouts`, `rango_ventana`, `hora_chile` con
+zoneinfo). Los registros viejos NO se reescriben: son constancia, con su hash.
 
 **Respaldo in-situ verificado (2026-08-29, corregido 2026-09-02)**:
 `monitor/crosscheck_elcolorado.py` cruza El Colorado 2750 m —la ÚNICA estación de

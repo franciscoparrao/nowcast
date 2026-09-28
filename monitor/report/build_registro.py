@@ -36,6 +36,7 @@ import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import rasterio
@@ -77,6 +78,15 @@ def fmt_pct(x):
     return "—" if x is None else f"{x*100:.0f}%"
 
 
+def f2(x):
+    """Dos decimales, o '—' si el valor falta (None/NaN). Barrido 2026-09-28: el
+    registro se caía formateando un gatillo None en el chequeo norte, y las
+    mismas tablas formateaban directo otros cinco campos que pueden faltar."""
+    if x is None or (isinstance(x, float) and x != x):
+        return "—"
+    return f"{x:.2f}"
+
+
 def fmt_mm(x):
     return "—" if x is None else f"{x:.0f} mm"
 
@@ -85,6 +95,50 @@ def fmt_dist(x):
     if x is None:
         return "—"
     return f"{x} m" if x < 1000 else f"{x/1000:.1f} km"
+
+
+SCL = ZoneInfo("America/Santiago")   # huso REAL de cada fecha (UTC−4 / UTC−3)
+_MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+NIVEL_ALERTA = 0.5
+
+
+def hora_chile(dt):
+    """'HH:MM (UTC−3)' con el offset vigente en esa fecha. Hasta 2026-09-28 esto
+    era `(hour-4)%24` fijo: desde el cambio de huso del 6-sep cada registro
+    declaraba una hora de Chile corrida en una hora."""
+    loc = dt.astimezone(SCL)
+    off = int(loc.utcoffset().total_seconds() // 3600)
+    return f"{loc:%H:%M} (UTC&minus;{abs(off)})"
+
+
+def _utc(stamp):
+    """'20260928T0700' o '2026-10-02T03:00Z' → datetime UTC (None si no parsea)."""
+    for fmt, txt in (("%Y%m%dT%H%M", stamp), ("%Y-%m-%dT%H:%M", (stamp or "").rstrip("Z")[:16])):
+        try:
+            return datetime.strptime(txt, fmt).replace(tzinfo=timezone.utc)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def fecha_chile(dt, con_hora=False):
+    loc = dt.astimezone(SCL)
+    base = f"{loc.day} {_MESES[loc.month - 1]}"
+    return f"{base} {loc:%H:%M}" if con_hora else base
+
+
+def rango_ventana(forecast):
+    """Ventana de 120 h del ciclo en fechas de Chile ('28 sep – 3 oct 2026')."""
+    for d in ("chile-centro-sur", *forecast):
+        v = (forecast.get(d) or {}).get("ventana") or {}
+        a, b = _utc(v.get("desde")), _utc(v.get("hasta"))
+        if a and b:
+            return f"{fecha_chile(a)} &ndash; {fecha_chile(b)} {b.astimezone(SCL).year}"
+    return "ventana de 120&nbsp;h"
+
+
+def plural(n, uno, varios):
+    return f"{n} {uno if n == 1 else varios}"
 
 
 def fmt_hour(x):
@@ -437,6 +491,75 @@ def lista_chip(nombres):
     return "<span class='chip' style='background:#f0e6d2;color:#6b5418;'>peligro</span>"
 
 
+def resumen_modelos(forecast, cycle):
+    """Frase del resumen ejecutivo sobre GFS/ECMWF/ICON, calculada del ciclo.
+
+    Reemplaza (2026-09-28) un párrafo fijo del evento de julio ("Ñuble, Biobío,
+    Araucanía y Los Ríos… ICON levanta el Huasco") que se repitió en cada
+    registro durante dos meses, dijera lo que dijera el pronóstico.
+    """
+    regionales = [d for d in DOMAIN_ORDER if d in forecast and d != "chile-centro-sur"]
+
+    def pico(d, modelo):
+        m = forecast[d] if modelo == "gfs" else forecast[d].get(modelo, {})
+        v = (m.get("variants") or {}).get("regional-a5.5") or {}
+        return v.get("peak_prob")
+
+    def lista(ds):
+        return ", ".join(f"{DOMAIN_LABELS[d]} ({pico(d, 'gfs'):.2f})" for d in ds)
+
+    gfs_alto = [d for d in regionales if (pico(d, "gfs") or 0) >= NIVEL_ALERTA]
+    macro = "chile-centro-sur" in forecast and (pico("chile-centro-sur", "gfs") or 0) >= NIVEL_ALERTA
+    if gfs_alto or macro:
+        cruces = [_utc(forecast[d]["variants"]["regional-a5.5"].get("first_crossing"))
+                  for d in gfs_alto + (["chile-centro-sur"] if macro else [])]
+        cruces = [c for c in cruces if c]
+        donde = lista(gfs_alto) if gfs_alto else "el barrido macro, fuera de los dominios regionales"
+        txt = (f"El pronóstico GFS del ciclo <strong>{cycle}</strong> cruza el nivel de alerta "
+               f"({NIVEL_ALERTA}) del umbral lluvia&ndash;duración regional en {donde}")
+        if cruces:
+            txt += f"; primer cruce el {fecha_chile(min(cruces), con_hora=True)} (hora de Chile)"
+        txt += "."
+    else:
+        top = max((d for d in forecast), key=lambda d: pico(d, "gfs") or 0)
+        txt = (f"El pronóstico GFS del ciclo <strong>{cycle}</strong> no cruza el nivel de alerta "
+               f"({NIVEL_ALERTA}) en ningún dominio; su pico es {(pico(top, 'gfs') or 0):.2f} en "
+               f"{DOMAIN_LABELS[top]}.")
+    if not any("ecmwf" in forecast[d] for d in forecast):
+        txt += " ECMWF no está disponible para este ciclo."
+    else:
+        ec = [d for d in regionales if (pico(d, "ecmwf") or 0) >= NIVEL_ALERTA]
+        txt += (f" ECMWF lo cruza en {', '.join(DOMAIN_LABELS[d] for d in ec)}." if ec
+                else " ECMWF no cruza el nivel de alerta en ningún dominio regional.")
+    if any("icon" in forecast[d] for d in forecast):
+        solo_icon = [d for d in regionales
+                     if (pico(d, "icon") or 0) >= NIVEL_ALERTA and (pico(d, "gfs") or 0) < NIVEL_ALERTA]
+        if solo_icon:
+            txt += (" ICON lo cruza además donde GFS no: "
+                    + ", ".join(f"{DOMAIN_LABELS[d]} ({pico(d, 'icon'):.2f} vs {pico(d, 'gfs'):.2f})"
+                                for d in solo_icon)
+                    + " &mdash; léase como desacuerdo entre modelos (secc. 01).")
+    return txt
+
+
+def resumen_runouts(rows, loc_labels):
+    """Frase sobre los footprints simulados, con la distancia REAL más corta."""
+    dist = [(r["proximity"].get("min_distance_m"), name) for _, name, r in rows
+            if (r.get("proximity") or {}).get("min_distance_m") is not None]
+    if not dist:
+        return ("Este ciclo no tiene footprints de flujo detrítico simulados para las localidades "
+                "en vigilancia.")
+    dmin, quien = min(dist)
+    cerca = sum(1 for dd, _ in dist if dd < 500)
+    label = loc_labels.get(quien, (quien.replace("_", " ").title(), ""))[0]
+    cercania = (f"el de {label} alcanza el centro poblado" if dmin == 0 else
+                f"el más cercano queda a {fmt_dist(dmin)} del centro poblado ({label})")
+    return ("Simulaciones de flujo detrítico por agentes (parámetros de Atacama 2015, sin calibrar "
+            f"localmente) dan footprints ilustrativos: {cercania}; "
+            f"{cerca} de {len(dist)} localidades {'tiene' if cerca == 1 else 'tienen'} footprint a "
+            "menos de 500&nbsp;m.")
+
+
 def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_utc, comuna=None,
                ensemble=None, gefs=None, loc_labels=None, norte_check=None, runout_ensemble=None,
                en_lista=None, dos_listas=False, solo_exposicion=None, solo_peligro=None):
@@ -462,14 +585,14 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
         ecmwf_cell = ""
         if any_ecmwf:
             ev = m.get("ecmwf", {}).get("variants", {}).get("regional-a5.5")
-            ecmwf_cell = f"<td class='num'>{ev['peak_prob']:.2f}</td>" if ev else "<td class='num'>—</td>"
+            ecmwf_cell = f"<td class='num'>{f2(ev.get('peak_prob'))}</td>" if ev else "<td class='num'>—</td>"
         icon_cell = ""
         if any_icon:
             iv = m.get("icon", {}).get("variants", {}).get("regional-a5.5")
-            icon_cell = f"<td class='num'>{iv['peak_prob']:.2f}</td>" if iv else "<td class='num'>—</td>"
+            icon_cell = f"<td class='num'>{f2(iv.get('peak_prob'))}</td>" if iv else "<td class='num'>—</td>"
         dom_rows += (f"<tr><td>{DOMAIN_LABELS[d]}</td><td class='num'>{m['iso0_mean_m']:.0f} m</td>"
                      f"<td class='num'>{m['snow_fraction_mean']*100:.0f}%</td>"
-                     f"<td class='num'>{v['peak_prob']:.2f}</td>{ecmwf_cell}{icon_cell}"
+                     f"<td class='num'>{f2(v.get('peak_prob'))}</td>{ecmwf_cell}{icon_cell}"
                      f"<td class='num'>{v['n_crossings']}</td>"
                      f"<td class='mono'>{v['first_crossing'] or 'sin cruce'}</td></tr>")
 
@@ -565,7 +688,7 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
                      f"<td><span class='chip {cls}'>{txt}</span> {fenomeno_chip(r)} "
                      f"{plaus_chip(r)} {sinfp_chip(r)} {domain_chip(r)}</td>"
                      f"{celda_lista}"
-                     f"<td class='num'>{s['hazard_max_regional']:.2f}</td>"
+                     f"<td class='num'>{f2(s.get('hazard_max_regional'))}</td>"
                      f"<td class='mono'>{fmt_hour(s['first_crossing_fhour'])}</td>"
                      f"<td class='num'>{fmt_mm(s['rain_liquid_total_mm'])}</td>"
                      f"<td class='num'>{fmt_dist(p['min_distance_m'])}</td></tr>")
@@ -638,7 +761,7 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
             f"<span class='chip {cls}'>{txt}</span></div>"
             f"<div class='region'>{region} · ventana {r.get('size_km', 12)}&nbsp;km · "
             f"escenario 3 días: {rain3}&nbsp;mm/día</div>"
-            f"<div class='stat-row'><span>Gatillo</span><span>{s['hazard_max_regional']:.2f}</span></div>"
+            f"<div class='stat-row'><span>Gatillo</span><span>{f2(s.get('hazard_max_regional'))}</span></div>"
             f"<div class='stat-row'><span>Dist. al footprint</span><span>{fmt_dist(p['min_distance_m'])}</span></div>"
             f"<div class='stat-row'><span>Anillo 0.5&nbsp;km cubierto</span>"
             f"<span>{fmt_pct(p['rings'].get('0.5km'))}</span></div>"
@@ -685,7 +808,7 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
             top_rows += (
                 f"<tr><td><strong>{r['COMUNA'].title()}</strong><br>"
                 f"<span class='region-tag'>{r['REGION'].title()}</span></td>"
-                f"<td class='num'>{r['peak_gfs']:.2f}</td><td class='num'>{r['peak_ecmwf']:.2f}</td>"
+                f"<td class='num'>{f2(r.get('peak_gfs'))}</td><td class='num'>{f2(r.get('peak_ecmwf'))}</td>"
                 f"<td class='num'>{r.get('peak_icon', float('nan')):.2f}</td><td class='num'>{terr}</td><td class='num'>{pob}</td>{vuln_cell}</tr>")
         map_fig = ""
         if "mapa_comunas" in images:
@@ -726,7 +849,7 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
         "obtenida restando directamente el campo de nieve (<code>sf</code>) del total (<code>tp</code>), "
         "sin necesitar la aproximación por isoterma que usa la ruta GFS. Donde ambos modelos difieren "
         "sustancialmente (columna <em>Pico ECMWF</em> muy por sobre <em>Pico GFS</em>), se lee como "
-        "señal de que el consenso entre modelos es bajo para este evento &mdash; no que uno de los dos "
+        "señal de que el consenso entre modelos es bajo en este ciclo &mdash; no que uno de los dos "
         "esté \"equivocado\".</p>" if any_ecmwf else "")
     icon_note = (
         "<p>También se agrega <strong>DWD ICON global</strong> (~13&nbsp;km nativo, Open Data) como "
@@ -758,21 +881,27 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
       (agua+nieve equivalente), no partida en líquida/sólida &mdash; no comparable número a número con
       las cifras de líquido de ECMWF, pero sí como chequeo independiente de orden de magnitud.</p>
       <ul>{rows_g}</ul>"""
+        # miembros POR FAMILIA (cada dominio corre los mismos miembros; sumarlos
+        # entre dominios contaría 3 veces cada corrida)
+        n_ec = max(v["n_members"] for v in ensemble.values())
+        n_ge = max((v["n_members"] for v in (gefs or {}).values()), default=0)
+        todos = list(ensemble.values()) + list((gefs or {}).values())
+        seco = min(todos, key=lambda v: v["min_mm"])
+        familias = f"{n_ec} de ECMWF" + (f" y {n_ge} de GEFS" if n_ge else "")
+        ens_resumen = (f"Se consultaron {n_ec + n_ge} miembros ({familias}) en "
+                       f"{len(ensemble)} dominio(s); el más seco deja "
+                       f"{seco['min_mm']:.0f}&nbsp;mm en 120&nbsp;h.")
         ensemble_note = f"""<div class="callout" style="margin-top:22px;">
       <h2>¿Es un outlier de una sola corrida? &mdash; chequeo de ensembles (ECMWF + GEFS)</h2>
-      <p>Ante lo inusual de estos números, se corrió el <strong>ensemble</strong> de ECMWF (stream
+      <p>Como chequeo de robustez se corrió el <strong>ensemble</strong> de ECMWF (stream
       <code>enfo</code>, 50 miembros perturbados, mismo ciclo, acumulado a 120&nbsp;h) para los
       dominios de mayor divergencia con GFS &mdash; no el CFS (modelo estacional, ~1&deg;, no resuelve
       una tormenta de días; no es la herramienta para esta pregunta).</p>
       <ul>{rows_e}</ul>
-      <p>Ningún miembro del ensemble ECMWF muestra un escenario "tranquilo": el HRES determinístico
-      ya reportado cae dentro del rango central de su propio ensemble, no en la cola.</p>
       {gefs_block}
-      <p>Con las dos familias de ensemble consultadas, <strong>ningún miembro de ninguna de las dos
-      (81 corridas en total) muestra un escenario tranquilo</strong> en estos tres dominios. Esto no
-      confirma el evento &mdash; sigue siendo pronóstico, no observación &mdash; pero descarta con
-      bastante solidez que el número extremo sea un capricho de una única corrida determinística de
-      un solo modelo.</p>
+      <p>{ens_resumen} Esto no confirma nada sobre lo que ocurrirá &mdash; sigue siendo pronóstico,
+      no observación &mdash; pero muestra cuánto del rango de las corridas queda sobre o bajo lo que
+      dice la corrida determinística.</p>
     </div>"""
 
     norte_note = ""
@@ -782,9 +911,17 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
             r = watchlist.get(loc["name"])
             g = r["signal"]["hazard_max_regional"] if r else None
             rain = r["signal"]["rain_liquid_total_mm"] if r else None
+            agg = loc.get("peak_worst_comuna_agregado")
+            agg_txt = f" (vs. {agg:.2f} agregado a nivel comuna)" if agg is not None else ""
+            if g is None:
+                # la localidad del chequeo no tiene corrida en runouts/ (p.ej. un
+                # ciclo viejo re-generado): se dice, en vez de tumbar el registro
+                rows_n += (f"<li><strong>{loc['label']}</strong>: sin corrida de runout para "
+                           f"este ciclo{agg_txt}.</li>")
+                continue
+            rain_txt = f" &mdash; lluvia líquida 120&nbsp;h {rain:.1f}&nbsp;mm" if rain is not None else ""
             rows_n += (f"<li><strong>{loc['label']}</strong>: gatillo en el punto exacto del pueblo "
-                       f"{g:.2f} (vs. {loc['peak_worst_comuna_agregado']:.2f} agregado a nivel comuna) "
-                       f"&mdash; lluvia líquida 120&nbsp;h {rain:.1f}&nbsp;mm.</li>")
+                       f"{g:.2f}{agg_txt}{rain_txt}.</li>")
         norte_note = f"""<div class="callout" style="margin-top:22px;">
       <h2>¿Y el Norte? &mdash; por qué Atacama no entra al top-20 (con una corrección propia)</h2>
       <p>{norte_check['motivo']}</p>
@@ -793,34 +930,38 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
       <p>{norte_check['resultado']}</p>
     </div>"""
 
+    ventana = rango_ventana(forecast)
+    gfs_bullet = resumen_modelos(forecast, cycle)
+    runout_bullet = resumen_runouts(rows, loc_labels)
+
     body = f"""
 <div class="sheet">
   <div class="masthead">
     <div class="eyebrow">Registro técnico interno · sistema nowcast</div>
-    <h1 class="title">Vigilancia de remociones en masa y flujos detríticos<br>Evento hidrometeorológico del 15&ndash;20 de julio de 2026</h1>
-    <p class="subtitle">Estado del pronóstico, observación y simulación al momento de generar este documento — dejado como constancia previa al desarrollo del evento.</p>
+    <h1 class="title">Vigilancia de remociones en masa y flujos detríticos<br>Ciclo {cycle} &middot; {ventana}</h1>
+    <p class="subtitle">Estado del pronóstico, observación y simulación al momento de generar este documento — dejado como constancia previa a lo que ocurra en la ventana pronosticada.</p>
     <div class="meta-strip">
       <div class="meta-item"><span class="k">Generado</span><span class="v">{gen_stamp}</span></div>
-      <div class="meta-item"><span class="k">Hora Chile</span><span class="v">{(now_utc.hour-4)%24:02d}:{now_utc.minute:02d} (UTC&minus;4)</span></div>
+      <div class="meta-item"><span class="k">Hora Chile</span><span class="v">{hora_chile(now_utc)}</span></div>
       <div class="meta-item"><span class="k">Ciclo GFS base</span><span class="v">{cycle}</span></div>
-      <div class="meta-item"><span class="k">Dominios activos</span><span class="v">{len(forecast)} (2 nodos)</span></div>
+      <div class="meta-item"><span class="k">Dominios activos</span><span class="v">{len(forecast)}</span></div>
       <div class="meta-item"><span class="k">Localidades en vigilancia</span><span class="v">{len(rows)}</span></div>
     </div>
   </div>
 
   <div class="callout">
     <h2>Resumen ejecutivo</h2>
-    <p>Este documento fija en el tiempo el estado de un sistema experimental de nowcasting de geopeligros (motor <em>nowcast</em>) corriendo de forma autónoma sobre dos nodos del cluster doméstico del autor, en modo sombra, ante el pronóstico de un sistema frontal con río atmosférico extremo afectando Chile centro-sur. Su propósito es doble: servir de base para comparar el pronóstico contra lo efectivamente ocurrido una vez cerrado el evento, y dejar constancia verificable — con huella de integridad y timestamp — de qué se sabía y cuándo.</p>
+    <p>Este documento fija en el tiempo el estado de un sistema experimental de nowcasting de geopeligros (motor <em>nowcast</em>) corriendo de forma autónoma, en modo sombra, sobre la ventana pronosticada de 120&nbsp;h ({ventana}). Su propósito es doble: servir de base para comparar el pronóstico contra lo efectivamente ocurrido una vez cerrada la ventana, y dejar constancia verificable — con huella de integridad y timestamp — de qué se sabía y cuándo.</p>
     <ul>
-      <li>El pronóstico GFS del ciclo <strong>{cycle}</strong> muestra excedencia sostenida del umbral lluvia&ndash;duración regional, concentrada en la precordillera y cordillera de Ñuble, Biobío, Araucanía y Los Ríos. ECMWF e ICON (secc. 01) agregan una mirada independiente; ICON 13&nbsp;km levanta especialmente el valle del Huasco, donde GFS venía severamente bajo.</li>
-      <li>El cruce con los modelos de susceptibilidad de terreno identifica <strong>{n_high} localidades en nivel ALTO</strong> de vigilancia combinada.</li>
-      <li>Simulaciones de flujo detrítico por agentes (parámetros de Atacama 2015, sin calibrar localmente) muestran footprints ilustrativos que en algunos casos alcanzan a menos de 20&nbsp;m del centro poblado.</li>
+      <li>{gfs_bullet}</li>
+      <li>El cruce con los modelos de susceptibilidad de terreno identifica <strong>{plural(n_high, "localidad", "localidades")} en nivel ALTO</strong> de vigilancia combinada.</li>
+      <li>{runout_bullet}</li>
       {comuna_bullet}
       <li><strong>Nada de este documento es un aviso oficial.</strong> Las fuentes de verdad para decisiones de protección civil son SENAPRED, SERNAGEOMIN y la Dirección Meteorológica de Chile.</li>
     </ul>
   </div>
 
-  <div class="disclaimer"><strong>Sobre la naturaleza de este registro.</strong> Todos los números provienen de un sistema experimental, sin validación operacional, con susceptibilidad de terreno agregada por analogía (transferencia entre cuencas en dos capas) y parámetros de simulación calibrados para un régimen árido distinto (Atacama). Se documentan como fueron calculados el {gen_stamp}, antes de que el evento se desarrollara.</div>
+  <div class="disclaimer"><strong>Sobre la naturaleza de este registro.</strong> Todos los números provienen de un sistema experimental, sin validación operacional, con susceptibilidad de terreno agregada por analogía (transferencia entre cuencas en dos capas) y parámetros de simulación calibrados para un régimen árido distinto (Atacama). Se documentan como fueron calculados el {gen_stamp}, antes de que transcurriera la ventana pronosticada.</div>
 
   <section class="doc">
     <div class="sec-head"><span class="sec-num">01</span><h2>Qué pronosticaba el sistema en este momento</h2></div>
@@ -897,7 +1038,7 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
 </div>
 """
     font_faces = FONT_FACES_TPL.format(**fonts)
-    return f"<title>Vigilancia de remociones en masa — Evento 15–20 jul 2026</title>\n<style>\n{font_faces}\n{CSS}\n</style>\n{body}\n"
+    return f"<title>Registro del ciclo {cycle} — vigilancia de remociones en masa</title>\n<style>\n{font_faces}\n{CSS}\n</style>\n{body}\n"
 
 
 def main():
