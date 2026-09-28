@@ -152,6 +152,13 @@ else
     log "analysis_all: build_registro DESACTIVADO (REGISTRO_ENABLED=0)"
 fi
 
+# 6b. Índice de la bitácora (informes/index.html): una página con el estado, la
+#     evolución de 30 días y el registro de cada ciclo. BLANDA y barata (<1 s):
+#     si falla, el ciclo es igual de válido y el índice queda en su versión previa.
+if ! python3 "$HERE/report/build_index.py" --base "$FORECAST_WORKDIR" >>"$LOG" 2>&1; then
+    log "analysis_all: WARN build_index falló; el índice queda en su versión anterior"
+fi
+
 # 7. Retención de ciclos. El disco NO se poda solo: 4 corridas/día × ~9 ciclos
 #    de ~1.1 GB llenaron 80 GB en 19 días y dejaron la máquina al 100% (medido
 #    2026-08-01). Va al FINAL a propósito: nunca debe poder tocar los productos

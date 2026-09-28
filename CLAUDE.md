@@ -428,6 +428,18 @@ decimales → 3.3 MB, SOLO al escribir: los picos se calculan con la geometría
 completa y el `comuna_impact.json` sale idéntico. Los consumidores leen `latest/`
 (`select_watchlist` cruza por CUT, no por geometría).
 
+**Bitácora: `~/nowcast-forecast/informes/index.html`** (2026-09-28,
+`monitor/report/build_index.py`, paso 6b de `analysis_all.sh`, <1 s): una página
+autónoma (fuentes y tokens importados de `build_registro`, sin copias) con el
+estado de servicios, el último ciclo por dominio y modelo, pequeños múltiplos de
+30 días (pico I-D regional por GFS/ECMWF/ICON, huecos >24 h rotulados "sin
+ciclos" para que un apagón no se lea como calma) y la bitácora por día con el
+registro de cada ciclo. Paleta validada con el validador de dataviz en claro y
+oscuro. **OJO `build_registro.py`**: su título, bajada y narrativa del resumen
+están FIJOS en el evento de julio ("Evento 15–20 jul 2026", "río atmosférico
+extremo", ICON en el Huasco) y su "Hora Chile" usa UTC−4 fijo; los datos
+(tabla, mapa, comunas) sí son del ciclo. Pendiente corregirlo.
+
 **Respaldo in-situ verificado (2026-08-29, corregido 2026-09-02)**:
 `monitor/crosscheck_elcolorado.py` cruza El Colorado 2750 m —la ÚNICA estación de
 cordillera del dominio piloto— entre la API DMC (330077) que el monitor usa hoy
