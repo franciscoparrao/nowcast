@@ -417,6 +417,17 @@ la primera vez que lo vio. Cubre el caso que un aviso desde el ciclo no puede:
 el ciclo que ni parte. Autotest `selftest.py --watchdog`. OJO nodos: `monitor.sh`
 ya NO funciona sin `lib_notify.sh` al lado (README paso 2).
 
+**`~/nowcast-forecast` y el GeoJSON comunal (2026-09-28)**: el mayor volumen del
+directorio (14.7 GB de 37) era `comuna_impact.geojson`, 78 MB/ciclo de geometría
+del censo repetida; la poda lo declaraba intocable porque la medición de agosto
+contó `*.json` y no `*.geojson`. Ahora (1) `prune_forecast.py` lo reemplaza pasado
+`PRUNE_DIAS_GEOJSON`=7 por `comuna_impact_attrs.csv` con TODAS sus columnas,
+verificado fila a fila antes de borrar (primera pasada: 12.93 GB, 177 archivos);
+(2) `comuna_impact.py` lo escribe con `shapely.coverage_simplify` 0.001° + 6
+decimales → 3.3 MB, SOLO al escribir: los picos se calculan con la geometría
+completa y el `comuna_impact.json` sale idéntico. Los consumidores leen `latest/`
+(`select_watchlist` cruza por CUT, no por geometría).
+
 **Respaldo in-situ verificado (2026-08-29, corregido 2026-09-02)**:
 `monitor/crosscheck_elcolorado.py` cruza El Colorado 2750 m —la ÚNICA estación de
 cordillera del dominio piloto— entre la API DMC (330077) que el monitor usa hoy

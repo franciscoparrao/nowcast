@@ -169,6 +169,7 @@ case "${PRUNE_MODE:-report}" in
     apply)
         if ! python3 "$HERE/prune_forecast.py" --base "$FORECAST_WORKDIR" \
                 --dias-30m "${PRUNE_DIAS_30M:-7}" --dias-crudo "${PRUNE_DIAS_CRUDO:-10}" \
+                --dias-geojson "${PRUNE_DIAS_GEOJSON:-7}" \
                 --apply >>"$LOG" 2>&1; then
             log "analysis_all: WARN prune_forecast falló; el ciclo queda válido, el disco no se podó"
         fi
@@ -176,6 +177,7 @@ case "${PRUNE_MODE:-report}" in
     report)
         python3 "$HERE/prune_forecast.py" --base "$FORECAST_WORKDIR" \
             --dias-30m "${PRUNE_DIAS_30M:-7}" --dias-crudo "${PRUNE_DIAS_CRUDO:-10}" \
+            --dias-geojson "${PRUNE_DIAS_GEOJSON:-7}" \
             >>"$LOG" 2>&1 \
             || log "analysis_all: WARN prune_forecast (modo report) falló"
         log "analysis_all: retención en modo REPORT (no borra) — PRUNE_MODE=apply para podar"

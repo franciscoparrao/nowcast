@@ -16,7 +16,9 @@ from rasterio.transform import from_origin
 from rasterstats import zonal_stats
 
 CR2 = "/mnt/kingston/proyectos/Agentes/CR2MET_pr_v2.5_day_1960-2021_005deg/pr"
-F = os.path.expanduser("~/nowcast-forecast/20260731T06z")
+# Solo usa geometría, población y peak_terreno (estáticos): cualquier ciclo sirve,
+# y desde 2026-09-28 los GeoJSON de ciclos viejos se podan a CSV sin geometría.
+F = os.path.expanduser("~/nowcast-forecast/latest")
 SCR = os.path.dirname(os.path.abspath(__file__))
 ANIOS = range(1991, 2021)
 MESES = (5, 6, 7, 8, 9)

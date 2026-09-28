@@ -49,6 +49,7 @@ import duckdb
 import geopandas as gpd
 import numpy as np
 import rasterio
+import shapely
 from rasterstats import zonal_stats
 
 CENSUS_GPKG = os.path.expanduser(
@@ -59,6 +60,9 @@ CENSUS_PERSONAS = os.path.expanduser(
 # III (Atacama) a XIV (Los Ríos) inclusive, más Ñuble (16, enclavada en el
 # tramo Biobío/Maule): 3,4,5,6,7,8,9,13,14,16.
 TARGET_REGIONS = [3, 4, 5, 6, 7, 8, 9, 13, 14, 16]
+# Tolerancia de coverage_simplify para el GeoJSON de salida (ver el bloque de
+# escritura). Solo afecta el archivo; los picos usan la geometría completa.
+SIMPLIFY_DEG = 0.001
 REGION_ORDER = {3: 0, 4: 1, 5: 2, 13: 3, 6: 4, 7: 5, 16: 6, 8: 7, 9: 8, 14: 9}
 
 # región → dominio de pronóstico que la cubre (ver docstring: atacama propio,
@@ -215,7 +219,17 @@ def main():
 
     for c in gdf.select_dtypes(include="string").columns:
         gdf[c] = gdf[c].astype(object)
-    gdf.to_file(os.path.join(out_dir, "comuna_impact.geojson"), driver="GeoJSON")
+    # Geometría SIMPLIFICADA solo para escribir (2026-09-28): los picos de arriba
+    # ya se calcularon con los polígonos completos del censo, así que ningún
+    # número cambia. Antes cada ciclo escribía ~78 MB, 100% geometría repetida
+    # (14.7 GB en 187 ciclos). coverage_simplify simplifica cada borde COMPARTIDO
+    # una sola vez: sin huecos ni traslapes entre comunas vecinas. Medido sobre
+    # el ciclo 20260928T06z con 0.001° (~110 m, 100× más fino que la grilla de
+    # 0.1° del peligro): 6.7% de los vértices, todas válidas, Δárea total 0.000%.
+    gdf_out = gdf.copy()
+    gdf_out["geometry"] = shapely.coverage_simplify(gdf.geometry.values, SIMPLIFY_DEG)
+    gdf_out.to_file(os.path.join(out_dir, "comuna_impact.geojson"), driver="GeoJSON",
+                    COORDINATE_PRECISION=6)
     with open(os.path.join(out_dir, "comuna_impact.json"), "w") as f:
         json.dump(summary, f, indent=1, ensure_ascii=False, default=lambda o: None if
                   (isinstance(o, float) and np.isnan(o)) else o)
