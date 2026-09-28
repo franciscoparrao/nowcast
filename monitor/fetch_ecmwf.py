@@ -46,8 +46,6 @@ import json
 import os
 import subprocess
 import sys
-import time
-import urllib.request
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
@@ -60,27 +58,19 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from forecast_gfs import EVENT_DOMAINS, bilinear_to  # noqa: E402
 from fetch_goes_qpe import target_grid  # noqa: E402
 
-BUCKET = "https://ecmwf-forecasts.s3.eu-central-1.amazonaws.com"
+from ecmwf_mirrors import MIRRORS, NoPublicado, fetch  # noqa: E402
+
+# Edad máxima del ciclo aceptado. Antes se aceptaban hasta ~60 h y, con el bucket
+# saturado, llegaron a entrar ciclos de 56 h como si fueran el ECMWF del ciclo.
+# Mejor que ECMWF FALTE (y el índice/registro lo digan) a que aporte uno de hace
+# dos días.
+MAX_AGE_H = float(os.environ.get("ECMWF_MAX_AGE_H", "30"))
 STEP_H = 3  # cadencia de HRES hasta 144h
 RES = 0.1  # misma grilla destino 0.1° que forecast_gfs.py
 
 
 def log(msg):
     print(f"[ecmwf] {msg}", flush=True)
-
-
-def urlopen_read(req, timeout, retries=5):
-    last = None
-    for attempt in range(retries):
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                return r.read()
-        except Exception as exc:
-            last = exc
-            if attempt == retries - 1:
-                break
-            time.sleep(min(2 ** attempt, 20))
-    raise last
 
 
 def latest_cycle(now, max_age_h=8.0):
@@ -94,15 +84,16 @@ def latest_cycle(now, max_age_h=8.0):
             yield cyc
 
 
-def index_url(cycle, step):
+def index_path(cycle, step):
+    """Ruta RELATIVA (igual en todos los espejos, ver ecmwf_mirrors)."""
     d = cycle.strftime("%Y%m%d")
     hz = f"{cycle.hour:02d}z"
     stamp = cycle.strftime("%Y%m%d%H0000")
-    return f"{BUCKET}/{d}/{hz}/ifs/0p25/oper/{stamp}-{step}h-oper-fc.index"
+    return f"{d}/{hz}/ifs/0p25/oper/{stamp}-{step}h-oper-fc.index"
 
 
-def grib_url(cycle, step):
-    return index_url(cycle, step).replace(".index", ".grib2")
+def grib_path(cycle, step):
+    return index_path(cycle, step).replace(".index", ".grib2")
 
 
 def fetch_field(cycle, step, param, cache_dir):
@@ -110,7 +101,7 @@ def fetch_field(cycle, step, param, cache_dir):
     mensaje GRIB crudo (chico) en disco para no re-pedir en corridas repetidas."""
     cache = os.path.join(cache_dir, f"{cycle:%Y%m%d%H}_{step:03d}h_{param}.grib2")
     if not os.path.exists(cache):
-        lines = urlopen_read(index_url(cycle, step), timeout=60).decode().strip().split("\n")
+        lines = fetch(index_path(cycle, step), timeout=60).decode().strip().split("\n")
         rec = None
         for line in lines:
             d = json.loads(line)
@@ -120,13 +111,11 @@ def fetch_field(cycle, step, param, cache_dir):
         if rec is None:
             raise RuntimeError(f"campo {param} no encontrado en el índice de f{step:03d}")
         off, length = rec["_offset"], rec["_length"]
-        req = urllib.request.Request(
-            grib_url(cycle, step), headers={"Range": f"bytes={off}-{off + length - 1}"}
-        )
         tmp = cache + ".tmp"
         try:
             with open(tmp, "wb") as f:
-                f.write(urlopen_read(req, timeout=90))
+                f.write(fetch(grib_path(cycle, step), timeout=90,
+                              headers={"Range": f"bytes={off}-{off + length - 1}"}))
             os.replace(tmp, cache)
         except Exception:
             try:
@@ -176,16 +165,25 @@ def main():
     domains = {d: EVENT_DOMAINS[d] for d in a.domain} if a.domain else EVENT_DOMAINS
     now = datetime.now(timezone.utc)
 
+    # "No publicado" (404 en TODOS los espejos) y "servidor saturado" (5xx) son
+    # cosas distintas: solo lo primero justifica retroceder a un ciclo anterior.
     cycle = None
     for cand in latest_cycle(now):
+        edad = (now - cand).total_seconds() / 3600
+        if edad > MAX_AGE_H:
+            break
         try:
-            urllib.request.urlopen(index_url(cand, 0), timeout=30).read(200)
+            fetch(index_path(cand, 0), timeout=30)
             cycle = cand
             break
-        except Exception:
-            continue
+        except NoPublicado:
+            log(f"ciclo {cand:%Y%m%dT%H}z aún no publicado en ningún espejo")
+        except Exception as exc:
+            sys.exit(f"[ecmwf] no se pudo consultar el ciclo {cand:%Y%m%dT%H}z en ningún "
+                     f"espejo ({exc}); NO se retrocede a un ciclo anterior por un error de "
+                     f"servidor. Espejos: {', '.join(MIRRORS)}")
     if cycle is None:
-        sys.exit("[ecmwf] ningún ciclo HRES disponible aún")
+        sys.exit(f"[ecmwf] ningún ciclo HRES publicado con menos de {MAX_AGE_H:.0f} h")
     cycle_id = f"{cycle:%Y%m%dT%H}z"
     log(f"ciclo {cycle_id} (edad {(now - cycle).total_seconds()/3600:.1f} h)")
 
@@ -206,6 +204,11 @@ def main():
     if not cumulative:
         sys.exit("[ecmwf] no se pudo leer ningún paso")
     log(f"{len(cumulative)} pasos de 3h leídos ({failed} fallidos)")
+    if failed:
+        # Un paso perdido no pierde lluvia (tp es acumulado) pero la concentra en
+        # el paso siguiente y deforma la intensidad que ve el umbral I-D. El
+        # 26-sep entró así un ECMWF con 16 de 41 pasos perdidos. Mejor faltar.
+        sys.exit(f"[ecmwf] {failed} paso(s) sin leer: no se escribe un ECMWF incompleto")
 
     # Diferenciar consecutivos: tp/sf son acumulados desde t=0, no buckets.
     # f000 es la referencia (típicamente ~0); si faltó, el primer paso

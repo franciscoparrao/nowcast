@@ -23,11 +23,12 @@ Uso:
 import argparse
 import json
 import os
-import urllib.request
 
 import numpy as np
 
-BUCKET = "https://ecmwf-forecasts.s3.eu-central-1.amazonaws.com"
+# Espejos con respaldo (ver ecmwf_mirrors.py: el bucket de AWS solo respondía
+# 1 de cada ~6 pedidos en sep-2026).
+from ecmwf_mirrors import fetch as mirror_fetch  # noqa: E402
 CACHE = os.path.expanduser("~/nowcast-forecast/.enfo_cache")
 DOMAINS = {
     "atacama": (-71.4, -29.8, -68.9, -25.8),
@@ -47,12 +48,16 @@ def fetch(cycle_date, cycle_hz, step, number, param, idx):
         return None
     cache_f = os.path.join(CACHE, f"{cycle_date}{cycle_hz}_{step}h_{number}_{param}.grib2")
     if not os.path.exists(cache_f):
-        grib_url = (f"{BUCKET}/{cycle_date}/{cycle_hz}z/ifs/0p25/enfo/"
+        grib_rel = (f"{cycle_date}/{cycle_hz}z/ifs/0p25/enfo/"
                     f"{cycle_date}{cycle_hz}0000-{step}h-enfo-ef.grib2")
         off, length = rec["_offset"], rec["_length"]
-        req = urllib.request.Request(grib_url, headers={"Range": f"bytes={off}-{off + length - 1}"})
-        with urllib.request.urlopen(req, timeout=90) as r, open(cache_f, "wb") as f:
-            f.write(r.read())
+        data = mirror_fetch(grib_rel, timeout=90,
+                            headers={"Range": f"bytes={off}-{off + length - 1}"})
+        # atómico: antes el archivo se abría ANTES de leer, y un corte dejaba en
+        # caché un GRIB vacío que la corrida siguiente daba por bueno
+        with open(cache_f + ".tmp", "wb") as f:
+            f.write(data)
+        os.replace(cache_f + ".tmp", cache_f)
     return cache_f
 
 
@@ -83,11 +88,11 @@ def main():
     a = ap.parse_args()
     os.makedirs(CACHE, exist_ok=True)
 
-    idx_url = (f"{BUCKET}/{a.cycle_date}/{a.cycle_hz}z/ifs/0p25/enfo/"
+    idx_rel = (f"{a.cycle_date}/{a.cycle_hz}z/ifs/0p25/enfo/"
                f"{a.cycle_date}{a.cycle_hz}0000-{a.step}h-enfo-ef.index")
-    log(f"índice: {idx_url}")
+    log(f"índice: {idx_rel}")
     idx = [json.loads(l) for l in
-           urllib.request.urlopen(idx_url, timeout=60).read().decode().strip().split("\n")]
+           mirror_fetch(idx_rel, timeout=60).decode().strip().split("\n")]
     n_tp = sum(1 for r in idx if r["param"] == "tp")
     log(f"{n_tp} miembros con campo tp en el índice (perturbados, sin control cf)")
 

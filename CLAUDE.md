@@ -443,6 +443,17 @@ Chile" usaba UTC−4 fijo (corrida 1 h desde el 6-sep). Ahora todo sale del cicl
 (`resumen_modelos`, `resumen_runouts`, `rango_ventana`, `hora_chile` con
 zoneinfo). Los registros viejos NO se reescriben: son constancia, con su hash.
 
+**ECMWF por espejos (`monitor/ecmwf_mirrors.py`, 2026-09-28)**: desde el 26-sep
+ningún ciclo tuvo ECMWF utilizable. El bucket de AWS respondía `503 Slow Down` a
+~90% de los pedidos, y `fetch_ecmwf.py` lo usaba como única fuente y leía CUALQUIER
+error del chequeo como "ciclo no publicado": retrocedía a ciclos de 25-56 h o se
+rendía. Además aceptaba corridas con pasos perdidos (16/41 el 26-sep), que
+concentran la lluvia en el paso siguiente y deforman la intensidad I-D. Ahora:
+Google Cloud → data.ecmwf.int → AWS con respaldo (`ECMWF_MIRRORS`); "no publicado"
+solo si TODOS dan 404; un error de servidor NO hace retroceder de ciclo; ciclo
+de más de `ECMWF_MAX_AGE_H`=30 h no se usa; un paso perdido hace fallar la corrida.
+`ecmwf_ensemble_check.py` usa el mismo módulo.
+
 **Respaldo in-situ verificado (2026-08-29, corregido 2026-09-02)**:
 `monitor/crosscheck_elcolorado.py` cruza El Colorado 2750 m —la ÚNICA estación de
 cordillera del dominio piloto— entre la API DMC (330077) que el monitor usa hoy
