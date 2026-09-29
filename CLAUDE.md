@@ -454,6 +454,21 @@ solo si TODOS dan 404; un error de servidor NO hace retroceder de ciclo; ciclo
 de más de `ECMWF_MAX_AGE_H`=30 h no se usa; un paso perdido hace fallar la corrida.
 `ecmwf_ensemble_check.py` usa el mismo módulo.
 
+**Visor web — etapa 1: paquete por ciclo (`monitor/web_package.py`, 2026-09-29)**.
+Decisión: visor ESTÁTICO (Svelte + WASM, stack del visor de SurtGIS), **privado
+por ahora** (nada se publica; publicar marcaría comunas en "ALTO" con un sistema
+en modo sombra). El paquete es el contrato: `~/nowcast-forecast/web/<ciclo>/`
+con `manifest.json` (ventana, modelos por dominio, hora de cada paso, escala,
+atribución CC BY de ECMWF/DWD, aviso), COG multibanda uint8 por dominio×modelo
+(prob×250, 255 = sin dato, INTERLEAVE=BAND para leer un paso), máximo por
+modelo, peor, `desacuerdo` (máx−mín entre modelos) y lluvia; `comunas.geojson`
+(0.005°) y `localidades.geojson`. ~2 MB/ciclo, `WEB_KEEP`=12, `web/latest` y
+`web/ciclos.json`. Paso 6c de `analysis_all.sh` (blando). Validado: 18/18 COG,
+cuantización ≤0.002, NaN preservados, máximo = pico reportado (±0.0005), y
+leído con geotiff.js (un paso sin cargar los 120). Etapas siguientes: visor
+mínimo (modelo, tiempo, desacuerdo, comunas) y `nowcast-core` → WASM (umbral
+movible, `explain` por celda).
+
 **Respaldo in-situ verificado (2026-08-29, corregido 2026-09-02)**:
 `monitor/crosscheck_elcolorado.py` cruza El Colorado 2750 m —la ÚNICA estación de
 cordillera del dominio piloto— entre la API DMC (330077) que el monitor usa hoy

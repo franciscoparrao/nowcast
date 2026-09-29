@@ -159,6 +159,14 @@ if ! python3 "$HERE/report/build_index.py" --base "$FORECAST_WORKDIR" >>"$LOG" 2
     log "analysis_all: WARN build_index falló; el índice queda en su versión anterior"
 fi
 
+# 6c. Paquete web del ciclo (web/<ciclo>/: COG por modelo y paso, comunas,
+#     localidades, manifest.json) — el contrato del visor web estático. Privado
+#     por ahora: queda local. BLANDA: si falla, el visor sigue con el anterior.
+if ! python3 "$HERE/web_package.py" --forecast "$FORECAST_WORKDIR/latest" \
+        --web "$FORECAST_WORKDIR/web" --keep "${WEB_KEEP:-12}" >>"$LOG" 2>&1; then
+    log "analysis_all: WARN web_package falló; web/latest queda en el ciclo anterior"
+fi
+
 # 7. Retención de ciclos. El disco NO se poda solo: 4 corridas/día × ~9 ciclos
 #    de ~1.1 GB llenaron 80 GB en 19 días y dejaron la máquina al 100% (medido
 #    2026-08-01). Va al FINAL a propósito: nunca debe poder tocar los productos
