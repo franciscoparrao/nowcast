@@ -465,9 +465,26 @@ modelo, peor, `desacuerdo` (máx−mín entre modelos) y lluvia; `comunas.geojso
 (0.005°) y `localidades.geojson`. ~2 MB/ciclo, `WEB_KEEP`=12, `web/latest` y
 `web/ciclos.json`. Paso 6c de `analysis_all.sh` (blando). Validado: 18/18 COG,
 cuantización ≤0.002, NaN preservados, máximo = pico reportado (±0.0005), y
-leído con geotiff.js (un paso sin cargar los 120). Etapas siguientes: visor
-mínimo (modelo, tiempo, desacuerdo, comunas) y `nowcast-core` → WASM (umbral
-movible, `explain` por celda).
+leído con geotiff.js (un paso sin cargar los 120).
+
+**Visor — etapa 2 (`web/visor/`, 2026-09-30)**: Svelte 5 + Vite + geotiff.js,
+mapa en canvas propio (sin tiles; mapa base = límites comunales), ráster
+recortado a la silueta comunal, servidor solo en 127.0.0.1 con bloqueo de
+recorrido de rutas. Modelo/peor/desacuerdo, peligro/lluvia, máximo 120 h u hora a
+hora, tooltip con los 3 modelos, ficha de comuna. Probado por CDP (Chrome
+headless), sin errores de JS. Cada archivo del ciclo se pide con `?g=<generado>`:
+un ciclo SÍ puede regenerarse (la caché de 1 h escondió el arreglo de ICON).
+Siguiente: `nowcast-core` → WASM (umbral movible, `explain` por celda).
+
+**Umbral por modelo en UN solo lugar: `monitor/variantes.py`** (2026-09-30). GFS y
+ECMWF → `regional-a5.5`; ICON → `caine-global` (su vecino-más-cercano desde 13 km
+no diluye picos y con el regional se satura: 272/275 comunas en ALTO). La regla
+existía desde el 16-jul en `susc_overlay` y `comuna_impact`, pero el índice, el
+registro (tabla por dominio y resumen) y el paquete web usaban el regional también
+para ICON: ICON aparecía ~0.95 donde el cruce comunal decía ~0.2 (en Linares una
+celda 0.83 con pico comunal 0.17). Verificado tras unificar: 0 celdas sobre el pico
+comunal en los 3 modelos (ECMWF comparado con el dominio de cada comuna, como hace
+`comuna_impact`: Atacama para la región III).
 
 **Respaldo in-situ verificado (2026-08-29, corregido 2026-09-02)**:
 `monitor/crosscheck_elcolorado.py` cruza El Colorado 2750 m —la ÚNICA estación de

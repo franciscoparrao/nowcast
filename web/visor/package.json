@@ -1,0 +1,20 @@
+{
+  "name": "nowcast-visor",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Visor web estático de las salidas del pronóstico nowcast (privado).",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "geotiff": "^2"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5",
+    "svelte": "^5",
+    "vite": "^6"
+  }
+}
