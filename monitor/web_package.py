@@ -43,11 +43,11 @@ import rasterio
 import shapely
 import geopandas as gpd
 
-VARIANTE = "regional-a5.5"
+from variantes import VARIANTE_POR_MODELO, carpeta_pasos
 ESCALA = 250.0          # uint8 = round(prob × ESCALA)
 NODATA_U8 = 255
 SIMPLIFY_WEB_DEG = 0.005   # ~550 m: sobra para un coroplético comunal en pantalla
-ESQUEMA = 1
+ESQUEMA = 2  # 2: variante de umbral por modelo (ICON = caine-global)
 
 DOMINIOS = {
     "atacama": "Atacama", "coquimbo": "Coquimbo", "rm": "Región Metropolitana",
@@ -82,7 +82,7 @@ def _t(stamp):
 
 def pasos_modelo(ddir, modelo, meta):
     """[(hora UTC, ruta)] de los pasos de peligro del modelo, en orden."""
-    carpeta = os.path.join(ddir, MODELOS[modelo][0], f"hazard_{VARIANTE}")
+    carpeta = os.path.join(ddir, MODELOS[modelo][0], carpeta_pasos(modelo))
     tifs = sorted(glob.glob(os.path.join(carpeta, "hazard_*.tif")))
     if not tifs:
         return []
@@ -158,9 +158,9 @@ def paquete_dominio(ddir, out, dom):
             with rasterio.open(lluvia) as src:
                 escribir_cog(os.path.join(out, f"lluvia_{modelo}.tif"),
                              [src.read(1).astype("float32")], perfil, "float32", float("nan"))
-        v = (meta.get("variants") or {}).get(VARIANTE) or {}
+        v = (meta.get("variants") or {}).get(VARIANTE_POR_MODELO[modelo]) or {}
         entrada["modelos"][modelo] = {
-            "ciclo": meta.get("cycle"), "pasos": horas,
+            "ciclo": meta.get("cycle"), "variante": VARIANTE_POR_MODELO[modelo], "pasos": horas,
             "paso_horas": round((pasos[1][0] - pasos[0][0]).total_seconds() / 3600, 3)
             if len(pasos) > 1 else None,
             "pico": v.get("peak_prob"), "primer_cruce": v.get("first_crossing"),
@@ -239,7 +239,7 @@ def construir(fdir, web_dir):
         "esquema": ESQUEMA,
         "ciclo": ciclo,
         "generado": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "variante": VARIANTE,
+        "variante_por_modelo": VARIANTE_POR_MODELO,
         "nivel_alerta": 0.5,
         "escala": {"hazard": {"dtype": "uint8", "divisor": ESCALA, "nodata": NODATA_U8,
                               "nota": "prob = valor / divisor; 255 = sin dato"},

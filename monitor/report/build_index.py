@@ -32,11 +32,15 @@ import json
 import os
 import re
 from datetime import datetime, timedelta, timezone
+import sys
 from zoneinfo import ZoneInfo
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from variantes import VARIANTE_POR_MODELO, pico as pico_modelo  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCL = ZoneInfo("America/Santiago")   # hora de Chile REAL (UTC−4/−3 según la fecha)
-VARIANTE = "regional-a5.5"
+VARIANTE = VARIANTE_POR_MODELO["gfs"]   # la del primer cruce de GFS
 NIVEL = 0.5                           # el ALERT_LEVEL del pronóstico
 CICLO_RE = re.compile(r"^\d{8}T\d{2}z$")
 
@@ -62,11 +66,6 @@ def _json(path):
         return None
 
 
-def _pico(meta):
-    try:
-        return float(meta["variants"][VARIANTE]["peak_prob"])
-    except (TypeError, KeyError, ValueError):
-        return None
 
 
 def leer_ciclo(d):
@@ -79,9 +78,9 @@ def leer_ciclo(d):
         v = (g.get("variants") or {}).get(VARIANTE) or {}
         e = _json(os.path.join(d, key, "ecmwf", "ecmwf.json"))
         dom[key] = {
-            "gfs": _pico(g),
-            "icon": _pico(_json(os.path.join(d, key, "icon", "icon.json"))),
-            "ecmwf": _pico(e),
+            "gfs": pico_modelo(g, "gfs"),
+            "icon": pico_modelo(_json(os.path.join(d, key, "icon", "icon.json")), "icon"),
+            "ecmwf": pico_modelo(e, "ecmwf"),
             "ecmwf_ciclo": (e or {}).get("cycle"),
             "cruce": v.get("first_crossing"),
             "iso0": g.get("iso0_mean_m"),
@@ -542,7 +541,8 @@ def construir(base, dias):
 <div class="kicker">Bitácora · sistema nowcast</div>
 <h1>Qué está pronosticando el sistema</h1>
 <p class="sub">Índice regenerado al cierre de cada ciclo. Cada cifra es el pico del índice de excedencia
-del umbral lluvia–duración (a = 5.5) dentro de las 120 h de ese ciclo: un pronóstico, no una observación.</p>
+del umbral lluvia–duración dentro de las 120 h de ese ciclo: un pronóstico, no una observación. Umbral
+regional a = 5.5 para GFS y ECMWF, Caine global para ICON (su malla no diluye los picos; ver variantes.py).</p>
 <div class="meta">
   <div><span class="lbl">Generado</span><span class="v">{gen} · {hora_local(ahora)}</span></div>
   <div><span class="lbl">Último ciclo</span><span class="v">{esc(ult["nombre"])}</span></div>

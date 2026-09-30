@@ -38,6 +38,9 @@ import sys
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from variantes import VARIANTE_POR_MODELO  # noqa: E402  (ICON = caine-global)
+
 import numpy as np
 import rasterio
 
@@ -502,7 +505,7 @@ def resumen_modelos(forecast, cycle):
 
     def pico(d, modelo):
         m = forecast[d] if modelo == "gfs" else forecast[d].get(modelo, {})
-        v = (m.get("variants") or {}).get("regional-a5.5") or {}
+        v = (m.get("variants") or {}).get(VARIANTE_POR_MODELO[modelo]) or {}
         return v.get("peak_prob")
 
     def lista(ds):
@@ -511,7 +514,7 @@ def resumen_modelos(forecast, cycle):
     gfs_alto = [d for d in regionales if (pico(d, "gfs") or 0) >= NIVEL_ALERTA]
     macro = "chile-centro-sur" in forecast and (pico("chile-centro-sur", "gfs") or 0) >= NIVEL_ALERTA
     if gfs_alto or macro:
-        cruces = [_utc(forecast[d]["variants"]["regional-a5.5"].get("first_crossing"))
+        cruces = [_utc(forecast[d]["variants"][VARIANTE_POR_MODELO["gfs"]].get("first_crossing"))
                   for d in gfs_alto + (["chile-centro-sur"] if macro else [])]
         cruces = [c for c in cruces if c]
         donde = lista(gfs_alto) if gfs_alto else "el barrido macro, fuera de los dominios regionales"
@@ -581,14 +584,14 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
         if d not in forecast:
             continue
         m = forecast[d]
-        v = m["variants"]["regional-a5.5"]
+        v = m["variants"][VARIANTE_POR_MODELO["gfs"]]
         ecmwf_cell = ""
         if any_ecmwf:
-            ev = m.get("ecmwf", {}).get("variants", {}).get("regional-a5.5")
+            ev = m.get("ecmwf", {}).get("variants", {}).get(VARIANTE_POR_MODELO["ecmwf"])
             ecmwf_cell = f"<td class='num'>{f2(ev.get('peak_prob'))}</td>" if ev else "<td class='num'>—</td>"
         icon_cell = ""
         if any_icon:
-            iv = m.get("icon", {}).get("variants", {}).get("regional-a5.5")
+            iv = m.get("icon", {}).get("variants", {}).get(VARIANTE_POR_MODELO["icon"])
             icon_cell = f"<td class='num'>{f2(iv.get('peak_prob'))}</td>" if iv else "<td class='num'>—</td>"
         dom_rows += (f"<tr><td>{DOMAIN_LABELS[d]}</td><td class='num'>{m['iso0_mean_m']:.0f} m</td>"
                      f"<td class='num'>{m['snow_fraction_mean']*100:.0f}%</td>"
@@ -841,7 +844,7 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
             f"(ver secci&oacute;n 03).</li>")
 
     ecmwf_th = "<th class=\"num\">Pico ECMWF</th>" if any_ecmwf else ""
-    icon_th = "<th class=\"num\">Pico ICON</th>" if any_icon else ""
+    icon_th = "<th class=\"num\">Pico ICON (Caine)</th>" if any_icon else ""
     ecmwf_note = (
         "<p>Se agrega, a partir del ciclo 2026&ndash;07&ndash;14 12z, el modelo determinístico "
         "<strong>ECMWF HRES</strong> (0.25&deg;, Open Data, 2 ciclos/día) corriendo en paralelo e "
@@ -965,7 +968,7 @@ def build_html(forecast, watchlist, images, loc_images, fonts, data_hash, now_ut
 
   <section class="doc">
     <div class="sec-head"><span class="sec-num">01</span><h2>Qué pronosticaba el sistema en este momento</h2></div>
-    <p>El motor consume el pronóstico determinístico GFS (0.25&deg;, NOAA/NCEP) cuatro veces al día, particiona la precipitación en líquida y sólida según la altura de la isoterma 0&deg;C del propio modelo contra su propia orografía, y corre el umbral lluvia&ndash;duración regional (intercepto <em>a</em>=5.5, calibrado contra el inventario histórico del río Maipo) sobre una ventana de 120&nbsp;h. ECMWF Open Data e ICON global se procesan en paralelo cuando están disponibles, con la misma ventana y umbral.</p>
+    <p>El motor consume el pronóstico determinístico GFS (0.25&deg;, NOAA/NCEP) cuatro veces al día, particiona la precipitación en líquida y sólida según la altura de la isoterma 0&deg;C del propio modelo contra su propia orografía, y corre el umbral lluvia&ndash;duración regional (intercepto <em>a</em>=5.5, calibrado contra el inventario histórico del río Maipo) sobre una ventana de 120&nbsp;h. ECMWF Open Data e ICON global se procesan en paralelo cuando están disponibles, con la misma ventana; ECMWF con el mismo umbral regional y ICON con el de Caine global, porque su malla nativa de ~13&nbsp;km no diluye los picos y con el umbral regional se satura.</p>
     {ecmwf_note}
     {icon_note}
     <div class="table-wrap"><table>

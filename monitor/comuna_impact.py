@@ -136,11 +136,8 @@ def main():
     # de dilución; mismo intercepto que regional-a5.5 saturaba el peak_icon a 1.0
     # en 18/20 comunas del watchlist (ver susc_overlay.py). Mismo criterio en
     # ambos módulos.
-    HAZARD_VARIANT_BY_SOURCE = {
-        "gfs": "hazard_max_regional-a5.5.tif",
-        "ecmwf": "hazard_max_regional-a5.5.tif",
-        "icon": "hazard_max.tif",
-    }
+    from variantes import archivo_max  # una sola copia de la regla
+    HAZARD_VARIANT_BY_SOURCE = {m: archivo_max(m) for m in ("gfs", "ecmwf", "icon")}
     for label, sub in [("gfs", ""), ("ecmwf", "ecmwf"), ("icon", "icon")]:
         variant = HAZARD_VARIANT_BY_SOURCE[label]
         vals_by_domain = {}

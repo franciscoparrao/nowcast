@@ -109,11 +109,9 @@ DOMAIN_BASINS = {
 # GFS/ECMWF: bilineal, forzante diluida -> intercepto regional permisivo.
 # ICON: vecino-mas-cercano, ~13 km nativo sin diluir -> intercepto global sin
 # descuento (ver nota de módulo). Mismo criterio en comuna_impact.py.
-HAZARD_VARIANT_BY_SOURCE = {
-    "gfs": "hazard_max_regional-a5.5.tif",
-    "ecmwf": "hazard_max_regional-a5.5.tif",
-    "icon": "hazard_max.tif",
-}
+from variantes import archivo_max  # noqa: E402  (una sola copia de la regla)
+
+HAZARD_VARIANT_BY_SOURCE = {m: archivo_max(m) for m in ("gfs", "ecmwf", "icon")}
 HAZARD_COMBINED = "hazard_max_worst_available.tif"
 HAZARD_SOURCES = [("gfs", ""), ("ecmwf", "ecmwf"), ("icon", "icon")]
 
