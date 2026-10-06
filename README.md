@@ -44,9 +44,12 @@ checked out at these exact paths relative to this repository's root:
 | `nowcast-hydroflux` | `hydroflux-solver-2d` | `../postdoc/hydroflux`       |
 | `nowcast-cli`       | `surtgis-core`        | `../surtgis`                 |
 
-`scripts/check_siblings.sh` verifies the layout. **Without the siblings, build
-`nowcast-core` and its examples on their own** (`cargo test -p nowcast-core`) —
-the core is self-contained and carries all headline results.
+`scripts/check_siblings.sh` verifies the layout. **Without the siblings, use
+`scripts/reproduce_core.sh`**: the core is self-contained and carries all the
+headline results, but Cargo loads every workspace member before building any of
+them, so a plain `cargo test -p nowcast-core` fails when the siblings are absent
+(e.g. from the Zenodo snapshot). The script builds the core in a workspace of its
+own and runs its tests and the paper's examples.
 
 ## Status — v0.1 (decoupled core)
 
@@ -435,6 +438,15 @@ crates pull in sibling engines but vendor no system libraries (GeoTIFF I/O is
 pure-Rust, no GDAL). Every result and figure in the manuscript is produced by a
 runnable example — there are no hidden scripts:
 
+From the Zenodo snapshot (no sibling repositories), one command reproduces the
+core results (Sections 5.1–5.7 of the paper), given the derived CSVs in `data/`:
+
+```bash
+scripts/reproduce_core.sh         # core tests + the nine examples behind 5.1–5.7
+```
+
+With the sibling repositories checked out alongside:
+
 ```bash
 cargo test --workspace            # full unit + doc test suite
 cargo clippy --workspace -- -D warnings
@@ -455,8 +467,9 @@ inventory). Figures are rendered by `docs/paper/figs.R` (R + `ggplot2`).
 ## Citation
 
 If you use this software or its results, please cite the manuscript (see
-`CITATION.cff`). A citable archive with a DOI will be deposited on Zenodo at
-submission.
+`CITATION.cff`). Citable snapshots are archived on Zenodo; the concept DOI
+[10.5281/zenodo.22019137](https://doi.org/10.5281/zenodo.22019137) always resolves
+to the latest version.
 
 ## License
 

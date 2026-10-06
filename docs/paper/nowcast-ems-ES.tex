@@ -1330,7 +1330,11 @@ umbrales publicados, el experimento controlado de resolución, el head-to-head, 
 lead times multi-evento, la descomposición por factor único y la sensibilidad al
 intercepto --- desde el snapshot archivado por sí solo, dados los CSV de entrada
 derivados (regenerados por los scripts de extracción a partir de los conjuntos de
-datos de terceros de abajo). Los crates proveedores son distintos: cada uno
+datos de terceros de abajo), mediante \texttt{scripts/reproduce\_core.sh}. El script
+es necesario porque Cargo resuelve todos los miembros de un workspace antes de
+compilar cualquiera, así que una compilación directa en la raíz del snapshot ya
+exigiría los repositorios hermanos; el script compila el núcleo en un workspace
+propio y corre sus tests y los ejemplos del paper. Los crates proveedores son distintos: cada uno
 envuelve un motor hermano de la familia Rust de geoamenazas del autor mediante una
 dependencia \emph{por ruta} a un repositorio fuera de este snapshot, de modo que la
 vía de crecidas de la Sección~5.8 (GR4J sobre CAMELS-CL Itata, ROC-AUC 0.90, en

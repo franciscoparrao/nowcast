@@ -10,7 +10,9 @@
 # workspace member". This script builds a throwaway workspace that contains
 # only the core — the same root Cargo.toml (same edition, versions, profile)
 # with its member list reduced to `crates/nowcast-core` — and runs the tests and
-# the paper's examples there. Nothing in the snapshot is modified.
+# the paper's examples there. The snapshot's sources are not touched; two
+# examples (backtest_distributed, synthetic_resolution) write the CSVs behind the
+# figures into data/, as they do in a normal checkout.
 #
 # Usage:
 #   scripts/reproduce_core.sh            # tests + every paper example
