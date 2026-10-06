@@ -1311,12 +1311,12 @@ skill, pueda enchufarse sin tocar la lógica de peligro.
 
 \section*{Disponibilidad de código y datos}
 
-El código fuente de \texttt{nowcast} (once crates de Rust, incluidos un ejecutable
-de línea de comandos y bindings de Python por PyO3, más treinta ejemplos) y todos
+El código fuente de \texttt{nowcast} (doce crates de Rust, incluidos un ejecutable
+de línea de comandos y bindings de Python por PyO3, más treinta y seis ejemplos) y todos
 los scripts de extracción de datos están disponibles abiertamente en
 \url{https://github.com/franciscoparrao/nowcast} bajo licencia MIT o Apache-2.0; un
-snapshot citable de la versión usada aquí (v0.1.0) está archivado en Zenodo en
-\url{https://doi.org/10.5281/zenodo.22019138} (DOI de concepto
+snapshot citable de la versión usada aquí (v0.2.0) está archivado en Zenodo en
+\url{https://doi.org/10.5281/zenodo.PENDIENTE} (DOI de concepto
 \url{https://doi.org/10.5281/zenodo.22019137}, que siempre resuelve a la última
 versión).
 
@@ -1356,12 +1356,13 @@ inventario SERNAGEOMIN.
 \emph{Hardware requerido}: cualquier máquina de 64 bits; los experimentos de este
 paper corren en un notebook (la suite completa de ejemplos en minutos; ver la
 Sección~2.6 para los tiempos).
-\emph{Software requerido}: Rust 1.75 o posterior (estable) para el motor y la CLI;
+\emph{Software requerido}: Rust 1.85 o posterior (estable; edición 2024) para el motor central, y 1.91
+o posterior para el ejecutable de línea de comandos, porque así lo declara su dependencia geoespacial;
 Python 3.9 o posterior con \texttt{maturin} para los bindings opcionales; R con
 \texttt{ggplot2} para regenerar las figuras; los scripts de extracción de datos
 necesitan \texttt{numpy}, \texttt{netCDF4}, \texttt{xarray} y \texttt{earthaccess}.
 \emph{Lenguaje de programación}: Rust (con bindings de Python vía PyO3).
-\emph{Tamaño del programa}: aproximadamente 25\,000 líneas en once crates.
+\emph{Tamaño del programa}: aproximadamente 17\,000 líneas de Rust en doce crates.
 \emph{Disponibilidad y costo}: libre y de código abierto, MIT o Apache-2.0, en el
 repositorio y los DOI de Zenodo de arriba.
 

@@ -8,11 +8,10 @@ authors:
     affiliation: "Departamento de Ingeniería Informática, Universidad de Santiago de Chile, Santiago, Chile"
     email: francisco.parra.o@usach.cl
     orcid: "https://orcid.org/0009-0006-0435-1854"
-# NOTA: el registro Zenodo v0.1.0 ya publicado acredita "Parra Ortiz, Francisco".
-# La forma de firma acordada es «Francisco Parra» y aplica desde la proxima version;
-# el ORCID es el mismo en ambas, asi que la atribucion no se pierde.
-version: 0.1.0
-date-released: 2026-06-24
+# NOTA: el registro Zenodo v0.1.0 acredita "Parra Ortiz, Francisco"; desde v0.2.0
+# la firma es «Francisco Parra». El ORCID es el mismo, la atribucion no se pierde.
+version: 0.2.0
+date-released: 2026-10-06
 license: "MIT OR Apache-2.0"
 repository-code: "https://github.com/franciscoparrao/nowcast"
 keywords:
@@ -41,5 +40,5 @@ preferred-citation:
       affiliation: "Departamento de Ingeniería Informática, Universidad de Santiago de Chile, Santiago, Chile"
   journal: "Environmental Modelling & Software"
   year: 2026
-  doi: "10.5281/zenodo.22019137"   # concept DOI (siempre la ultima version)
-  # volume / start / end:  # add on publication
+  # doi / volume / start / end: al publicarse el ARTÍCULO. No va el DOI de Zenodo:
+  # ese identifica el software, no el paper (hasta v0.1.0 estaba aquí por error).

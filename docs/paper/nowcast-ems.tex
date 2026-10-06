@@ -1189,11 +1189,11 @@ without touching the hazard logic.
 
 \section*{Code and data availability}
 
-The \texttt{nowcast} source (eleven Rust crates, including a command-line runner and
-PyO3 Python bindings, plus thirty examples) and all data-extraction scripts
+The \texttt{nowcast} source (twelve Rust crates, including a command-line runner and
+PyO3 Python bindings, plus thirty-six examples) and all data-extraction scripts
 are openly available at \url{https://github.com/franciscoparrao/nowcast} under the
-MIT or Apache-2.0 licence; a citable snapshot of the version used here (v0.1.0) is archived on
-Zenodo at \url{https://doi.org/10.5281/zenodo.22019138} (concept DOI
+MIT or Apache-2.0 licence; a citable snapshot of the version used here (v0.2.0) is archived on
+Zenodo at \url{https://doi.org/10.5281/zenodo.PENDIENTE} (concept DOI
 \url{https://doi.org/10.5281/zenodo.22019137}, which always resolves to the
 latest version). 
 
@@ -1231,12 +1231,13 @@ SERNAGEOMIN inventory.
 \emph{Year first available}: 2026.
 \emph{Hardware required}: any 64-bit machine; the experiments in this paper run on
 a laptop (the full example suite in minutes; see Section~2.6 for timings).
-\emph{Software required}: Rust 1.75 or later (stable) for the engine and CLI;
+\emph{Software required}: Rust 1.85 or later (stable; the 2024 edition) for the core engine, and 1.91
+or later for the command-line runner, whose geospatial dependency declares it;
 Python 3.9 or later with \texttt{maturin} for the optional bindings; R with
 \texttt{ggplot2} to regenerate the figures; the data-extraction scripts need
 \texttt{numpy}, \texttt{netCDF4}, \texttt{xarray} and \texttt{earthaccess}.
 \emph{Program language}: Rust (with Python bindings via PyO3).
-\emph{Program size}: approximately 25\,000 lines across eleven crates.
+\emph{Program size}: approximately 17\,000 lines of Rust across twelve crates.
 \emph{Availability and cost}: free and open source, MIT or Apache-2.0, at the
 repository and Zenodo DOIs above.
 
