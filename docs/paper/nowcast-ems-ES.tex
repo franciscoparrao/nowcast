@@ -2,8 +2,11 @@
 %  TRADUCCIÓN DE TRABAJO AL ESPAÑOL — NO ES EL MANUSCRITO DE RECORD
 %
 %  Fuente:  docs/paper/nowcast-ems.tex
-%  Commit:  0ef61df  (sha del .tex: ver la línea \sourcehash de abajo)
+%  Commit:  fa26195  (sha del .tex: ver la línea \sourcehash de abajo)
 %  Fin:     auditoría del contenido en la lengua del autor.
+%  Nota 2026-10-07: el inglés tuvo una revisión de ESTILO (registro, oraciones
+%  partidas, incisos) sin cambio de contenido ni de cifras; esta traducción
+%  refleja el contenido y las cifras de ese commit, no su redacción literal.
 %
 %  REGLA DE ORO: ante cualquier discrepancia manda el .tex en inglés.
 %  Este archivo NO se somete, NO se cita y NO debe editarse para corregir el
@@ -28,7 +31,7 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta, positioning, fit, backgrounds}
 
-\newcommand{\sourcehash}{0ef61df30a2fe7bc9c9045db3211ead2a03eb66d}
+\newcommand{\sourcehash}{fa26195496cddbd09e2161a4f80ae40683ed413d}
 
 \journal{Environmental Modelling \& Software (traducción de trabajo)}
 
@@ -404,9 +407,7 @@ incendios (propagación superficial de Rothermel \citep{andrews2018} con un
 algoritmo de perímetro de tiempo mínimo de viaje \citep{finney1998}) con una
 cascada de susceptibilidad post-incendio; un ejecutable de línea de comandos expone
 el motor (run, backtest, explain, watch, calibrate) y los bindings PyO3 lo exponen
-a Python. La base de código está cubierta por $\sim$106 tests unitarios y de
-documentación, el linter corre limpio bajo \texttt{-D warnings}, y treinta
-ejemplos ejecutables reproducen cada resultado de abajo. Cada proveedor es un
+a Python. La base de código está cubierta por $\sim$150 tests unitarios, de integración y de documentación, el linter corre limpio bajo \texttt{-D warnings}, y treinta y seis ejemplos ejecutables reproducen cada resultado de abajo. Cada proveedor es un
 crate con dependencias aisladas que implementa el mismo trait \texttt{Forcing}, de
 modo que el diseño es reutilizable y extensible por construcción: agregar una
 forzante de amenaza es un crate nuevo, no una edición al núcleo. Esa separación, y

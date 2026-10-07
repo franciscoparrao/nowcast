@@ -154,12 +154,7 @@ with metrics appropriate for sparse, month-dated inventories, and the resolution
 diagnosis that this instrument makes possible. The established components (the
 Caine I--D law, a logistic factor, prefix-sum windows) enter as building blocks
 and are not claimed as novel; the contribution is the architecture that makes
-them independently swappable and the diagnosis that architecture enables. On real Chilean data, distributing daily forcing and
-adding real susceptibility does not improve discrimination; this honest null,
-with a sub-daily head-to-head, locates the binding constraint on the forcing
-resolution rather than the model; a flood path validated against observed
-streamflow shows the converse, where routing integrates the forcing, daily
-resolution suffices (out-of-sample ROC-AUC 0.90).
+them independently swappable and the diagnosis that architecture enables. On real Chilean data, distributing daily forcing and adding real susceptibility does not improve discrimination. That null, together with a sub-daily head-to-head, places the binding constraint on the resolution of the forcing, not on the model. A flood path validated against observed streamflow shows the converse case: where routing integrates the forcing, daily resolution suffices (out-of-sample ROC-AUC 0.90).
 
 \section{The nowcast engine}
 
@@ -176,8 +171,7 @@ where $\mathrm{susceptibility}\in[0,1]$ is a static background field (a terrain
 index, a physically-based factor-of-safety proxy, or a machine-learning
 susceptibility raster) and $\mathrm{trigger\_factor}\in[0,1]$ is a dimensionless
 modulation derived from the dynamic forcing. Both factors lie in $[0,1]$, so the
-product is a bounded hazard index. We deliberately call it an \emph{index}, not a
-calibrated probability (Section~\ref{sec:limits}).
+product is a bounded hazard index. We call it an \emph{index} because it is not a calibrated probability (Section~\ref{sec:limits}).
 
 The trigger factor is a smooth function of an \emph{exceedance ratio} $E$, how
 far the forcing has crossed a critical level. A hard threshold ($E\geq 1$ fires,
@@ -202,8 +196,7 @@ pub trait Forcing {
     fn depth_mm(&self, cell: usize, step: usize) -> f64;
 }
 \end{verbatim}
-Random access (rather than a pull/iterator model) is deliberate: the I--D logic
-accumulates rolling windows, and backtesting replays whole dated series. Shipped
+The trait offers random access, not a pull or iterator model, because the I--D logic accumulates rolling windows and backtesting replays whole dated series. Shipped
 implementations are a single observed gauge broadcast over a grid, an independent
 series per cell (a gridded precipitation product) and, through the provider
 crates, snowmelt runoff and InSAR deformation. The same trait therefore admits a
@@ -219,14 +212,7 @@ initialise/update/get--set functions that any model implements to become
 composable, and the Object Modeling System \citep{david2013} approaches the same
 problem from a software-engineering direction, using lightweight annotations
 instead of a prescriptive component API. We do not propose \texttt{Forcing} as an
-alternative to these. It is deliberately narrower: a read-only, random-access view
-of \emph{one} scalar field, with no lifecycle, no time control and no
-bidirectional exchange, which is what makes the random access that the I--D window
-kernel and the backtester both need cheap to provide. The trade is the usual one:
-a single-purpose interface is trivial for a provider to implement --- each of our
-six adapters is a few dozen lines --- but it cannot express two-way coupling or
-let a component drive the clock, which is precisely what BMI and OpenMI exist to
-do. The two levels compose rather than compete: a BMI-exposed model is a
+alternative to these. It is narrower: a read-only, random-access view of \emph{one} scalar field, with no lifecycle, no time control and no bidirectional exchange. That narrowness is what makes random access cheap, and both the I--D window kernel and the backtester depend on it. The trade is the usual one. A single-purpose interface is trivial for a provider to implement (each of our six adapters is a few dozen lines), but it cannot express two-way coupling or let a component drive the clock, and those are the jobs BMI and OpenMI exist to do. The two levels compose rather than compete: a BMI-exposed model is a
 legitimate source behind a \texttt{Forcing} implementation, and wrapping the
 engine itself in BMI so that it can be driven inside a CSDMS or OpenMI
 composition is the natural interoperability step, left as future work.
@@ -329,16 +315,10 @@ already-interpretable input.
 \subsection{Implementation}
 
 The engine is written in Rust (edition 2024) as a Cargo workspace of ten
-crates. The core depends only on \texttt{std} and an error-handling crate, so it
-builds and tests offline with no system dependencies; native providers are
-separate crates that wrap sibling engines through path dependencies:
+crates. The core depends only on \texttt{std} and an error-handling crate, so it builds and tests offline with no system dependencies. Native providers are separate crates that wrap sibling engines through path dependencies:
 rainfall--runoff (GR4J/HBV; \citealp{perrin2003,seibert2012}), distributed
 snowmelt, 2-D shallow water \citep{audusse2004,toro1994}, an agent-based
-debris-flow model in the cellular-automata tradition \citep{dambrosio2003}, the SurtGIS geospatial raster substrate \citep{parra2026surtgis} (native GeoTIFF I/O, no GDAL dependency), PS-InSAR/SBAS deformation \citep{ferretti2001,berardino2002}, and a wildfire-spread model (Rothermel surface-fire spread \citep{andrews2018} with a minimum-travel-time perimeter algorithm \citep{finney1998}) with a
-post-fire susceptibility cascade; a command-line runner exposes the engine
-(run, backtest, explain, watch, calibrate) and PyO3 bindings expose it to Python. The codebase is covered by
-$\sim$106 unit and documentation tests, the linter runs clean under
-\texttt{-D warnings}, and thirty runnable examples reproduce every result below.
+debris-flow model in the cellular-automata tradition \citep{dambrosio2003}, the SurtGIS geospatial raster substrate \citep{parra2026surtgis} (native GeoTIFF I/O, no GDAL dependency), PS-InSAR/SBAS deformation \citep{ferretti2001,berardino2002}, and a wildfire-spread model (Rothermel surface-fire spread \citep{andrews2018} with a minimum-travel-time perimeter algorithm \citep{finney1998}) with a post-fire susceptibility cascade. A command-line runner exposes the engine (run, backtest, explain, watch, calibrate), and PyO3 bindings expose it to Python. The codebase is covered by $\sim$150 unit, integration and documentation tests, the linter runs clean under \texttt{-D warnings}, and thirty-six runnable examples reproduce every result below.
 Each provider is a dependency-isolated crate implementing the same \texttt{Forcing}
 trait, so the design is reusable and extensible by construction: adding a hazard
 forcing is a new crate, not an edit to the core. That separation, not any single
@@ -582,7 +562,7 @@ not the choice of published threshold (\texttt{published\_thresholds} example). 
 same 35 curves are re-used in Section~\ref{sec:intercept} to show that the sub-daily
 results do not hinge on the choice of curve either.
 
-\subsection{Distributed daily backtest, an honest null}
+\subsection{Distributed daily backtest: a null result}
 
 Repeating the backtest with \emph{distributed} CR2MET rainfall over a
 $15\times18$ grid (270 cells, 123\,120 cell-months, 884 in the event footprint),
@@ -600,10 +580,7 @@ configuration), and the bootstrap probability that AUC exceeds 0.5 is only
 than the grid-wide average (49\,mm).
 
 \paragraph{What this null does, and does not, accuse}
-That last number deserves scrutiny rather than a passing mention: if recorded
-events sit where it rained \emph{less}, the finger points at the inventory or the
-rainfall field, not at the time step, and it would be self-serving to read it as
-evidence for a resolution argument. We therefore tested the competing explanations
+That last number needs scrutiny. If recorded events sit where it rained \emph{less}, the finger points at the inventory or the rainfall field, not at the time step, and reading it as evidence for a resolution argument would be self-serving. We therefore tested the competing explanations
 on the same data (\texttt{null\_diagnosis} example). \emph{Is it a dry cell or a dry
 month?} Removing the spatial gradient by standardising each cell against its own
 history leaves the null intact (AUC 0.472; the mean event-month anomaly is
@@ -611,8 +588,7 @@ $z=-0.13$), so there is no temporal signal being masked by the space dimension.
 \emph{Is the record merely displaced?} Dilating the \emph{label} --- counting a
 cell-month as positive if an event is recorded within $\pm k$ months and $r$ cells
 --- lifts AUC only to 0.496 at $\pm2$ months and one cell of slack, still
-indistinguishable from chance, so the events are not simply mis-filed by a month or
-a cell. \emph{Is it exposure bias?} Cells that ever record an event receive
+indistinguishable from chance, so the events are not just mis-filed by a month or a cell. \emph{Is it exposure bias?} Cells that ever record an event receive
 essentially the same climatological rainfall as the rest ($-0.2$\,\%), though they
 are slightly more susceptible (0.351 vs 0.329), so the inventory is not
 concentrated in a systematically drier part of the basin. Most directly, a recorded
@@ -620,8 +596,7 @@ event cell-month sits at the 46th percentile of its own cell's history and the 4
 percentile of its own month's spatial distribution: on both axes it is where chance
 would put it.
 
-The honest conclusion is stronger and narrower than the one this null is often
-asked to support. The daily 5\,km field carries no recoverable information about
+The conclusion that follows is stronger and narrower than the one this null is often asked to support. The daily 5\,km field carries no recoverable information about
 where and when these events were recorded, and no reasonable relaxation of the
 label recovers any; but that is a statement about \emph{this target and this
 product jointly}, and it cannot be attributed to temporal resolution alone. The
@@ -720,9 +695,7 @@ $0.43\to0.29$ --- and that mildness is itself informative: the pooled number
 averages a population the aggregation annihilates with one it leaves untouched, so
 reporting it alone would hide the effect entirely. With these labels, 68\,\% of
 failures are accumulation-driven, and those a daily product catches perfectly well.
-The honest statement is therefore not that daily forcing is blind, but that it is
-blind \emph{to the sub-daily triggering route} --- which is the route an I--D
-nowcast exists to catch, and the one the field cases confirm
+Daily forcing is therefore not blind in general: it is blind \emph{to the sub-daily triggering route}. That is the route an I--D nowcast exists to catch, and the one the field cases confirm
 (Section~\ref{sec:singlefactor}, where resolution flips detection only for the
 short Caj\'on del Maipo burst). The experiment isolates the \emph{aggregation
 mechanism} under known ground truth with the model and terrain fixed; it is not a
@@ -758,9 +731,7 @@ event}, so this is a triggering-timing comparison, can each product cross the cu
 and when, not a discrimination test; discrimination is the business of the
 distributed backtest (Section~5.2) and the controlled experiment
 (Section~\ref{sec:synthetic}). Throughout this section and the next we use the
-regional intercept $a^\star=5.5$\,mm\,h$^{-1}$ calibrated in Section~\ref{sec:lumped}
---- the only I--D curve fitted to data in this work --- rather than a value chosen
-to make the comparison work; Section~\ref{sec:intercept} shows the conclusion does
+regional intercept $a^\star=5.5$\,mm\,h$^{-1}$ calibrated in Section~\ref{sec:lumped}, the only I--D curve fitted to data in this work, and not a value chosen to make the comparison work. Section~\ref{sec:intercept} shows the conclusion does
 not rest on that choice. With a daily value the finest resolvable duration is
 24\,h, so the maximum resolvable mean intensity is (daily total)$/24$\,h: CR2MET
 sees 30.1\,mm spread to 0.66\,mm\,h$^{-1}$, an exceedance of at most 0.45
@@ -775,9 +746,7 @@ disagree on magnitude (IMERG 108\,mm vs CR2MET 30\,mm at this
 core); IMERG is known to overestimate in arid convective regimes while CR2MET,
 gauge-blended over a near-ungauged zone, likely underestimates, so the true
 total lies between. A CR2MET-daily vs IMERG-half-hourly contrast therefore
-confounds the product with its resolution, and Section~\ref{sec:singlefactor}
-separates them explicitly --- with a result that qualifies this one, since at
-\emph{this} event the product, not the resolution, is what decides detection.
+confounds the product with its resolution, Section~\ref{sec:singlefactor} separates the two, and its result qualifies this one: at \emph{this} event the product, not the resolution, decides detection.
 What survives the separation unchanged is the timing: no daily product, whatever
 its magnitude, can place the crossing at 04:30. The purely
 arithmetic part of the argument is also independent of the magnitude dispute:
@@ -890,9 +859,7 @@ Maipo does resolution flip detection with the product held fixed
 ($E=0.45\to1.23$), and there the product factor does not ($E=0.18\to0.45$, still
 below the curve).
 
-So of three events, resolution changes the \emph{detection} in one, and in that one
-the burst is short and weak --- precisely the regime the aggregation argument
-predicts. In all three it changes the \emph{timing}, which no daily product can
+So of three events, resolution changes the \emph{detection} in one, and in that one the burst is short and weak, which is the regime the aggregation argument predicts. In all three it changes the \emph{timing}, which no daily product can
 supply at any magnitude. We state the distinction plainly because the two claims
 have different strengths: sub-daily forcing yields intra-day lead time generally,
 whereas it rescues detection specifically for short bursts, and a case like
@@ -965,8 +932,7 @@ Second, and without selecting any intercept at all, we re-ran the 35 published
 power laws of \citet{guzzetti2007} --- each with its own $(a,b)$, unchanged ---
 over each event at both resolutions. Resolution flips the outcome (sub-daily fires,
 daily does not) for 8 of 35 curves at Atacama, 8 of 35 at Villa Santa Luc\'ia, and 2
-of 35 at Caj\'on del Maipo. The Caj\'on del Maipo figure also states the honest
-limit of that event: it is a weak burst (28\,mm, 5\,mm\,h$^{-1}$ peak) that only 4
+of 35 at Caj\'on del Maipo. The Caj\'on del Maipo figure also shows the limit of that event: it is a weak burst (28\,mm, 5\,mm\,h$^{-1}$ peak) that only 4
 of the 35 published curves detect at \emph{any} resolution, so while the
 resolution effect there is real, it is demonstrated on an event near the detection
 floor of the literature. At the two stronger events, where most published curves do
@@ -974,11 +940,7 @@ fire, the resolution effect is carried by roughly a quarter of the ensemble. Bot
 analyses are reproduced by the \texttt{intercept\_sensitivity} example.
 
 Two caveats bound this. Applying $a^\star$, fitted in the R\'io Maipo, to storms in
-the Atacama and in Patagonia is a transfer well outside its calibration region, and
-we make no claim that 5.5\,mm\,h$^{-1}$ is the right regional curve for either;
-the point of Table~\ref{tab:intercept} is precisely that the resolution result
-survives whatever intercept one adopts within a broad band, so no such claim is
-needed. And $b$ is held at 0.39 throughout: the critical intercept of
+the Atacama and in Patagonia is a transfer well outside its calibration region, and we make no claim that 5.5\,mm\,h$^{-1}$ is the right regional curve for either. Table~\ref{tab:intercept} shows that the resolution result survives whatever intercept one adopts within a broad band, so no such claim is needed. And $b$ is held at 0.39 throughout: the critical intercept of
 Eq.~\ref{eq:acrit} is defined for a given exponent, and the published-curve
 ensemble, which varies $b$ from 0.19 to 1.50, is what covers that dimension.
 
@@ -1029,17 +991,11 @@ routing integrates, and fails where triggering is sub-daily.
 \subsection{Architecture extensibility}
 
 Beyond the two validated paths above, the engine ships further adapters that
-exercise the \emph{interface} rather than make a hazard claim; we are explicit that
-none is a validated prediction. A snowmelt provider supplies rain-plus-melt runoff
-per cell (wrapping a distributed snowmelt model, relevant as mountain snowmelt
-timing itself shifts under warming \citep{musselman2017}); an InSAR provider turns a
+exercise the \emph{interface} and make no hazard claim: none of them is a validated prediction. A snowmelt provider supplies rain-plus-melt runoff per cell by wrapping a distributed snowmelt model, which matters in the Andes because mountain snowmelt timing itself shifts under warming \citep{musselman2017}. An InSAR provider turns a
 line-of-sight velocity field into a duration-independent deformation trigger that
 fuses with rainfall by noisy-OR, so a slope already creeping
-($|v|>v_{\mathrm{crit}}$) can cross the alert level under rain that alone would not
-trigger; an agent-based debris-flow model, run on demand from an alert, returns
-a runout footprint onto which the coarse probability is concentrated, the landslide
-analogue of the flood coupling of Section~2.5; and a wildfire-spread model couples
-the other way, as a one-way cascade in which a simulated burn scar amplifies the
+($|v|>v_{\mathrm{crit}}$) can cross the alert level under rain that alone would not trigger. An agent-based debris-flow model, run on demand from an alert, returns
+a runout footprint onto which the coarse probability is concentrated, the landslide analogue of the flood coupling of Section~2.5. A wildfire-spread model couples the other way, as a one-way cascade in which a simulated burn scar amplifies the
 static susceptibility, so a subsequent rainfall nowcast sees the elevated post-fire
 debris-flow hazard the scar is known to carry \citep{cannon2008}. Each is a runnable example. Their
 purpose here is to show that a new forcing, a new trigger family and a new
@@ -1094,9 +1050,7 @@ Aggregated to five days the identical event falls to the 97th percentile and is
 equalled 127 times, roughly five times per winter, because it concentrated 87\,\%
 of its five-day total into two days. A rarity statistic computed on a window
 wider than the triggering burst therefore reports a routine event where a
-1-in-15-winter one occurred. This matters operationally because anomaly- or
-return-period-based triggers are a common alternative to fixed I--D curves: they
-inherit the resolution ceiling through the reference climatology even when the
+1-in-15-winter one occurred. The consequence is operational. Anomaly- or return-period-based triggers are a common alternative to fixed I--D curves, and they inherit the resolution ceiling through the reference climatology even when the
 forcing itself is sub-daily, which is a failure mode the forcing-side diagnosis
 alone does not expose.
 
@@ -1117,16 +1071,14 @@ on the forcing-agnostic design: swapping CR2MET daily for IMERG half-hourly, or
 adding a deformation trigger, requires no change to the hazard logic. The same
 interface lets the engine act as the downstream integrator of a family of process
 models, and the one-way on-demand coupling keeps the expensive physics confined to
-alerted areas. This is a different design point from existing tools rather than a
-replacement for them. Operational nowcasts such as LHASA couple a static susceptibility map with a
+alerted areas. It occupies a different design point from existing tools and does not replace them. Operational nowcasts such as LHASA couple a static susceptibility map with a
 specific rainfall product (IMERG) and trigger, as a global monolithic chain
 \citep{kirschbaum2018}, and its data-driven successor replaces that map with
 explanatory variables inside the same fixed chain \citep{stanley2021}; threshold
 calculators such as CTRL-T \citep{melillo2018} automate regional rainfall-threshold
 estimation from event catalogues.
 nowcast is complementary: it makes the forcing, the trigger and the
-physical-refinement model \emph{independently swappable} behind one interface, which
-is precisely what let us hold the model fixed and vary the forcing resolution. It is
+physical-refinement model \emph{independently swappable} behind one interface, and that is what let us hold the model fixed and vary the forcing resolution. It is
 an experimental and integrating substrate, not a calibrated operational product, and
 an operational chain like LHASA is the kind of system its outputs would feed or be
 benchmarked against.
@@ -1134,14 +1086,12 @@ benchmarked against.
 \section{Limitations and future work}
 \label{sec:limits}
 
-We are explicit about what the engine does \emph{not} yet do. (i) The raw hazard
+Six things are still missing from the engine. (i) The raw hazard
 is a bounded \emph{index}; the engine ships isotonic calibration \citep{niculescumizil2005} that maps it to a
 probability with reliability diagnostics (Brier score and skill \citep{brier1950}, Wilson intervals \citep{wilson1927},
 expected calibration error). Fitting it on the real distributed Maipo backtest
 (odd years $\to$ even) collapses the calibrated probability to climatology (Brier
-skill $-3.4$ for the raw index $\to -0.003$ calibrated; expected calibration error
-$0.080\to0.003$): an honest confirmation that the daily index carries no skill to
-calibrate, consistent with the Section~5.2 null. Validating the calibration where
+skill $-3.4$ for the raw index $\to -0.003$ calibrated; expected calibration error $0.080\to0.003$), which confirms that the daily index carries no skill to calibrate, consistent with the Section~5.2 null. Validating the calibration where
 skill is present (the flood path, sub-daily forcing) remains future work.
 (ii) Trigger parameters are calibrated
 minimally; a formal calibration with uncertainty, for which the sibling
@@ -1176,12 +1126,8 @@ susceptibility into a time-varying hazard through a single interchangeable forci
 interface and a composable trigger, with native providers for rainfall--runoff,
 snowmelt, shallow-water inundation, agent-based debris-flow runout, a geospatial
 substrate and InSAR deformation, and exact closed-form attribution of every alert.
-Used as an experimental instrument over Chilean basins, it yields an honest and,
-we argue, generalisable result: the resolution of the forcing, not the
-model, sets the skill ceiling of intensity--duration nowcasting. A global I--D
-threshold is reached on 7 of 13\,880 days and never on a recorded event month; a calibrated regional threshold transfers
-but, distributed at daily resolution, does not discriminate event locations
-(AUC $\approx 0.48$); the identical trigger on half-hourly satellite forcing pins
+Used as an experimental instrument over Chilean basins, it yields a result that, we argue, generalises: the resolution of the forcing, not the
+model, sets the skill ceiling of intensity--duration nowcasting. A global I--D threshold is reached on 7 of 13\,880 days and never on a recorded event month. A calibrated regional threshold transfers, but at daily resolution and distributed over the basin it does not discriminate event locations (AUC $\approx 0.48$). The identical trigger on half-hourly satellite forcing pins
 the threshold crossing to a timestamp hours ahead of documented flows across three
 climatically distinct events, and a single-factor decomposition separates what that
 gain owes to the rainfall product from what it owes to its resolution, which turns
@@ -1222,8 +1168,7 @@ command-line runner, which links the geospatial substrate, cannot be rebuilt fro
 the Zenodo record on its own; they require the sibling repositories checked out
 alongside, which \texttt{scripts/check\_siblings.sh} verifies and the README
 documents. Publishing the sibling engines as versioned registry crates would close
-this gap and is the intended path; until then the honest scope of the archived
-artefact is the core engine and the resolution results, which is where the paper's
+this gap and is the intended path; until then the scope of the archived artefact is the core engine and the resolution results, which is where the paper's
 claims live. Input datasets are third-party and openly documented: CR2MET v2.5,
 GPM IMERG Final v07 and Early NRT v07 (NASA GES DISC; the latter feeds the live
 chain of limitation~(iii)), GOES-East ABI-L2-RRQPEF (NOAA, public AWS bucket),
