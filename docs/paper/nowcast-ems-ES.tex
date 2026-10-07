@@ -359,8 +359,7 @@ proceso que refina la alerta hacia un campo físico, solo sobre el área alertad
 Para \textbf{crecidas}, un solver 2-D de aguas someras (flujos HLLC,
 reconstrucción bien balanceada de Audusse \citep{audusse2004}, fricción de Manning
 semi-implícita) rutea el caudal alertante sobre el modelo digital de elevación
-local y devuelve una profundidad de inundación por celda. Para
-\textbf{deslizamientos/flujos de detritos}, un modelo basado en agentes (agentes
+local y devuelve una profundidad de inundación por celda. El solver, hydroflux, y su verificación contra benchmarks analíticos y comunitarios se describen en un manuscrito aparte, hoy en evaluación en esta misma revista; aquí se usa solo como componente acoplado. Para \textbf{deslizamientos/flujos de detritos}, un modelo basado en agentes (agentes
 de lluvia y de flujo sobre el ráster de terreno, calibrado con el evento de
 Atacama 2015) devuelve la huella de runout. Esa calibración alimenta únicamente la
 demostración de huella de runout y es independiente del análisis de lead time I--D
@@ -399,8 +398,7 @@ proveedores nativos son crates separados que envuelven motores hermanos mediante
 dependencias por ruta: lluvia--escorrentía (GR4J/HBV;
 \citealp{perrin2003,seibert2012}), deshielo distribuido, aguas someras 2-D
 \citep{audusse2004,toro1994}, un modelo de flujo de detritos basado en agentes en
-la tradición de los autómatas celulares \citep{dambrosio2003}, el sustrato ráster
-geoespacial (E/S GeoTIFF nativa, sin dependencia de GDAL), deformación
+la tradición de los autómatas celulares \citep{dambrosio2003}, el sustrato ráster geoespacial SurtGIS \citep{parra2026surtgis} (E/S GeoTIFF nativa, sin dependencia de GDAL), deformación
 PS-InSAR/SBAS \citep{ferretti2001,berardino2002}, y un modelo de propagación de
 incendios (propagación superficial de Rothermel \citep{andrews2018} con un
 algoritmo de perímetro de tiempo mínimo de viaje \citep{finney1998}) con una
@@ -1579,6 +1577,11 @@ Machine Learning (ICML), pp.\ 625--632.
 Peckham, S.D., Hutton, E.W.H., Norris, B., 2013. A component-based approach to
 integrated modeling in the geosciences: The design of CSDMS. Comput.\ Geosci.\
 53, 3--12. \url{https://doi.org/10.1016/j.cageo.2012.04.002}.
+
+\bibitem[Parra(2026)]{parra2026surtgis}
+Parra, F., 2026. SurtGIS: A high-performance raster geospatial analysis library
+in Rust with WebAssembly and Python support. Environ.\ Model.\ Softw.\ 204,
+107102. \url{https://doi.org/10.1016/j.envsoft.2026.107102}.
 
 \bibitem[Peres et al.(2018)]{peres2018}
 Peres, D.J., Cancelliere, A., Greco, R., Bogaard, T., 2018. Influence of

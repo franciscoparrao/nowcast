@@ -297,8 +297,7 @@ alerts, the engine couples, one-way and on demand, to a process model that
 refines the alert into a physical field, only over the alerted area. For
 \textbf{floods}, a 2-D shallow-water solver (HLLC fluxes, Audusse well-balanced
 reconstruction \citep{audusse2004}, semi-implicit Manning friction) routes the
-alerting discharge over the local digital elevation model and returns an
-inundation depth per cell. For \textbf{landslides/debris flows}, an agent-based
+alerting discharge over the local digital elevation model and returns an inundation depth per cell. The solver, hydroflux, and its verification against analytical and community benchmarks are described in a separate manuscript currently under review in this journal; here it is used only as a coupled component. For \textbf{landslides/debris flows}, an agent-based
 model (rain and flow agents over the terrain raster, calibrated on the 2015
 Atacama event) returns the runout footprint. That calibration feeds only the
 runout-footprint demonstration and is independent of the I--D lead-time analysis
@@ -335,8 +334,7 @@ builds and tests offline with no system dependencies; native providers are
 separate crates that wrap sibling engines through path dependencies:
 rainfall--runoff (GR4J/HBV; \citealp{perrin2003,seibert2012}), distributed
 snowmelt, 2-D shallow water \citep{audusse2004,toro1994}, an agent-based
-debris-flow model in the cellular-automata tradition \citep{dambrosio2003}, the geospatial raster substrate (native GeoTIFF I/O, no GDAL
-dependency), PS-InSAR/SBAS deformation \citep{ferretti2001,berardino2002}, and a wildfire-spread model (Rothermel surface-fire spread \citep{andrews2018} with a minimum-travel-time perimeter algorithm \citep{finney1998}) with a
+debris-flow model in the cellular-automata tradition \citep{dambrosio2003}, the SurtGIS geospatial raster substrate \citep{parra2026surtgis} (native GeoTIFF I/O, no GDAL dependency), PS-InSAR/SBAS deformation \citep{ferretti2001,berardino2002}, and a wildfire-spread model (Rothermel surface-fire spread \citep{andrews2018} with a minimum-travel-time perimeter algorithm \citep{finney1998}) with a
 post-fire susceptibility cascade; a command-line runner exposes the engine
 (run, backtest, explain, watch, calibrate) and PyO3 bindings expose it to Python. The codebase is covered by
 $\sim$106 unit and documentation tests, the linter runs clean under
@@ -1454,6 +1452,11 @@ Machine Learning (ICML), pp.\ 625--632.
 Peckham, S.D., Hutton, E.W.H., Norris, B., 2013. A component-based approach to
 integrated modeling in the geosciences: The design of CSDMS. Comput.\ Geosci.\
 53, 3--12. \url{https://doi.org/10.1016/j.cageo.2012.04.002}.
+
+\bibitem[Parra(2026)]{parra2026surtgis}
+Parra, F., 2026. SurtGIS: A high-performance raster geospatial analysis library
+in Rust with WebAssembly and Python support. Environ.\ Model.\ Softw.\ 204,
+107102. \url{https://doi.org/10.1016/j.envsoft.2026.107102}.
 
 \bibitem[Peres et al.(2018)]{peres2018}
 Peres, D.J., Cancelliere, A., Greco, R., Bogaard, T., 2018. Influence of
