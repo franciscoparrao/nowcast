@@ -612,6 +612,13 @@ estructura también se mantiene 1:1 (8 secciones, 19 subsecciones, 9 tablas, 6
 figuras, 5 ecuaciones, 27 labels, 43 citas). Si el inglés cambia, el sha queda
 obsoleto y el chequeo de cifras avisa.
 
+**OJO: la bibliografía IMPRESA no sale de `refs.bib`** (verify-refs, 2026-10-07). Los
+dos `.tex` traen un bloque `thebibliography` escrito a mano (revistas abreviadas,
+"et al."), idéntico en EN y ES, y no hay `\bibliography{}`: compilar con BibTeX no lo
+regenera. `refs.bib` es la fuente que verifica `/verify-refs`; cualquier corrección va
+en LOS TRES (refs.bib + bloque EN + bloque ES). Cruzado entrada a entrada ese día
+(año + DOI): coincidían 41/43, y las 2 distintas eran las que se corrigieron.
+
 ## Conexiones con tu ecosistema
 - **rainflow** / **snowmelt-rs**: proveen las forzantes dinámicas.
 - **Smelt**: modelo de susceptibilidad base + XAI.
