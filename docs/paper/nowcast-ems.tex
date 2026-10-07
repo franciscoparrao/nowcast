@@ -110,11 +110,12 @@ famously the intensity--duration (I--D) power law of \citet{caine1980} and its
 many regional successors \citep{guzzetti2007,segoni2018,gariano2016}, estimate \emph{when}
 triggering rainfall has occurred. Operational early-warning, however, needs
 \emph{where} and \emph{when} together, as a hazard field that evolves through an
-event \citep{bogaard2018}. This coupling is already realised operationally: NASA's
+event; and the \emph{when} itself depends on the hydrological state that prepares a
+slope, not only on the meteorological trigger \citep{bogaard2018}. This coupling is already realised operationally: NASA's
 LHASA gates a static landslide susceptibility map with GPM IMERG satellite-rainfall
 thresholds at the global scale \citep{kirschbaum2018}, its successor adds a
 data-driven model \citep{stanley2021}, and geographical landslide early-warning
-systems are now widespread \citep{guzzetti2020}. What these share is a
+systems are operational in a growing number of nations and regions \citep{guzzetti2020}. What these share is a
 \emph{product-specific} design: the forcing, the trigger and the susceptibility
 model are welded into one operational chain, so swapping the rainfall product,
 adding a second trigger (snowmelt, discharge, deformation), or attaching a
@@ -424,7 +425,7 @@ precipitation is CR2MET v2.5 (0.05$^\circ$, $\sim$5\,km; \citealp{boisier2018cr2
 region that has experienced a sustained decline in rainfall since 2010, the
 Central Chile Mega Drought \citep{garreaud2019,boisier2018}.
 Sub-daily precipitation is GPM IMERG Final v07 half-hourly ($\sim$0.1$^\circ$;
-\citealp{huffman2020,tan2019}). Catchment forcing for the flood path uses CAMELS-CL
+\citealp{huffman2023,tan2019}). Catchment forcing for the flood path uses CAMELS-CL
 \citep{alvarez2018}. The dated event inventory is the SERNAGEOMIN
 landslide/flow catalogue, consistent with regional patterns of rainfall-triggered
 fatal landslides across Chile and Latin America \citep{sepulveda2015}; events are dated to year and month from the record
@@ -567,7 +568,8 @@ high across the sweep; the critical success index peaks at $a^\star\approx5.5$\,
 Self-calibration invites the objection that a published threshold, taken as is,
 might do better. We tested this directly by applying, unchanged, the 35 empirical
 I--D power laws ($I=a\,D^{-b}$, mm\,h$^{-1}$) compiled by \citet{guzzetti2007}
-(their Table~2, the canonical collation of the literature) to the same CR2MET
+(the pure power laws of their Table~2, excluding its asymptotic and normalised
+forms) to the same CR2MET
 daily forcing. The outcome is dictated by resolution, not by the curve: 10 of the
 35 sit \emph{structurally} above the daily ceiling --- on a basin whose wettest
 day in 38 years is 136\,mm, no daily forcing can reach their 24\,h intensity, since
@@ -1102,8 +1104,9 @@ alone does not expose.
 
 \textbf{The inventory ceiling.} A second, independent ceiling is the validation
 target. The inventory is dated to $\sim$month and is incomplete, echoing a
-broader finding that uncertain identification of the triggering rainfall episode
-itself distorts threshold assessment even where daily inventories exist
+broader finding, from synthetic experiments, that uncertain identification of the
+triggering rainfall episode itself distorts threshold assessment, generally biasing
+thresholds low, with an effect that grows once dating errors exceed one day
 \citep{peres2018}. Month-level
 dating alone accounts for a large fraction of apparent misses
 (Table~\ref{tab:lumped}), and incompleteness makes per-cell FAR uninformative.
@@ -1117,10 +1120,12 @@ adding a deformation trigger, requires no change to the hazard logic. The same
 interface lets the engine act as the downstream integrator of a family of process
 models, and the one-way on-demand coupling keeps the expensive physics confined to
 alerted areas. This is a different design point from existing tools rather than a
-replacement for them. Operational nowcasts such as LHASA \citep{kirschbaum2018,
-stanley2021} couple a static susceptibility map with a specific rainfall product
-(IMERG) and trigger, as a global monolithic chain; threshold calculators such as
-CTRL-T \citep{melillo2018} automate regional I--D estimation from event catalogues.
+replacement for them. Operational nowcasts such as LHASA couple a static susceptibility map with a
+specific rainfall product (IMERG) and trigger, as a global monolithic chain
+\citep{kirschbaum2018}, and its data-driven successor replaces that map with
+explanatory variables inside the same fixed chain \citep{stanley2021}; threshold
+calculators such as CTRL-T \citep{melillo2018} automate regional rainfall-threshold
+estimation from event catalogues.
 nowcast is complementary: it makes the forcing, the trigger and the
 physical-refinement model \emph{independently swappable} behind one interface, which
 is precisely what let us hold the model fixed and vary the forcing resolution. It is
@@ -1403,8 +1408,8 @@ Hanley, J.A., McNeil, B.J., 1982. The meaning and use of the area under a
 receiver operating characteristic (ROC) curve. Radiology 143 (1), 29--36.
 \url{https://doi.org/10.1148/radiology.143.1.7063747}.
 
-\bibitem[Huffman et al.(2020)]{huffman2020}
-Huffman, G.J., et al., 2020. GPM IMERG Final Precipitation L3 Half Hourly, V07.
+\bibitem[Huffman et al.(2023)]{huffman2023}
+Huffman, G.J., et al., 2023. GPM IMERG Final Precipitation L3 Half Hourly, V07.
 NASA GES DISC. \url{https://doi.org/10.5067/GPM/IMERG/3B-HH/07}.
 
 \bibitem[Hutton et al.(2020)]{hutton2020}
@@ -1419,8 +1424,8 @@ rainfall-triggered landslide hazard for situational awareness. Earth's Future 6
 
 \bibitem[Lundberg and Lee(2017)]{lundberg2017}
 Lundberg, S.M., Lee, S.-I., 2017. A unified approach to interpreting model
-predictions. Adv.\ Neural Inf.\ Process.\ Syst.\ 30.
-\url{https://doi.org/10.48550/arXiv.1705.07874}.
+predictions. In: Advances in Neural Information Processing Systems 30 (NeurIPS
+2017). \url{https://proceedings.neurips.cc/paper/2017/hash/8a20a8621978632d76c43dfd28b67767-Abstract.html}.
 
 \bibitem[Melillo et al.(2018)]{melillo2018}
 Melillo, M., Brunetti, M.T., Peruccacci, S., Gariano, S.L., Roccati, A.,

@@ -157,12 +157,13 @@ intensidad--duración (I--D) de \citet{caine1980} y sus muchos sucesores
 regionales \citep{guzzetti2007,segoni2018,gariano2016}, estiman \emph{cuándo} ha
 ocurrido lluvia gatillante. La alerta temprana operacional, sin embargo, necesita
 el \emph{dónde} y el \emph{cuándo} juntos, como un campo de peligro que evoluciona
-a lo largo de un evento \citep{bogaard2018}. Este acoplamiento ya está realizado
+a lo largo de un evento; y el propio \emph{cuándo} depende del estado hidrológico que
+prepara una ladera, no solo del gatillo meteorológico \citep{bogaard2018}. Este acoplamiento ya está realizado
 operacionalmente: LHASA de la NASA condiciona un mapa estático de susceptibilidad
 a deslizamientos con umbrales de lluvia satelital GPM IMERG a escala global
 \citep{kirschbaum2018}, su sucesor agrega un modelo basado en datos
 \citep{stanley2021}, y los sistemas geográficos de alerta temprana de
-deslizamientos hoy están extendidos \citep{guzzetti2020}. Lo que estos comparten
+deslizamientos operan en un número creciente de países y regiones \citep{guzzetti2020}. Lo que estos comparten
 es un diseño \emph{específico al producto}: la forzante, el gatillo y el modelo de
 susceptibilidad quedan soldados en una sola cadena operacional, de modo que
 cambiar el producto de lluvia, agregar un segundo gatillo (deshielo, caudal,
@@ -496,7 +497,7 @@ surge. La precipitación diaria es CR2MET v2.5 (0.05$^\circ$, $\sim$5\,km;
 \citealp{boisier2018cr2met}), producida sobre una región de cuenca que ha
 experimentado un descenso sostenido de la lluvia desde 2010, la Megasequía de
 Chile central \citep{garreaud2019,boisier2018}. La precipitación sub-diaria es GPM
-IMERG Final v07 semihoraria ($\sim$0.1$^\circ$; \citealp{huffman2020,tan2019}). La
+IMERG Final v07 semihoraria ($\sim$0.1$^\circ$; \citealp{huffman2023,tan2019}). La
 forzante de cuenca para la vía de crecidas usa CAMELS-CL \citep{alvarez2018}. El
 inventario de eventos fechados es el catálogo de deslizamientos/flujos de
 SERNAGEOMIN, consistente con los patrones regionales de deslizamientos fatales
@@ -650,7 +651,8 @@ del valor global de Caine de 14.82.}
 La auto-calibración invita a la objeción de que un umbral publicado, tomado tal
 cual, podría hacerlo mejor. Lo probamos directamente aplicando, sin modificar, las
 35 leyes de potencia I--D empíricas ($I=a\,D^{-b}$, mm\,h$^{-1}$) compiladas por
-\citet{guzzetti2007} (su Tabla~2, la recopilación canónica de la literatura) a la
+\citet{guzzetti2007} (las leyes de potencia puras de su Tabla~2, sin sus formas asintóticas ni
+normalizadas) a la
 misma forzante diaria CR2MET. El desenlace lo dicta la resolución, no la curva: 10
 de las 35 quedan \emph{estructuralmente} por encima del techo diario --- en una
 cuenca cuyo día más lluvioso en 38 años es 136\,mm, ninguna forzante diaria puede
@@ -1218,9 +1220,10 @@ el diagnóstico del lado de la forzante por sí solo no expone.
 
 \textbf{El techo del inventario.} Un segundo techo, independiente, es el objetivo
 de validación. El inventario está fechado a $\sim$mes y es incompleto, en eco de un
-hallazgo más amplio: la identificación incierta del propio episodio de lluvia
-gatillante distorsiona la evaluación de umbrales incluso donde existen inventarios
-diarios \citep{peres2018}. El fechado a nivel de mes por sí solo da cuenta de una
+hallazgo más amplio, obtenido con experimentos sintéticos: la identificación incierta
+del propio episodio de lluvia gatillante distorsiona la evaluación de umbrales, en
+general sesgándolos hacia abajo, con un efecto que crece cuando el error de fechado
+supera un día \citep{peres2018}. El fechado a nivel de mes por sí solo da cuenta de una
 fracción grande de los fallos aparentes (Tabla~\ref{tab:lumped}), y la
 incompletitud vuelve poco informativo el FAR por celda. Una discriminación creíble
 y un skill de lead time verdadero requieren un inventario con resolución de día o
@@ -1235,10 +1238,12 @@ como el integrador aguas abajo de una familia de modelos de proceso, y el
 acoplamiento unidireccional bajo demanda mantiene la física costosa confinada a las
 áreas alertadas. Este es un punto de diseño distinto al de las herramientas
 existentes, no un reemplazo de ellas. Los nowcasts operacionales como LHASA
-\citep{kirschbaum2018, stanley2021} acoplan un mapa estático de susceptibilidad con
-un producto de lluvia específico (IMERG) y un gatillo, como cadena monolítica
-global; los calculadores de umbrales como CTRL-T \citep{melillo2018} automatizan la
-estimación regional de I--D a partir de catálogos de eventos. nowcast es
+acoplan un mapa estático de susceptibilidad con un producto de lluvia específico
+(IMERG) y un gatillo, como cadena monolítica global \citep{kirschbaum2018}, y su
+sucesor basado en datos reemplaza ese mapa por variables explicativas dentro de la
+misma cadena fija \citep{stanley2021}; los calculadores de umbrales como CTRL-T
+\citep{melillo2018} automatizan la estimación regional de umbrales de lluvia a
+partir de catálogos de eventos. nowcast es
 complementario: hace que la forzante, el gatillo y el modelo de refinamiento físico
 sean \emph{intercambiables de forma independiente} detrás de una sola interfaz, que
 es precisamente lo que nos permitió mantener fijo el modelo y variar la resolución
@@ -1528,8 +1533,8 @@ Hanley, J.A., McNeil, B.J., 1982. The meaning and use of the area under a
 receiver operating characteristic (ROC) curve. Radiology 143 (1), 29--36.
 \url{https://doi.org/10.1148/radiology.143.1.7063747}.
 
-\bibitem[Huffman et al.(2020)]{huffman2020}
-Huffman, G.J., et al., 2020. GPM IMERG Final Precipitation L3 Half Hourly, V07.
+\bibitem[Huffman et al.(2023)]{huffman2023}
+Huffman, G.J., et al., 2023. GPM IMERG Final Precipitation L3 Half Hourly, V07.
 NASA GES DISC. \url{https://doi.org/10.5067/GPM/IMERG/3B-HH/07}.
 
 \bibitem[Hutton et al.(2020)]{hutton2020}
@@ -1544,8 +1549,8 @@ rainfall-triggered landslide hazard for situational awareness. Earth's Future 6
 
 \bibitem[Lundberg and Lee(2017)]{lundberg2017}
 Lundberg, S.M., Lee, S.-I., 2017. A unified approach to interpreting model
-predictions. Adv.\ Neural Inf.\ Process.\ Syst.\ 30.
-\url{https://doi.org/10.48550/arXiv.1705.07874}.
+predictions. In: Advances in Neural Information Processing Systems 30 (NeurIPS
+2017). \url{https://proceedings.neurips.cc/paper/2017/hash/8a20a8621978632d76c43dfd28b67767-Abstract.html}.
 
 \bibitem[Melillo et al.(2018)]{melillo2018}
 Melillo, M., Brunetti, M.T., Peruccacci, S., Gariano, S.L., Roccati, A.,
