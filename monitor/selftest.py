@@ -169,6 +169,76 @@ def susc_selftest():
     return 0 if not fallos else 1
 
 
+def susc_overlay_selftest():
+    """`susc_overlay.py` debe FALLAR ruidoso (exit≠0, "FATAL") cuando un dominio
+    tiene cuencas configuradas y NINGÚN ráster existe bajo KINGSTON (disco
+    desmontado), en vez de escribir una capa de terreno todo-NaN que río abajo
+    se lee como "sin terreno" y nadie nota. Con un solo ráster presente debe
+    terminar en 0 y escribir `susc_max_0p1.tif` con valores finitos."""
+    import subprocess
+    from rasterio.transform import Affine
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from variantes import archivo_max
+
+    root = os.path.join(BASE, "susc_overlay")
+    shutil.rmtree(root, ignore_errors=True)
+    fdir = os.path.join(root, "forecast", "rm")
+    os.makedirs(fdir)
+    hazard = np.full((PROFILE["height"], PROFILE["width"]), 0.8, "float32")
+    with rasterio.open(os.path.join(fdir, archivo_max("gfs")), "w", **PROFILE) as dst:
+        dst.write(hazard, 1)
+
+    def correr(kingston):
+        env = dict(os.environ, KINGSTON_FACTORS=kingston)
+        return subprocess.run(
+            [sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                          "susc_overlay.py"),
+             "--forecast", os.path.join(root, "forecast"), "--domain", "rm"],
+            env=env, capture_output=True, text=True)
+
+    fallos = []
+    # A) KINGSTON vacío → FATAL, nada escrito.
+    vacio = os.path.join(root, "kingston_vacio")
+    os.makedirs(vacio)
+    r = correr(vacio)
+    ok_a = r.returncode != 0 and "FATAL" in r.stderr \
+        and not os.path.exists(os.path.join(fdir, "susc_max_0p1.tif"))
+    print(f"[selftest susc_overlay] KINGSTON vacío → exit {r.returncode}, "
+          f"FATAL={'FATAL' in r.stderr}, susc escrita="
+          f"{os.path.exists(os.path.join(fdir, 'susc_max_0p1.tif'))} "
+          f"{'OK' if ok_a else 'FALLA'}")
+    if not ok_a:
+        fallos.append("vacio"); print(r.stderr[-600:])
+
+    # B) un ráster de cuenca presente (0.01°, cubre el dominio) → exit 0 y
+    #    susc_max finita.
+    lleno = os.path.join(root, "kingston_lleno")
+    bdir = os.path.join(lleno, "09_rio_maipo")
+    os.makedirs(bdir)
+    t = PROFILE["transform"]
+    n = 10 * PROFILE["width"]
+    bprof = dict(driver="GTiff", height=n, width=n, count=1, dtype="float32",
+                 crs=PROFILE["crs"],
+                 transform=Affine(t.a / 10, 0, t.c, 0, t.e / 10, t.f), nodata=np.nan)
+    with rasterio.open(os.path.join(bdir, "susceptibility_RandomForest.tif"), "w",
+                       **bprof) as dst:
+        dst.write(np.full((n, n), 0.6, "float32"), 1)
+    r = correr(lleno)
+    susc_p = os.path.join(fdir, "susc_max_0p1.tif")
+    finita = False
+    if os.path.exists(susc_p):
+        with rasterio.open(susc_p) as s:
+            arr = s.read(1)
+        finita = bool(np.isfinite(arr).all() and abs(float(arr.max()) - 0.6) < 1e-3)
+    ok_b = r.returncode == 0 and finita
+    print(f"[selftest susc_overlay] 1 cuenca presente → exit {r.returncode}, "
+          f"susc_max finita y =0.6: {finita} {'OK' if ok_b else 'FALLA'}")
+    if not ok_b:
+        fallos.append("lleno"); print(r.stderr[-600:])
+    print(f"\n[selftest susc_overlay] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 def rescue_selftest():
     """R4-H1: el dead-man switch decide sobre la UNIÓN de feeds, no el primario.
 
@@ -664,6 +734,8 @@ if __name__ == "__main__":
         sys.exit(susc_selftest())
     if "--rescue" in sys.argv:
         sys.exit(rescue_selftest())
+    if "--susc-overlay" in sys.argv:
+        sys.exit(susc_overlay_selftest())
     if "--exit-contract" in sys.argv:
         sys.exit(exit_contract_selftest())
     if "--notify-contract" in sys.argv:

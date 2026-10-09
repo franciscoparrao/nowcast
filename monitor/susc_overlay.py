@@ -51,7 +51,11 @@ import numpy as np
 import rasterio
 from rasterio.warp import Resampling, reproject
 
-KINGSTON = "/mnt/kingston/proyectos/postdoc/papers/paper1_susceptibilidad/factors"
+# Sobreescribible por entorno para el autotest (`selftest.py --susc-overlay`);
+# en operación NO se define y vale el disco externo.
+KINGSTON = os.environ.get(
+    "KINGSTON_FACTORS",
+    "/mnt/kingston/proyectos/postdoc/papers/paper1_susceptibilidad/factors")
 # Dominio → rasters de cuenca que lo cubren (rutas relativas a KINGSTON).
 DOMAIN_BASINS = {
     # 3 cuencas PROPIAS (sin transfer) — Atacama es la mejor cubierta de los
@@ -224,13 +228,22 @@ def combined_hazard(ddir):
 
 def aggregate(basins, ref_profile, resampling):
     """Reproyecta/agrega cada cuenca a la grilla del dominio y mosaica
-    (celda válida gana; solapes → máximo, conservador)."""
+    (celda válida gana; solapes → máximo, conservador).
+
+    Devuelve (mosaico, n_cuencas_leidas). Una cuenca ausente se omite con
+    aviso (cobertura parcial es legítima); que NO se lea NINGUNA lo decide el
+    llamador, porque un mosaico todo-NaN escrito en silencio se propaga como
+    "sin terreno" a comuna_impact y la watchlist sin que nadie se entere
+    (mismo patrón de los 23 días de `target/`: el disco de KINGSTON desmontado
+    dejaba el ciclo "exitoso" y sin capa de terreno)."""
     out = np.full((ref_profile["height"], ref_profile["width"]), np.nan, "float32")
+    n_found = 0
     for path in basins:
         src_path = os.path.join(KINGSTON, path)
         if not os.path.exists(src_path):
             print(f"  AVISO: falta {src_path}, se omite", file=sys.stderr)
             continue
+        n_found += 1
         with rasterio.open(src_path) as src:
             dst = np.full_like(out, np.nan)
             reproject(
@@ -241,7 +254,7 @@ def aggregate(basins, ref_profile, resampling):
         valid = np.isfinite(dst)
         out[valid] = np.where(np.isfinite(out[valid]),
                               np.maximum(out[valid], dst[valid]), dst[valid])
-    return np.clip(out, 0.0, 1.0, out=out, where=np.isfinite(out))
+    return np.clip(out, 0.0, 1.0, out=out, where=np.isfinite(out)), n_found
 
 
 def main():
@@ -273,7 +286,15 @@ def main():
         profile.update(dtype="float32", nodata=np.nan)
 
         for tag, resampling in [("mean", Resampling.average), ("max", Resampling.max)]:
-            susc = aggregate(basins, profile, resampling)
+            susc, n_found = aggregate(basins, profile, resampling)
+            if n_found == 0:
+                # Dominio CON cuencas configuradas y NINGÚN ráster legible:
+                # no es cobertura parcial, es el disco ausente. Fallar aquí hace
+                # que analysis_all.sh (paso 1, DURO) aborte y avise por ntfy en
+                # vez de escribir una capa de terreno vacía.
+                sys.exit(f"FATAL {dom}: ninguno de los {len(basins)} rásters de "
+                         f"susceptibilidad existe bajo {KINGSTON} — ¿KINGSTON "
+                         "desmontado? Sin capa de terreno no se escribe nada.")
             with rasterio.open(os.path.join(ddir, f"susc_{tag}_0p1.tif"), "w",
                                **profile) as dst:
                 dst.write(susc, 1)
@@ -315,8 +336,11 @@ def main():
                         resampling=Resampling.bilinear, dst_nodata=np.nan,
                     )
             cross30 = (hz30 * np.clip(susc30, 0.0, 1.0)).astype("float32")
+            # Bloque fijo: el perfil heredado trae el blocksize del origen y, si
+            # ese ráster viene en franjas (no en mosaico), GDAL rechaza
+            # tiled=True con "blocks must be multiples of 16".
             p30.update(dtype="float32", nodata=np.nan, compress="deflate",
-                       predictor=3, tiled=True)
+                       predictor=3, tiled=True, blockxsize=256, blockysize=256)
             out30 = os.path.join(ddir, f"hazard_x_susc_30m_{basin}.tif")
             with rasterio.open(out30, "w", **p30) as dst:
                 dst.write(cross30, 1)
