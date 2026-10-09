@@ -542,6 +542,34 @@ EXT-108: 97.2% 2018-2026 (100% 2023-25); los grandes son caídas de la ESTACIÓN
 que agromet no recupera y el archivador sí → agromet respalda ante API/token
 caído, no ante un corte de red de este equipo de más de ~12 h.
 
+**Cascada post-incendio EN OPERACIÓN (2026-10-09, caso Las Condes)**: el espejo
+de `nowcast-firespread::post_fire_susceptibility` corre sobre cicatrices REALES.
+`monitor/postfire_scar.py` calcula dNBR Landsat C2 L2 (B5/B7, QA_PIXEL) leyendo
+solo la ventana por `vsicurl` + firma SAS pública de Planetary Computer (no baja
+escenas; el disco va al 99 %), umbral 0.27 (Key & Benson) + mayoría 3×3, y
+registra la máscara con vigencia en `monitor/data/postfire/scars.json`
+(versionado: es evidencia). `susc_overlay.py` la aplica en la grilla NATIVA de
+la cuenca (×factor, clamp [0,1], como el motor) ANTES de agregar a 0.1°, y en el
+producto de 30 m; `comuna_impact`/watchlist la heredan sin cambios. Autotest:
+`selftest.py --susc-overlay` (cicatriz vigente amplifica, vencida no).
+Cicatriz registrada: San Carlos de Apoquindo, incendio 29-dic-2025 → 2-ene-2026
+(1.012 ha oficiales; dNBR ≥0.27 da 670 ha en un solo cuerpo, LC09 1-dic-2025 →
+18-ene-2026), factor 2.0 (el de `couple_fire.rs`), vigente hasta 2027-12-29.
+GOTCHAS medidos: (i) la prensa municipal decía "29 de septiembre" — era el 29 de
+DICIEMBRE (lunes); con escenas de sep/oct-2026 el dNBR dio 0 ha porque la post
+era pura nube (QA 50 %); verificar la fecha del incendio contra dos fuentes antes
+de elegir escenas. (ii) En Sentinel-2/Landsat, una cicatriz oscura cae en los
+bits de sombra del QA: mirar el desglose de bits si "no hay quema". (iii) A 0.1°
+la cicatriz (≈7 km²) es menor que una celda (≈93 km²): por vecino más cercano
+NO aparece; donde se ve es en el máx agregado y en el producto de 30 m. (iv)
+Persistencia: 9 meses después (LC09 15-sep-2026) la mediana del dNBR en la
+cicatriz bajó 0.346 → 0.153 y el 69 % sigue ≥0.1 — sigue activa. (v) Resultado
+operacional: con la forzante GFS del 8-oct la cascada NO cruza 0.5 en la
+cicatriz (mediana 0.13 → 0.26) porque el GFS daba 2.4 mm/h; con la ráfaga
+OBSERVADA en Tobalaba (8.2 mm/h, a*=5.5 → gatillo 0.88) la cicatriz pasa de
+0.30 a 0.60 (mediana), y con Caine global (0.14) no cruza nada. La cascada
+corrige el terreno; el cuello sigue siendo la forzante sub-horaria.
+
 **Fase A del plan EWS (2026-07-11) LISTA**: fusión multi-forzante de punta a
 punta. (1) CLI: `nowcast run --fuse-rasters <stack>` repetible + `--combine
 noisy-or|max|product` — cada stack extra es su propio `IdTrigger` vía

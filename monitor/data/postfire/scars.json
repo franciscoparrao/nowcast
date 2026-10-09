@@ -1,0 +1,13 @@
+[
+ {
+  "nombre": "san_carlos_apoquindo_2025-12-29",
+  "basin": "09_rio_maipo",
+  "factor": 2.0,
+  "mask": "san_carlos_apoquindo_2025-12-29/scar_mask.tif",
+  "fecha_incendio": "2025-12-29",
+  "valid_from": "2025-12-29",
+  "valid_until": "2027-12-29",
+  "ha_quemadas": 670.0,
+  "fuente": "dNBR landsat-c2-l2 LC09_L2SP_233083_20251201_02_T1 → LC09_L2SP_233083_20260118_02_T1, umbral 0.27"
+ }
+]

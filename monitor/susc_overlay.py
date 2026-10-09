@@ -226,7 +226,57 @@ def combined_hazard(ddir):
     return out_path, used
 
 
-def aggregate(basins, ref_profile, resampling):
+# --- Cascada post-incendio (espejo de nowcast-firespread::post_fire_susceptibility)
+# Registro de cicatrices reales (dNBR, `postfire_scar.py`): dentro de la máscara
+# quemada la susceptibilidad se multiplica por `factor` y se recorta a [0,1];
+# fuera queda intacta. Cada cicatriz trae su vigencia (valid_from/valid_until)
+# para que envejezca sola. Sobreescribible por entorno solo para el autotest.
+POSTFIRE_REGISTRO = os.environ.get(
+    "POSTFIRE_SCARS",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "postfire", "scars.json"))
+
+
+def cargar_cicatrices(hoy=None):
+    """Cicatrices VIGENTES del registro, agrupadas por directorio de cuenca.
+    Sin registro → {} (la cascada simplemente no aplica). Una máscara ausente
+    avisa y se omite: es un modulador, no debe tumbar la capa de terreno."""
+    if not os.path.exists(POSTFIRE_REGISTRO):
+        return {}
+    import json
+    from datetime import date
+    hoy = hoy or date.today().isoformat()
+    base = os.path.dirname(POSTFIRE_REGISTRO)
+    por_cuenca = {}
+    for r in json.load(open(POSTFIRE_REGISTRO)):
+        if not (r.get("valid_from", "0000") <= hoy <= r.get("valid_until", "9999")):
+            continue
+        p = os.path.join(base, r["mask"])
+        if not os.path.exists(p):
+            print(f"  AVISO: cicatriz {r.get('nombre')} sin máscara en {p}, se omite",
+                  file=sys.stderr)
+            continue
+        por_cuenca.setdefault(r["basin"], []).append(dict(r, mask_path=p))
+    return por_cuenca
+
+
+def aplicar_cascada(arr, transform, crs, cicatrices):
+    """post_fire_susceptibility sobre `arr` (grilla nativa de la cuenca): la
+    máscara se reproyecta por vecino más cercano a esa grilla y dentro de ella
+    arr ← clamp(arr·factor, 0, 1). Devuelve (arr, celdas_amplificadas)."""
+    n = 0
+    for c in cicatrices:
+        dst = np.full(arr.shape, 255, "uint8")
+        with rasterio.open(c["mask_path"]) as m:
+            reproject(source=rasterio.band(m, 1), destination=dst,
+                      dst_transform=transform, dst_crs=crs,
+                      resampling=Resampling.nearest, src_nodata=255, dst_nodata=255)
+        q = (dst == 1) & np.isfinite(arr)
+        arr[q] = np.clip(arr[q] * float(c["factor"]), 0.0, 1.0)
+        n += int(q.sum())
+    return arr, n
+
+
+def aggregate(basins, ref_profile, resampling, cicatrices=None):
     """Reproyecta/agrega cada cuenca a la grilla del dominio y mosaica
     (celda válida gana; solapes → máximo, conservador).
 
@@ -244,13 +294,26 @@ def aggregate(basins, ref_profile, resampling):
             print(f"  AVISO: falta {src_path}, se omite", file=sys.stderr)
             continue
         n_found += 1
+        scars = (cicatrices or {}).get(path.split("/")[0], [])
         with rasterio.open(src_path) as src:
             dst = np.full_like(out, np.nan)
-            reproject(
-                source=rasterio.band(src, 1), destination=dst,
-                dst_transform=ref_profile["transform"], dst_crs=ref_profile["crs"],
-                resampling=resampling, dst_nodata=np.nan,
-            )
+            if scars:
+                # La cascada va en la grilla NATIVA (como en el motor, misma
+                # grilla que la susceptibilidad) y recién después se agrega.
+                nat, _ = aplicar_cascada(src.read(1).astype("float32"),
+                                         src.transform, src.crs, scars)
+                reproject(
+                    source=nat, destination=dst,
+                    src_transform=src.transform, src_crs=src.crs, src_nodata=np.nan,
+                    dst_transform=ref_profile["transform"], dst_crs=ref_profile["crs"],
+                    resampling=resampling, dst_nodata=np.nan,
+                )
+            else:
+                reproject(
+                    source=rasterio.band(src, 1), destination=dst,
+                    dst_transform=ref_profile["transform"], dst_crs=ref_profile["crs"],
+                    resampling=resampling, dst_nodata=np.nan,
+                )
         valid = np.isfinite(dst)
         out[valid] = np.where(np.isfinite(out[valid]),
                               np.maximum(out[valid], dst[valid]), dst[valid])
@@ -268,6 +331,11 @@ def main():
     fdir = os.path.realpath(os.path.expanduser(a.forecast))
     domains = a.domain or [d for d in DOMAIN_BASINS
                            if os.path.isdir(os.path.join(fdir, d))]
+    cicatrices = cargar_cicatrices()
+    for basin, lst in cicatrices.items():
+        print(f"cascada post-incendio activa en {basin}: " + ", ".join(
+            f"{c['nombre']} ({c.get('ha_quemadas', '?')} ha, ×{c['factor']}, hasta {c['valid_until']})"
+            for c in lst))
     for dom in domains:
         basins = DOMAIN_BASINS.get(dom, [])
         ddir = os.path.join(fdir, dom)
@@ -286,7 +354,7 @@ def main():
         profile.update(dtype="float32", nodata=np.nan)
 
         for tag, resampling in [("mean", Resampling.average), ("max", Resampling.max)]:
-            susc, n_found = aggregate(basins, profile, resampling)
+            susc, n_found = aggregate(basins, profile, resampling, cicatrices)
             if n_found == 0:
                 # Dominio CON cuencas configuradas y NINGÚN ráster legible:
                 # no es cobertura parcial, es el disco ausente. Fallar aquí hace
@@ -326,8 +394,14 @@ def main():
                             "susceptibility_Ridge"):
                 basin = f"{basin}_{stem.split('_')[-1]}"
             with rasterio.open(src_path) as s:
-                susc30 = s.read(1)
+                susc30 = s.read(1).astype("float32")
                 p30 = dict(s.profile)
+                scars = cicatrices.get(path.split("/")[0], [])
+                if scars:
+                    susc30, n_amp = aplicar_cascada(susc30, s.transform, s.crs, scars)
+                    cell_ha = abs(s.transform.a * s.transform.e) / 10_000.0
+                    print(f"{dom} [{basin}]: cascada post-incendio sobre {n_amp} celdas "
+                          f"({n_amp * cell_ha:.0f} ha)")
                 hz30 = np.full(susc30.shape, np.nan, "float32")
                 with rasterio.open(hz_path) as h:
                     reproject(

@@ -1,0 +1,33 @@
+{
+ "nombre": "san_carlos_apoquindo_2025-12-29",
+ "fecha_incendio": "2025-12-29",
+ "pre": "LC09_L2SP_233083_20251201_02_T1",
+ "post": "LC09_L2SP_233083_20260118_02_T1",
+ "collection": "landsat-c2-l2",
+ "bbox_wgs84": [
+  -70.56,
+  -33.46,
+  -70.36,
+  -33.3
+ ],
+ "crs": "EPSG:32619",
+ "res_m": 30.0,
+ "umbral_dnbr": 0.27,
+ "filtro": "mayoría 3×3",
+ "fraccion_enmascarada_qa": {
+  "pre": 0.0006,
+  "post": 0.0
+ },
+ "fraccion_sin_dato": 0.0006,
+ "ha_por_clase_dnbr": {
+  "no quemado": 32423.2,
+  "baja": 815.2,
+  "moderada-baja": 581.7,
+  "moderada-alta": 71.5,
+  "alta": 0.2
+ },
+ "ha_quemadas_mascara": 670.0,
+ "celdas_quemadas": 7444,
+ "dnbr_p50_en_mascara": 0.346,
+ "dnbr_p90_en_mascara": 0.444
+}

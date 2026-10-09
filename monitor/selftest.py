@@ -20,6 +20,7 @@ corre con GOES_ENABLED=0 el ciclo queda quiet, que es exactamente la latencia
 que la fase A recupera. También valida fetch_dga.py --selftest.
 """
 
+import glob
 import json
 import os
 import shutil
@@ -188,8 +189,10 @@ def susc_overlay_selftest():
     with rasterio.open(os.path.join(fdir, archivo_max("gfs")), "w", **PROFILE) as dst:
         dst.write(hazard, 1)
 
-    def correr(kingston):
-        env = dict(os.environ, KINGSTON_FACTORS=kingston)
+    def correr(kingston, scars="/nonexistent/scars.json"):
+        # POSTFIRE_SCARS apunta fuera del registro REAL: la cicatriz de San
+        # Carlos de Apoquindo cae dentro de la cuenca sintética del test.
+        env = dict(os.environ, KINGSTON_FACTORS=kingston, POSTFIRE_SCARS=scars)
         return subprocess.run(
             [sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                           "susc_overlay.py"),
@@ -235,6 +238,43 @@ def susc_overlay_selftest():
           f"susc_max finita y =0.6: {finita} {'OK' if ok_b else 'FALLA'}")
     if not ok_b:
         fallos.append("lleno"); print(r.stderr[-600:])
+
+    # C) cascada post-incendio: una cicatriz que cubre la mitad NORTE de la
+    #    cuenca, factor 2 → ahí 0.6·2 → 1.0 (clamp); la mitad sur sigue en 0.6.
+    #    Una cicatriz VENCIDA no debe tocar nada.
+    import json
+    pf = os.path.join(root, "postfire")
+    os.makedirs(pf)
+    mprof = dict(bprof, dtype="uint8", nodata=255)
+    scar = np.zeros((n, n), "uint8")
+    # Exactamente las 5 filas gruesas del norte (50 filas de 30 m): así el
+    # bloque 0.1° de la frontera no mezcla quemado y no quemado.
+    scar[: (PROFILE["height"] // 2) * 10, :] = 1
+    with rasterio.open(os.path.join(pf, "scar.tif"), "w", **mprof) as dst:
+        dst.write(scar, 1)
+    for etiqueta, hasta, esperado_norte in [("vigente", "2999-01-01", 1.0),
+                                            ("vencida", "2000-01-01", 0.6)]:
+        reg = os.path.join(pf, f"scars_{etiqueta}.json")
+        json.dump([{"nombre": "test", "basin": "09_rio_maipo", "factor": 2.0,
+                    "mask": "scar.tif", "valid_from": "1990-01-01",
+                    "valid_until": hasta, "ha_quemadas": 1}], open(reg, "w"))
+        for f in glob.glob(os.path.join(fdir, "susc_*_0p1.tif")):
+            os.remove(f)
+        r = correr(lleno, scars=reg)
+        ok_c = r.returncode == 0
+        if ok_c:
+            with rasterio.open(susc_p) as s:
+                arr = s.read(1)
+            h = PROFILE["height"] // 2
+            norte, sur = float(arr[:h].max()), float(arr[h:].max())
+            ok_c = abs(norte - esperado_norte) < 1e-3 and abs(sur - 0.6) < 1e-3
+            print(f"[selftest susc_overlay] cicatriz {etiqueta} → norte {norte:.2f} "
+                  f"(esperado {esperado_norte}), sur {sur:.2f} (esperado 0.6) "
+                  f"{'OK' if ok_c else 'FALLA'}")
+        else:
+            print(f"[selftest susc_overlay] cicatriz {etiqueta} → exit {r.returncode} FALLA")
+        if not ok_c:
+            fallos.append(f"cicatriz_{etiqueta}"); print(r.stderr[-600:])
     print(f"\n[selftest susc_overlay] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
     return 0 if not fallos else 1
 
