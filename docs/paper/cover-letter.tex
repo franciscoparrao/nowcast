@@ -1,13 +1,14 @@
 \documentclass[11pt]{letter}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage{geometry}
-\geometry{margin=1in}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{hyperref}
+\usepackage{url}
 
 \signature{Francisco Parra\\
 Departamento de Ingenier\'ia Inform\'atica\\
 Universidad de Santiago de Chile\\
-francisco.parra.o@usach.cl}
+\texttt{francisco.parra.o@usach.cl}}
 
 \address{Francisco Parra\\
 Departamento de Ingenier\'ia Inform\'atica\\
@@ -15,67 +16,93 @@ Universidad de Santiago de Chile\\
 Av. V\'ictor Jara 3659\\
 Santiago 9170124, Chile}
 
+\date{\today}
+
 \begin{document}
 
-\begin{letter}{Editor-in-Chief\\
-Computers \& Geosciences\\
+\begin{letter}{Co-Editors-in-Chief\\
+Environmental Modelling \& Software\\
 Elsevier}
 
-\opening{Dear Editor,}
+\opening{Dear Editors,}
 
-I am pleased to submit my manuscript entitled ``\textbf{nowcast: a forcing-agnostic
-Rust engine for dynamic geohazard nowcasting, and why forcing resolution, not the
-model, sets the skill ceiling}'' for consideration for publication in
-\textit{Computers \& Geosciences}.
+I am pleased to submit the manuscript entitled \textbf{``nowcast: a
+forcing-agnostic Rust engine for dynamic geohazard nowcasting, and why forcing
+resolution, not the model, sets the skill ceiling''} for consideration as a
+research article in \textit{Environmental Modelling \& Software}.
 
-Susceptibility mapping is mature but static; empirical rainfall thresholds say
-\emph{when} but not \emph{where}. Operational early-warning needs both, yet existing
-systems weld a specific forcing, trigger and susceptibility model into one
-product-specific chain. I present \textbf{nowcast}, an open, dependency-light Rust
-engine that expresses time-varying hazard as a susceptibility field times a
-composable trigger behind a single interchangeable forcing interface, and I then
-use it as an experimental instrument to ask a question a fixed chain cannot: holding
-the model fixed, how much does the \emph{resolution of the forcing} determine
-attainable skill?
+Susceptibility maps for landslides and floods are static, and empirical rainfall
+thresholds say \emph{when} but not \emph{where}. Operational early warning needs
+both, yet existing systems weld one forcing product, one trigger and one
+susceptibility model into a single chain. The manuscript presents
+\textbf{nowcast}, an open, dependency-light Rust engine that writes time-varying
+hazard as a susceptibility field times a composable trigger behind a single
+interchangeable forcing interface, and then uses that interface as an
+experimental instrument: holding the model fixed, it varies only the resolution
+of the forcing and measures how much of the attainable skill that resolution
+decides.
 
-\textbf{Key contributions:}
-\begin{itemize}
-    \item A forcing-agnostic engine (ten Rust crates) in which rainfall, routed
-    discharge, snowmelt and InSAR deformation enter through one interface, with a
-    composable multi-trigger and exact, closed-form attribution of every alert.
-    \item A backtesting framework with metrics appropriate for rare, spatially
-    sparse, month-dated inventories (event-centred contingency, ROC-AUC,
-    probability-of-detection-at-area, split-sample calibration).
-    \item A reproducible \emph{resolution diagnosis}: on the R\'io Maipo, distributing
-    daily forcing and weighting by a real machine-learning susceptibility raster does
-    not lift discrimination above chance (AUC $\approx 0.48$), and applying the full
-    ensemble of 35 published intensity--duration thresholds does not rescue it; a
-    controlled experiment with known ground truth shows the same engine discriminates
-    planted sub-daily bursts almost perfectly but loses all operational catch rate
-    under daily aggregation. The binding constraint is the forcing resolution, not
-    the model.
-    \item A validated counterpart: half-hourly satellite forcing pins the
-    threshold crossing hours ahead of documented flows across three climatically
-    distinct events, and a discharge path validated against observed streamflow on
-    the R\'io Itata discriminates floods out of sample (ROC-AUC 0.90).
-\end{itemize}
+I believe the manuscript fits the journal for the following reasons:
 
-\textbf{Relevance to Computers \& Geosciences:} the work contributes a novel
-computational architecture and a methods result for geohazard early-warning, with
-emphasis on reproducibility: the engine, its backtesting framework and every
-result are open-source and accompanied by runnable examples and data-extraction
-scripts. This fits the journal's focus on computational methods and software for
-the geosciences.
+\begin{enumerate}
+    \item \textbf{A generalizable software contribution.} The forcing interface
+    decouples the hazard logic from the data source and the trigger family.
+    Rainfall, routed discharge, snowmelt and InSAR deformation enter through one
+    trait; triggers compose; physical refinement (2-D shallow-water inundation,
+    agent-based debris-flow runout) runs on demand only where the cheap nowcast
+    alerts; and every alert carries an exact, closed-form attribution to terrain
+    and trigger. Section~2 positions this design against OpenMI, BMI and OMS3 and
+    against operational chains such as LHASA and CTRL-T.
 
-The manuscript reports an honest negative result (the daily null) alongside its
-positive ones; I believe this transparency is a strength for a methods paper and is
-well suited to the journal's readership of practitioners and method developers.
+    \item \textbf{A methods result with a negative finding reported in full.}
+    On the R\'io Maipo basin (157 dated landslides, 38 years of daily gridded
+    rainfall), distributing the daily forcing and weighting it by a real
+    machine-learning susceptibility raster does not lift discrimination above
+    chance (ROC-AUC $\approx 0.48$), and the full ensemble of published
+    intensity--duration thresholds does not rescue it. Diagnostics show the
+    null accuses the inventory as much as the forcing, so the resolution claim
+    is not rested on it. A controlled experiment whose labels come from an
+    independent failure mechanism isolates the cause: aggregating the identical
+    field to daily resolution collapses the catch rate on burst-driven failures
+    from 0.46 to 0.00 while leaving accumulation-driven failures untouched.
 
-This manuscript has not been published elsewhere and is not under consideration by
-any other journal. I declare no competing interests. The code and data supporting
-this study are publicly available as indicated in the manuscript.
+    \item \textbf{A validated counterpart at high resolution.} With half-hourly
+    GPM IMERG forcing the same trigger pins the threshold crossing to a timestamp
+    hours ahead of three documented debris flows in opposite Chilean climates. A
+    single-factor decomposition separates the rainfall product from its
+    resolution, and an intercept-sensitivity analysis shows the contrast does not
+    depend on the threshold chosen. A discharge path validated against observed
+    streamflow discriminates floods out of sample (ROC-AUC 0.90).
 
-Thank you for considering my submission. I look forward to your response.
+    \item \textbf{Reproducibility.} The engine, its backtesting framework and
+    all thirty-six examples are open source (MIT/Apache-2.0) at
+    \url{https://github.com/franciscoparrao/nowcast}, archived as version 0.2.0
+    at \url{https://doi.org/10.5281/zenodo.23198956}, with a script that
+    reproduces Sections~5.1--5.7 from the data-extraction scripts included in
+    the repository. The Software Availability section states precisely which
+    results reproduce from the archived snapshot alone.
+\end{enumerate}
+
+\textbf{Related work by the author.} The engine builds on a family of sibling
+Rust models that it couples through the forcing interface. Two of them concern
+this journal and I want to declare them explicitly to avoid any appearance of
+overlap. (i)~\emph{SurtGIS}, the geospatial raster substrate used for GeoTIFF
+input and output, was published in \textit{Environmental Modelling \& Software}
+(Parra, 2026, vol.~204, 107102, \url{https://doi.org/10.1016/j.envsoft.2026.107102})
+and is cited as such. (ii)~\emph{hydroflux}, the 2-D shallow-water solver used
+for on-demand inundation refinement, is described in a separate manuscript
+currently under review in this journal; the present manuscript mentions it only
+as a coupled component, does not reproduce its verification, and cites no
+unpublished result from it. I will gladly provide the hydroflux manuscript to the
+handling editor or reviewers on request. Neither sibling paper contains the
+engine, the backtesting framework or the resolution experiments reported here.
+
+This manuscript has not been published elsewhere and is not under consideration
+by any other journal. I declare no competing interests. The use of a generative
+AI tool in drafting and editing is declared in the manuscript, as the journal
+requires.
+
+Thank you for considering this submission.
 
 \closing{Sincerely,}
 
