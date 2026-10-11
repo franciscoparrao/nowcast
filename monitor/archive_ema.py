@@ -19,9 +19,20 @@ un campo `momento` normalizado al frente: no sabemos hoy qué campo va a
 importar mañana, y reinterpretar es gratis mientras el crudo esté guardado.
 Idempotente: releer y reescribir la misma ventana no duplica nada.
 
+VARIAS ESTACIONES (2026-10-11). Hasta esa fecha solo se archivaba El Colorado,
+y la primera alerta de `monitor@rm` (chubascos del 10-oct, 22:30Z, gatillada
+por GOES solo) quedó SIN verificar contra Tobalaba, La Florida y San José de
+Guayacán: cuando se fue a mirar, la ventana de la API empezaba dos horas
+después de la alerta. Ahora `--code` acepta una lista separada por comas y el
+default son las cuatro EMAs del dominio RM. Cada estación se archiva por
+separado: una que falle (sin registros, red) se reporta y NO bloquea a las
+demás; solo las credenciales rechazadas abortan todo, porque ahí reintentar
+no tiene sentido. Salida 1 si alguna falló (el timer lo deja en el journal).
+
 Uso:
-    python3 monitor/archive_ema.py                 # El Colorado (330077)
-    python3 monitor/archive_ema.py --code 330020
+    python3 monitor/archive_ema.py                 # las 4 EMAs del dominio RM
+    python3 monitor/archive_ema.py --code 330077   # solo El Colorado
+    python3 monitor/archive_ema.py --code 330077,330019 --code 330020
     python3 monitor/archive_ema.py --selftest      # sin red
 """
 
@@ -38,7 +49,16 @@ from datetime import datetime
 from pathlib import Path
 
 API = "https://climatologia.meteochile.gob.cl/application/servicios/getDatosRecientesEma"
-DEFAULT_CODE = "330077"          # El Colorado 2750 m
+# Las EMAs del dominio RM (monitor@rm, DGA_STATIONS): sin las cuatro archivadas
+# ninguna alerta del piedemonte se puede verificar después.
+STATIONS = {
+    "330077": "El Colorado 2750 m",
+    "330112": "San José de Guayacán",
+    "330122": "La Florida",
+    "330019": "Tobalaba",
+}
+DEFAULT_CODE = "330077"          # El Colorado 2750 m (compat: crosscheck_elcolorado)
+DEFAULT_CODES = ",".join(STATIONS)
 MONITOR = Path(__file__).resolve().parent
 ARCHIVE_DIR = MONITOR / "data" / "ema"
 
@@ -98,8 +118,26 @@ def fetch_ema_raw(usuario, token, code):
         raise SystemExit(f"la API rechazó las credenciales: {payload.get('mensaje', payload)}")
     recs = payload.get("datosEstaciones", {}).get("datos", [])
     if not recs:
-        raise SystemExit(f"sin registros para {code}; claves: {list(payload)[:8]}")
+        raise RuntimeError(f"sin registros para {code}; claves: {list(payload)[:8]}")
     return recs
+
+
+def parse_codes(specs):
+    """['330077,330019', ' 330020 '] → ['330077', '330019', '330020'] sin repetidos,
+    en el orden dado. Vacío → ValueError (archivar nada no es un éxito)."""
+    out = []
+    for spec in specs or []:
+        for c in str(spec).split(","):
+            c = c.strip()
+            if not c:
+                continue
+            if not c.isdigit():
+                raise ValueError(f"código EMA inválido: {c!r}")
+            if c not in out:
+                out.append(c)
+    if not out:
+        raise ValueError("ninguna estación que archivar")
+    return out
 
 
 def parse_records(recs):
@@ -226,6 +264,18 @@ def selftest():
         assert p[datetime(2026, 8, 31, 9, 0)] == {"ta": 1.5, "pp": 0.6}, p
         assert p[datetime(2026, 9, 1, 0, 0)]["pp"] is None, "None no debe volverse 0.0"
         assert len(list(Path(td).glob("TEST-*.jsonl"))) == 2, "debe partir por mes"
+        # dos estaciones no se pisan: archivos y lecturas separados por código
+        archive("OTRA", recs[:1])
+        assert len(read_archive("TEST")) == 3 and len(read_archive("OTRA")) == 1
+    assert parse_codes(["330077,330019", " 330020 ", "330077"]) == ["330077", "330019", "330020"]
+    assert parse_codes(None if False else [DEFAULT_CODES]) == list(STATIONS)
+    for malo in ([], [""], ["33a"]):
+        try:
+            parse_codes(malo)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"parse_codes debió fallar con {malo!r}")
     print("[archive_ema] selftest OK")
     return 0
 
@@ -233,24 +283,46 @@ def selftest():
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--code", default=DEFAULT_CODE, help="código EMA de la DMC")
+    ap.add_argument("--code", action="append", metavar="CODE[,CODE…]",
+                    help=f"códigos EMA de la DMC, separados por coma o repitiendo la "
+                         f"opción (default: las 4 del dominio RM, {DEFAULT_CODES})")
     ap.add_argument("--selftest", action="store_true", help="autotest sin red")
     args = ap.parse_args()
 
     if args.selftest:
         return selftest()
 
+    try:
+        codes = parse_codes(args.code or [DEFAULT_CODES])
+    except ValueError as exc:
+        print(f"[archive_ema] {exc}")
+        return 1
+
     usuario, token = credentials()
     if not usuario or not token:
         print("faltan DMC_USUARIO/DMC_TOKEN (monitor/config.local.env o entorno)")
         return 1
 
-    recs = fetch_ema_raw(usuario, token, args.code)
-    nuevos, repetidos = archive(args.code, recs)
-    momentos = [m for m in (momento_of(r) for r in recs) if m]
-    ventana = f"{min(momentos)} .. {max(momentos)}" if momentos else "sin fechas"
-    print(f"[archive_ema] {args.code}: API sirvió {len(recs)} registros ({ventana}); "
-          f"nuevos {nuevos}, ya archivados {repetidos} → {ARCHIVE_DIR}")
+    fallidas = []
+    for code in codes:
+        nombre = STATIONS.get(code, "")
+        try:
+            recs = fetch_ema_raw(usuario, token, code)
+            nuevos, repetidos = archive(code, recs)
+        except SystemExit:
+            raise                      # credenciales rechazadas: no insistir con las demás
+        except Exception as exc:       # noqa: BLE001 — una estación caída no bloquea al resto
+            print(f"[archive_ema] {code} {nombre}: FALLÓ ({exc})")
+            fallidas.append(code)
+            continue
+        momentos = [m for m in (momento_of(r) for r in recs) if m]
+        ventana = f"{min(momentos)} .. {max(momentos)}" if momentos else "sin fechas"
+        print(f"[archive_ema] {code} {nombre}: API sirvió {len(recs)} registros ({ventana}); "
+              f"nuevos {nuevos}, ya archivados {repetidos} → {ARCHIVE_DIR}")
+    if fallidas:
+        print(f"[archive_ema] {len(fallidas)}/{len(codes)} estaciones sin archivar: "
+              + ", ".join(fallidas))
+        return 1
     return 0
 
 

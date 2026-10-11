@@ -533,6 +533,16 @@ perder once corridas seguidas sin perder un dato. El crosscheck acepta
 archivo reproduce el modo API en el decimal. Un evento NO archivado está perdido
 para siempre, así que el timer debe estar puesto ANTES de la lluvia. Autotest sin
 red: `python3 monitor/archive_ema.py --selftest`.
+**Desde el 2026-10-11 archiva las CUATRO EMAs del dominio RM** (`--code` acepta
+lista separada por comas; default 330077,330112,330122,330019 = `DGA_STATIONS`
+de `monitor@rm`): la primera alerta de `monitor@rm` (chubascos del 10-oct,
+22:30Z, gatillada por GOES solo con 7.6 mm/h) quedó SIN verificar contra
+Tobalaba, La Florida y San José de Guayacán porque solo se archivaba El
+Colorado y, al ir a mirar, la ventana de la API empezaba 2 h después de la
+alerta. Una estación caída se reporta y no bloquea a las demás (salida 1 si
+alguna falló); solo las credenciales rechazadas abortan. Costo: ~1.3 MB/día
+por estación en `monitor/data/ema/` (gitignored). Si se agrega una estación a
+`DGA_STATIONS`, agregarla también al `ExecStart` de la unit.
 **Cruce de PP VALIDADO (2026-09-25)** desde el archivo: chubasco del 11-sep 1.6 vs
 1.6 mm hora a hora, septiembre 4.2 vs 4.2 mm en 474 h. Llevaba días "sin lluvia en
 la ventana común" por un BUG del cruce, no por falta de lluvia: `--horas` (24 h)

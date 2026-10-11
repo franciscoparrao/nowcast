@@ -7,8 +7,11 @@ After=network-online.target
 Type=oneshot
 # La API de la DMC sirve ~12 h y nada más. Sin este archivador, cualquier
 # verificación posterior a un evento es imposible: cuando uno va a mirar, el
-# dato ya no existe en ningún lado. Corre seguido y barato (~700 registros).
-ExecStart=%h/proyectos/nowcast/monitor/archive_ema.py --code 330077
+# dato ya no existe en ningún lado. Corre seguido y barato (~700 registros por
+# estación). Las cuatro EMAs del dominio RM (DGA_STATIONS de monitor@rm): la
+# primera alerta de rm (10-oct-2026) quedó sin verificar porque solo se
+# archivaba El Colorado.
+ExecStart=%h/proyectos/nowcast/monitor/archive_ema.py --code 330077,330112,330122,330019
 Environment=DMC_USUARIO=
 Environment=DMC_TOKEN=
 # Las credenciales reales salen de monitor/config.local.env, que el script lee

@@ -87,7 +87,11 @@ def load_dmc(desde=None, hasta=None):
     usuario, token = credentials()
     if not usuario or not token:
         raise SystemExit("faltan DMC_USUARIO/DMC_TOKEN (monitor/config.local.env o entorno)")
-    return parse_records(fetch_ema_raw(usuario, token, DMC_CODE)), "API DMC (ventana ~12 h)"
+    try:
+        recs = fetch_ema_raw(usuario, token, DMC_CODE)
+    except RuntimeError as exc:        # "sin registros": archive_ema ya no aborta por esto
+        raise SystemExit(str(exc))
+    return parse_records(recs), "API DMC (ventana ~12 h)"
 
 
 def dmc_hourly(minutely):
