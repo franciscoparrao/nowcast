@@ -99,21 +99,39 @@ def source_rasters(basins):
     return out
 
 
-def fine_mosaic(paths, lons, lats, sub):
+def fine_mosaic(paths, lons, lats, sub, cicatrices=None):
     """Mosaico a resolución nativa sobre el bbox destino. Donde dos cuencas se
     solapan gana el MÁXIMO (mismo criterio que susc_overlay.aggregate: el borde
-    de una cuenca no debe borrar el dato de la vecina)."""
+    de una cuenca no debe borrar el dato de la vecina).
+
+    `cicatrices` (dict cuenca → lista, de susc_overlay.cargar_cicatrices): la
+    cascada post-incendio se aplica en la grilla NATIVA de cada ráster ANTES
+    de reproyectar y agregar, igual que en susc_overlay y que en el motor, para
+    que el p90 de la celda vea las laderas quemadas amplificadas."""
     fine_res = RES / sub
     W, H = len(lons) * sub, len(lats) * sub
     tr = from_origin(lons[0] - RES / 2, lats[-1] + RES / 2, fine_res, fine_res)
     acc = np.full((H, W), np.nan, dtype="float32")
     for p in paths:
         dst = np.full((H, W), np.nan, dtype="float32")
+        basin = os.path.relpath(p, KINGSTON).split(os.sep)[0]
+        scars = (cicatrices or {}).get(basin, [])
         with rasterio.open(p) as src:
-            reproject(source=rasterio.band(src, 1), destination=dst,
+            if scars:
+                from susc_overlay import aplicar_cascada
+                nat = src.read(1).astype("float32")
+                if src.nodata is not None and not np.isnan(src.nodata):
+                    nat[nat == src.nodata] = np.nan
+                nat, n_amp = aplicar_cascada(nat, src.transform, src.crs, scars)
+                print(f"[susc]   cascada post-incendio en {basin}: {n_amp} celdas nativas "
+                      f"amplificadas ({', '.join(c['nombre'] for c in scars)})")
+                source, src_nodata = nat, np.nan
+            else:
+                source, src_nodata = rasterio.band(src, 1), src.nodata
+            reproject(source=source, destination=dst,
                       src_transform=src.transform, src_crs=src.crs,
                       dst_transform=tr, dst_crs="EPSG:4326",
-                      src_nodata=src.nodata, dst_nodata=np.nan,
+                      src_nodata=src_nodata, dst_nodata=np.nan,
                       # nearest: agregamos nosotros más abajo con el estadístico
                       # elegido; un remuestreo promediador aquí ya aplanaría el
                       # dato antes de poder elegir el criterio.
@@ -247,6 +265,9 @@ def main():
                     help="k del TriggerModel, para derivar el ALERT_LEVEL coherente")
     ap.add_argument("--allow-mute", action="store_true",
                     help="no abortar aunque alguna celda quede permanentemente muda")
+    ap.add_argument("--no-postfire", action="store_true",
+                    help="ignorar las cicatrices de monitor/data/postfire/scars.json "
+                         "(línea base sin cascada post-incendio)")
     a = ap.parse_args()
 
     bbox = tuple(float(x) for x in a.bbox.split(","))
@@ -264,7 +285,14 @@ def main():
     if sub != a.sub:
         print(f"[susc] submuestreo bajado {a.sub}→{sub} (~{RES/sub*111000:.0f} m, "
               f"{sub*sub} muestras/celda) para caber en {MAX_FINE_PX/1e6:.0f}M px de grilla fina")
-    fine, _ = fine_mosaic(paths, lons, lats, sub)
+    cicatrices = {}
+    if not a.no_postfire:
+        from susc_overlay import cargar_cicatrices
+        cicatrices = cargar_cicatrices()
+        for b, lst in cicatrices.items():
+            print(f"[susc] cascada post-incendio vigente en {b}: " + ", ".join(
+                f"{c['nombre']} (×{c['factor']}, hasta {c['valid_until']})" for c in lst))
+    fine, _ = fine_mosaic(paths, lons, lats, sub, cicatrices)
     susc, cov = aggregate(fine, len(lats), len(lons), a.stat, sub)
 
     # NO se voltea: `fine` ya se construye north-up (from_origin usa lats[-1],

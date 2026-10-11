@@ -146,6 +146,71 @@ def geos_inverse(x, y, p):
     return lat, lon
 
 
+def bin_to_grid(rate, lat, lon, lons, lats):
+    """Binning por promedio de los píxeles ABI (≈2 km) a la grilla 0.1° del
+    monitor (≈25 px por celda). `rate` en mm/h con NaN donde no hay dato
+    válido. Devuelve (tasa media por celda, aplanada S→N; fracción de celdas
+    con ≥1 píxel válido).
+
+    Un gránulo SIN ningún píxel válido en el bbox (DQF≠0 en todo el dominio,
+    típico de madrugada) es un paso de 0 mm con cobertura 0, no un error: con
+    numpy ≥2.5 `bincount` con pesos vacíos devuelve int64 y `np.divide` no
+    podía escribir float en ese `out` → el gránulo fallaba en CADA ciclo
+    mientras siguiera en la ventana (atacama: 48 reintentos del mismo gránulo
+    del 10-oct-2026). De ahí el astype explícito; `--selftest` lo cubre."""
+    w_edge = lons[0] - RES / 2
+    s_edge = lats[0] - RES / 2
+    ncols, nrows = lons.size, lats.size
+    ci = np.floor((lon - w_edge) / RES).astype("int64")
+    ri = np.floor((lat - s_edge) / RES).astype("int64")
+    inside = (ci >= 0) & (ci < ncols) & (ri >= 0) & (ri < nrows) & np.isfinite(rate)
+    flat = ri[inside] * ncols + ci[inside]
+    sums = np.bincount(flat, weights=rate[inside], minlength=nrows * ncols).astype("float64")
+    counts = np.bincount(flat, minlength=nrows * ncols)
+    mean_rate = np.divide(sums, counts, out=np.zeros_like(sums), where=counts > 0)
+    coverage = float((counts > 0).sum()) / (nrows * ncols)
+    return mean_rate, coverage
+
+
+def selftest():
+    """Sin red: binning con dato normal, gránulo totalmente inválido (el caso
+    que reventaba con numpy ≥2.5) y proyección geoestacionaria ida y vuelta."""
+    lons, lats = target_grid((-70.85, -34.25, -69.75, -33.05))
+    ncols, nrows = lons.size, lats.size
+    fallos = []
+    # (a) dos píxeles en la celda (col 0, fila 0), 4 y 6 mm/h → media 5; cobertura 1 celda.
+    lon = np.array([lons[0] - 0.02, lons[0] + 0.02, lons[0] + 0.02])
+    lat = np.array([lats[0] - 0.02, lats[0] + 0.02, lats[0] + 0.02])
+    rate = np.array([4.0, 6.0, np.nan])
+    m, cov = bin_to_grid(rate, lat, lon, lons, lats)
+    ok = abs(m[0] - 5.0) < 1e-9 and m[1:].max() == 0.0 and abs(cov - 1 / (nrows * ncols)) < 1e-12
+    print(f"[selftest goes] binning normal: celda0={m[0]:.2f} (esp. 5.00) cobertura={cov:.4f} "
+          f"{'OK' if ok else 'FALLA'}")
+    if not ok:
+        fallos.append("binning")
+    # (b) gránulo sin ningún píxel válido → ceros, cobertura 0, SIN excepción.
+    try:
+        m, cov = bin_to_grid(np.full(3, np.nan), lat, lon, lons, lats)
+        ok = m.dtype == np.float64 and float(m.max()) == 0.0 and cov == 0.0
+    except Exception as exc:  # noqa: BLE001
+        ok = False
+        print(f"[selftest goes]   excepción: {exc}")
+    print(f"[selftest goes] gránulo sin dato válido: ceros y cobertura 0 {'OK' if ok else 'FALLA'}")
+    if not ok:
+        fallos.append("vacio")
+    # (c) proyección: ida y vuelta de un punto del dominio en GOES-East.
+    p = {"req": 6378137.0, "rpol": 6356752.31414, "H": 35786023.0 + 6378137.0,
+         "lam0": math.radians(-75.2)}
+    x, y = geos_forward(np.array([-33.4]), np.array([-70.5]), p)
+    la, lo = geos_inverse(x, y, p)
+    ok = abs(la[0] + 33.4) < 1e-6 and abs(lo[0] + 70.5) < 1e-6
+    print(f"[selftest goes] proyección ida/vuelta: ({lo[0]:.6f},{la[0]:.6f}) {'OK' if ok else 'FALLA'}")
+    if not ok:
+        fallos.append("proyeccion")
+    print(f"\n[selftest goes] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 def convert(nc_path, bbox, out_tif):
     """NetCDF full disk → GeoTIFF del bbox en mm por gránulo (10 min)."""
     import rasterio
@@ -185,19 +250,9 @@ def convert(nc_path, bbox, out_tif):
     good = (dqf == 0) & np.isfinite(rate)
     rate = np.where(good, np.clip(rate, 0.0, None), np.nan)
 
-    # Binning por promedio a la grilla 0.1° (≈25 px ABI de 2 km por celda).
-    w_edge = lons[0] - RES / 2
-    s_edge = lats[0] - RES / 2
+    mean_rate, coverage = bin_to_grid(rate, lat, lon, lons, lats)
     ncols, nrows = lons.size, lats.size
-    ci = np.floor((lon - w_edge) / RES).astype("int64")
-    ri = np.floor((lat - s_edge) / RES).astype("int64")
-    inside = (ci >= 0) & (ci < ncols) & (ri >= 0) & (ri < nrows) & np.isfinite(rate)
-    flat = ri[inside] * ncols + ci[inside]
-    sums = np.bincount(flat, weights=rate[inside], minlength=nrows * ncols)
-    counts = np.bincount(flat, minlength=nrows * ncols)
-    mean_rate = np.divide(sums, counts, out=np.zeros_like(sums), where=counts > 0)
-    coverage = float((counts > 0).sum()) / (nrows * ncols)
-
+    w_edge = lons[0] - RES / 2
     depth = (mean_rate * (GRANULE.total_seconds() / 3600.0)).reshape(nrows, ncols)
     grid = depth[::-1, :].astype("float32")  # S→N a north-up
     transform = from_origin(w_edge, lats[-1] + RES / 2, RES, RES)
@@ -396,4 +451,6 @@ def main():
 
 
 if __name__ == "__main__":
+    if "--selftest" in sys.argv:
+        sys.exit(selftest())
     main()

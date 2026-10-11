@@ -123,6 +123,25 @@ scp monitor/{config.env,fetch_imerg_early.py,fetch_goes_qpe.py,fetch_dga.py,prep
     sentinel:~/nowcast-monitor/monitor/
 ssh sentinel "chmod +x ~/nowcast-monitor/monitor/monitor.sh && ls -la ~/nowcast-monitor/bin"  # verificar bytes
 
+# 2b. INSTANCIAR UN DOMINIO en el orquestador (así corren atacama y rm; el
+#     config.env del repo es solo la plantilla y NO tiene timer propio — el
+#     piloto RM estuvo meses sin correr por eso, hasta el aluvión de Las Condes
+#     del 2026-10-08):
+#       mkdir -p ~/nowcast-monitor/domains/<dom> ~/nowcast-monitor-<dom>
+#       cp monitor/config.env ~/nowcast-monitor/domains/<dom>/config.env
+#       # editar: BBOX, WORK_DIR=$HOME/nowcast-monitor-<dom>,
+#       #         SUSC_TIF=$HOME/nowcast-monitor-<dom>/susc_0p1.tif, DGA_STATIONS
+#       python3 monitor/make_susc_grid.py --bbox="<W,S,E,N>" \
+#           --out ~/nowcast-monitor-<dom>/susc_0p1.tif      # imprime ALERT_LEVEL
+#       # (aplica solas las cicatrices vigentes de monitor/data/postfire/scars.json;
+#       #  --no-postfire para la línea base)
+#       # pegar el ALERT_LEVEL impreso en el config del dominio
+#       CONFIG=~/nowcast-monitor/domains/<dom>/config.env \
+#           LOCAL_CONFIG=monitor/config.local.env monitor/monitor.sh   # 1er ciclo a mano
+#       systemctl --user enable --now nowcast-monitor@<dom>.timer
+#     El vigía (watchdog.sh) descubre el timer nuevo solo. OJO: no editar
+#     monitor/*.py en la ventana :12/:42 — el ciclo lee el archivo tal cual esté.
+
 # 3. Configurar: editar ~/nowcast-monitor/monitor/config.env en el nodo
 #    (BBOX, NTFY_TOPIC — crear un topic privado en ntfy.sh, NOWCAST_BIN, y el
 #    ALERT_LEVEL que imprimió el paso 1b si cambiaste BBOX o el ráster).

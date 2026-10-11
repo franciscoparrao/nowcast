@@ -570,6 +570,44 @@ OBSERVADA en Tobalaba (8.2 mm/h, a*=5.5 → gatillo 0.88) la cicatriz pasa de
 0.30 a 0.60 (mediana), y con Caine global (0.14) no cruza nada. La cascada
 corrige el terreno; el cuello sigue siendo la forzante sub-horaria.
 
+**`monitor@rm` EN OPERACIÓN (2026-10-11, modo sombra)**: el piloto RM de
+`config.env` NUNCA tuvo timer propio (solo corría `monitor@atacama`), y por eso
+el 8-oct nadie vio en vivo la ráfaga de Las Condes. Instancia:
+`~/nowcast-monitor/domains/rm/config.env` (bbox −70.85..−69.75 / −34.25..−33.05,
+extendido al norte para cubrir Lo Barnechea entero; 12×13 celdas), `WORK_DIR`
+`~/nowcast-monitor-rm`, Caine global como atacama, `ALERT_LEVEL=0.267` derivado,
+IMERG Early + GOES QPE + 4 EMAs DMC (se suma Tobalaba 330019, la que midió los
+8.2 mm/h del 8-oct). **La susceptibilidad del monitor lleva la cascada
+post-incendio**: `make_susc_grid.py` carga `scars.json` y aplica ×factor en la
+grilla nativa ANTES del p90 (`--no-postfire` para la línea base); medido: la
+celda de la cicatriz sube 0.544→0.577, la mediana no se mueve (el umbral sigue
+coherente) y solo 3 celdas cambian. Primer ciclo (04:47Z): `quiet`, 108 pasos,
+máximo 0.07. Timer habilitado con `systemctl --user enable --now
+nowcast-monitor@rm.timer`; el vigía lo descubre solo.
+**Bug GOES destapado al instanciar (`fetch_goes_qpe.py`)**: con numpy ≥2.5,
+`bincount` con pesos VACÍOS devuelve int64 y `np.divide` no escribía en ese
+`out` → un gránulo sin ningún píxel válido en el bbox (DQF≠0 en todo el dominio,
+típico de madrugada) fallaba en CADA ciclo mientras siguiera en la ventana
+(atacama: 48 reintentos del mismo gránulo del 10-oct; rm: 3). Ahora es un paso
+de 0 mm con cobertura 0; el binning vive en `bin_to_grid` y
+`fetch_goes_qpe.py --selftest` cubre el caso vacío, el normal y la proyección.
+**Retrospectiva del 8-oct (IMERG+GOES, 84 h, susc con cascada) — RESULTADO
+NEGATIVO decisivo**: los DOS productos satelitales se perdieron la ráfaga del
+piedemonte. En la celda de Tobalaba, 17-21Z: IMERG 0.37 mm y GOES 1.66 mm contra
+12.6 mm observados (8.2 en la hora previa al aluvión) → ×34 y ×8 por debajo; en
+la cicatriz IMERG 1.0 / GOES 2.6 mm. Peligro en la cicatriz ≤0.04 con Caine y
+≤0.05 con a*=5.5: **el monitor con forzante satelital NO habría alertado**. Lo
+único que vio la ráfaga fue el pluviómetro a 7 km; simulado el feed DGA (IDW de
+las 4 EMAs) sobre la cicatriz: 5.5 mm/h → Caine 0.04 (nada), a*=5.5 0.29
+(ALERTA a la hora del evento, sin lead). Por eso `monitor@rm` corre con
+**ID_A=5.5 en SOMBRA** (atacama sigue en Caine): costo medido 17/168 pasos con
+alguna celda en alerta en la ventana 7-9 oct (cordillera SE, sin verificar).
+Conclusión que apunta a las fuentes: para ráfagas convectivas de piedemonte no
+hay forzante satelital que sirva; hace falta red densa in situ (EMAs, estaciones
+personales, enlaces de microondas). OJO: los fetchers miden la ventana hacia atrás desde AHORA y
+GOES escribe en `WORK_DIR/steps` → para una retrospectiva el GOES va con
+`WORK_DIR=$S/feeds/goes`, o mezcla sus pasos con los de IMERG (pasó).
+
 **Fase A del plan EWS (2026-07-11) LISTA**: fusión multi-forzante de punta a
 punta. (1) CLI: `nowcast run --fuse-rasters <stack>` repetible + `--combine
 noisy-or|max|product` — cada stack extra es su propio `IdTrigger` vía
