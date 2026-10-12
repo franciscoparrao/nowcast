@@ -1,0 +1,121 @@
+{
+ "20261012T1630": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0,
+   "trinitarias_rancho_chico_2026-01-14": 0,
+   "monte_negro_florida_ranquil_2026-01-14": 0,
+   "rucahue_sur_laja_2026-01-14": 0
+  }
+ },
+ "20261012T1700": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0,
+   "trinitarias_rancho_chico_2026-01-14": 0,
+   "monte_negro_florida_ranquil_2026-01-14": 0,
+   "rucahue_sur_laja_2026-01-14": 0
+  }
+ },
+ "20261012T1730": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0,
+   "trinitarias_rancho_chico_2026-01-14": 0,
+   "monte_negro_florida_ranquil_2026-01-14": 0,
+   "rucahue_sur_laja_2026-01-14": 0
+  }
+ },
+ "20261012T1800": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0,
+   "trinitarias_rancho_chico_2026-01-14": 0,
+   "monte_negro_florida_ranquil_2026-01-14": 0,
+   "rucahue_sur_laja_2026-01-14": 1
+  }
+ },
+ "20261012T1830": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261012T1900": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261012T1930": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261012T2000": {
+  "domain": 1,
+  "max_cell": 1,
+  "max_cell_lonlat": [
+   -70.65,
+   -33.65
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261012T2030": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261012T2100": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261012T2130": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261012T2200": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261012T2230": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ }
+}

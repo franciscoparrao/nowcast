@@ -7,9 +7,9 @@
     "autor": "Francisco Parra O. (con Claude Fable 5.1)",
     "fecha": "2026-10-12T13:24:33-03:00",
     "root": "../../..",
-    "commit": "8e28bad"
+    "commit": "832c7e1"
   },
-  "bluf": "El frente entra el lunes 12 en la tarde (ECMWF e ICON) o el martes 13 en la tarde (GFS). En el piedemonte de Las Condes los acumulados pronosticados igualan o superan los del 8 de octubre (12.7–30.7 mm en 120 h, picos de 1.4–3.2 mm/h), pero ningún modelo resuelve la ráfaga sub-horaria que gatilló ese aluvión, así que el pronóstico no confirma ni descarta una repetición. Fuera de Las Condes el único lugar con dos modelos sobre el umbral es Lonquimay; las señales de un solo modelo están en la precordillera de la RM (ICON, ocho ciclos seguidos), Machalí (ECMWF) y el secano de Coquimbo (ECMWF e ICON, lunes en la tarde). El monitor de la RM corre con los cuatro feeds al día, pero sigue en estado de alerta por una falsa alarma de GOES del sábado, de modo que un cruce real el lunes en la noche no saldría como aviso nuevo. Las tres cicatrices del megaincendio de enero (Concepción–Penco 18.533 ha, Florida–Ránquil 8.065 ha, Laja 4.040 ha) quedaron en la cascada post-incendio; esta semana no cambian ningún nivel comunal porque la lluvia pronosticada ahí es baja.",
+  "bluf": "El frente entra el lunes 12 en la tarde (ECMWF e ICON) o el martes 13 en la tarde (GFS). En el piedemonte de Las Condes los acumulados pronosticados igualan o superan los del 8 de octubre (12.7–30.7 mm en 120 h, picos de 1.4–3.2 mm/h), pero ningún modelo resuelve la ráfaga sub-horaria que gatilló ese aluvión, así que el pronóstico no confirma ni descarta una repetición. Fuera de Las Condes el único lugar con dos modelos sobre el umbral es Lonquimay; las señales de un solo modelo están en la precordillera de la RM (ICON, ocho ciclos seguidos), Machalí (ECMWF) y el secano de Coquimbo (ECMWF e ICON, lunes en la tarde). El monitor de la RM tuvo su primer cruce real el lunes 12 entre las 13:30 y las 16:30 de Chile, en la celda de Tobalaba (6.4 mm/h en la hora pico, 13 mm en 3 h), sostenido solo por el pluviómetro: IMERG y GOES no vieron nada y el GLM contó una descarga. El ciclo de las 17:15Z lo suprimió la histéresis de estado, tal como se había previsto; el aviso salió a las 14:46 de Chile con la histéresis por cruce recién instalada, y desde las 20:48Z la evidencia de la racha se congela sola. Con Caine global no habría cruzado. No hay reporte de daño al cierre: no se clasifica aún como acierto ni como falsa alarma. Las tres cicatrices del megaincendio de enero (Concepción–Penco 18.533 ha, Florida–Ránquil 8.065 ha, Laja 4.040 ha) quedaron en la cascada post-incendio; esta semana no cambian ningún nivel comunal porque la lluvia pronosticada ahí es baja.",
   "afirmaciones": [
     {
       "id": "A1",
@@ -127,21 +127,21 @@
           "tipo": "codigo",
           "ruta": "monitor/monitor.sh",
           "lineas": [
-            468,
-            480
+            542,
+            577
           ],
-          "sha256": "5821a07e49b97aeddbb3f1eae13e303b17b28d2b80b91685192148cd0b253474",
-          "extracto": "    # Histéresis por CRUCE (2026-10-12). Antes la marca `alert` se re-estampaba\n    # cada REALERT_HOURS mientras el dominio siguiera en alerta: notificaba el\n    # ESTADO. Costó verlo con monitor@rm: una falsa alarma de GOES del 10-oct\n    # (pasos de 22:30-23:30Z) quedó 54 h en la ventana y, con el frente del\n    # 12-oct entrando esa noche, un cruce REAL habría salido fundido con el\n    # aviso repetido, hasta 6 h tarde. Ahora: si la racha de alerta más\n    # reciente empieza más de ALERT_EPISODE_GAP_H horas después del fin de la\n    # última racha avisada (o no hay racha avisada), es un cruce nuevo y se\n    # avisa DE INMEDIATO (histéresis 0, que igual re-estampa `alert`); si es\n    # la misma racha, se repite cada REALERT_HOURS como antes. La racha\n    # avisada se guarda en state/alert_episode solo tras entrega confirmada\n    # (NOTIFY_DELIVERED), y se borra al volver a quiet.\n    NUEVO=1"
+          "sha256": "fb23e5544568ec8da8724c550b880ba21b870c16c866f0f2c91a8de7903fa6b2",
+          "extracto": "    # Histéresis por CRUCE (2026-10-12). Antes la marca `alert` se re-estampaba\n    # cada REALERT_HOURS mientras el dominio siguiera en alerta: notificaba el\n    # ESTADO. Costó verlo con monitor@rm: una falsa alarma de GOES del 10-oct\n    # (pasos de 22:30-23:30Z) quedó 54 h en la ventana y, con el frente del\n    # 12-oct entrando esa noche, un cruce REAL habría salido fundido con el\n    # aviso repetido, hasta 6 h tarde. Ahora: si la racha de alerta más\n    # reciente empieza más de ALERT_EPISODE_GAP_H horas después del fin de la\n    # última racha avisada (o no hay racha avisada), es un cruce nuevo y se\n    # avisa DE INMEDIATO (histéresis 0, que igual re-estampa `alert`); si es\n    # la misma racha, se repite cada REALERT_HOURS como antes. La racha\n    # avisada se guarda en state/alert_episode solo tras entrega confirmada\n    # (NOTIFY_DELIVERED), y se borra al volver a quiet.\n    # Corroboración entre feeds (2026-10-12, corroborate.py): la fusión es\n    # noisy-OR y un solo feed basta para cruzar. Si la racha la sostiene SOLO\n    # GOES QPE (sin IMERG, sin estación, sin rayos GLM) el aviso sale como\n    # \"NO corroborada\" (prioridad default, histéresis propia) y NO estampa la\n    # racha: si en un ciclo posterior otra fuente la respalda, saldrá como\n    # cruce nuevo urgente. Un cruce solo-DGA es legítimo (es la única fuente\n    # que ve el piedemonte: Tobalaba 6.4 mm/h con IMERG y GOES en 0, 12-oct).\n    CORROB=1; CORROB_DET=\"\"\n    if [[ \"${CORROB_ENABLED:-1}\" == \"1\" ]]; then\n        HZ_DIR=\"-\"; [[ \"${WRITE_HAZARD_TIFS:-0}\" == \"1\" ]] && HZ_DIR=\"$WORK_DIR/out/hazard\"\n        GLM_ST=\"-\"; [[ \"${GLM_ENABLED:-0}\" == \"1\" && -s \"$WORK_DIR/feeds/glm/status.json\" ]] && GLM_ST=\"$WORK_DIR/feeds/glm/status.json\"\n        read -r CORROB CORROB_FEEDS CORROB_DET < <(python3 \"$HERE/corroborate.py\" \"$RUN_JSON\" \"$FUSION_JSON\" \\\n            \"$HZ_DIR\" \"$GLM_ST\" \"${CORROB_MIN_MM:-1.0}\" \"${CORROB_HOURS:-3}\" \"${CORROB_GLM_FLASHES:-3}\" \\\n            \"$ALERT_LEVEL\" \"${CORROB_FRACTION:-0.5}\" 2>>\"$LOG\" || echo \"1 error corroborate.py falló (ver log): se asume corroborada\")\n        log \"corroboración: ${CORROB} (${CORROB_FEEDS}) — $CORROB_DET\"\n    fi\n    if [[ \"$CORROB\" != 1 ]]; then\n        notify \"nowcast-monitor: alerta I-D NO corroborada (solo GOES QPE)\" \\\n            \"$DETAIL. Solo el QPE de GOES sostiene el cruce ($CORROB_DET). GOES sobreestima chubascos (falsa alarma del 10-oct-2026): se avisa en prioridad baja hasta que IMERG, una estación o rayos GLM lo respalden. Último dato IMERG: $NEWEST.$GLM_NOTE Detalle: $RUN_JSON\" \\\n            default alert_uncorrob \"${REALERT_HOURS:-6}\"\n        freeze_evidence 0 \"${CORROB_FEEDS:-ninguno}\" \"$CORROB_DET\" \"alerta I-D NO corroborada (solo GOES QPE)\" \"$NOTIFY_DELIVERED\"\n        exit 0\n    fi\n    NUEVO=1"
         },
         {
           "tipo": "codigo",
           "ruta": "monitor/monitor.sh",
           "lineas": [
-            496,
-            506
+            593,
+            604
           ],
-          "sha256": "174366fcf18ed770ac45b5d54e13f3a07a20a8a938fa4a19b39bb2161a5b657c",
-          "extracto": "        TITULO=\"nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio\"; HORAS=0\n    else\n        TITULO=\"nowcast-monitor: ALERTA I-D persiste en el dominio\"; HORAS=\"${REALERT_HOURS:-6}\"\n    fi\n    notify \"$TITULO\" \\\n        \"$DETAIL. Último dato IMERG: $NEWEST (~4 h de latencia)$DEGRADED$FUSION_NOTE$FLOOD_NOTE$H0_NOTE. Feeds: $FUSE_SUMMARY. Detalle: $RUN_JSON\" \\\n        urgent alert \"$HORAS\"\n    if [[ \"$NOTIFY_DELIVERED\" == 1 && -n \"$EP_FIRST\" ]]; then\n        echo \"$EP_FIRST $EP_LAST\" > \"$WORK_DIR/state/alert_episode\"\n    fi\n    ;;"
+          "sha256": "cb8ceccd65766db244083b1881420de9268e7808ec8ad93c5798e3bab3ef6214",
+          "extracto": "        TITULO=\"nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio\"; HORAS=0\n    else\n        TITULO=\"nowcast-monitor: ALERTA I-D persiste en el dominio\"; HORAS=\"${REALERT_HOURS:-6}\"\n    fi\n    notify \"$TITULO\" \\\n        \"$DETAIL. Sostienen: ${CORROB_FEEDS:-?}. Último dato IMERG: $NEWEST (~4 h de latencia)$DEGRADED$FUSION_NOTE$FLOOD_NOTE$H0_NOTE.$GLM_NOTE Feeds: $FUSE_SUMMARY. Detalle: $RUN_JSON\" \\\n        urgent alert \"$HORAS\"\n    if [[ \"$NOTIFY_DELIVERED\" == 1 && -n \"$EP_FIRST\" ]]; then\n        echo \"$EP_FIRST $EP_LAST\" > \"$WORK_DIR/state/alert_episode\"\n    fi\n    freeze_evidence \"$CORROB\" \"${CORROB_FEEDS:-?}\" \"$CORROB_DET\" \"${TITULO#nowcast-monitor: }\" \"$NOTIFY_DELIVERED\"\n    ;;"
         },
         {
           "tipo": "codigo",
@@ -158,10 +158,10 @@
           "cmd": "PATH=/home/franciscoparrao/nowcast-monitor/venv/bin:$PATH python3 monitor/selftest.py --alert-episode 2>&1 | grep -E '^\\s+(ok|FALLA)|TODO OK|FALLAS'",
           "cwd": ".",
           "exit": 0,
-          "sha256": "c257c27769b516858c7d96f135fc4dba3b274a0d2aa8d653e460c3d7cbab7455",
-          "salida": "  ok   racha A (hace 15 h) → cruce nuevo, avisa         entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n  ok   state/alert_episode escrito tras entrega         20261012T0200 20261012T0400\n  ok   misma racha A → suprimida por histéresis         entregados=—\n  ok   racha C (nueva, 15 h después) → cruce nuevo, avisa entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n  ok   misma racha C → suprimida                        entregados=—\n  ok   quiet → nada y se borra alert_episode            entregados=—\n  ok   racha A tras quiet → cruce nuevo, avisa          entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n[selftest alert-episode] TODO OK",
-          "fecha": "2026-10-12T15:10:00-03:00",
-          "segundos": 16.39
+          "sha256": "c8d0257aafca573e6fef35990381adf64c7560be7c1103a41d556c843d8a849b",
+          "salida": "  ok   racha A (hace 15 h) → cruce nuevo, avisa         entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n  ok   state/alert_episode escrito tras entrega         20261012T0700 20261012T0900\n  ok   misma racha A → suprimida por histéresis         entregados=—\n  ok   racha C (nueva, 15 h después) → cruce nuevo, avisa entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n  ok   misma racha C → suprimida                        entregados=—\n  ok   quiet → nada y se borra alert_episode            entregados=—\n  ok   racha A tras quiet → cruce nuevo, avisa          entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n[selftest alert-episode] TODO OK",
+          "fecha": "2026-10-12T20:17:13-03:00",
+          "segundos": 8.96
         }
       ]
     },
@@ -203,8 +203,8 @@
           "tipo": "codigo",
           "ruta": "CLAUDE.md",
           "lineas": [
-            646,
-            660
+            722,
+            736
           ],
           "sha256": "76bfbaca07e505e1d0ab52973eaa61656085d77430befbb568871332a90b57b2",
           "extracto": "**Retrospectiva del 8-oct (IMERG+GOES, 84 h, susc con cascada) — RESULTADO\nNEGATIVO decisivo**: los DOS productos satelitales se perdieron la ráfaga del\npiedemonte. En la celda de Tobalaba, 17-21Z: IMERG 0.37 mm y GOES 1.66 mm contra\n12.6 mm observados (8.2 en la hora previa al aluvión) → ×34 y ×8 por debajo; en\nla cicatriz IMERG 1.0 / GOES 2.6 mm. Peligro en la cicatriz ≤0.04 con Caine y\n≤0.05 con a*=5.5: **el monitor con forzante satelital NO habría alertado**. Lo\núnico que vio la ráfaga fue el pluviómetro a 7 km; simulado el feed DGA (IDW de\nlas 4 EMAs) sobre la cicatriz: 5.5 mm/h → Caine 0.04 (nada), a*=5.5 0.29\n(ALERTA a la hora del evento, sin lead). Por eso `monitor@rm` corre con\n**ID_A=5.5 en SOMBRA** (atacama sigue en Caine): costo medido 17/168 pasos con\nalguna celda en alerta en la ventana 7-9 oct (cordillera SE, sin verificar).\nConclusión que apunta a las fuentes: para ráfagas convectivas de piedemonte no\nhay forzante satelital que sirva; hace falta red densa in situ (EMAs, estaciones\npersonales, enlaces de microondas). OJO: los fetchers miden la ventana hacia atrás desde AHORA y\nGOES escribe en `WORK_DIR/steps` → para una retrospectiva el GOES va con"
@@ -441,22 +441,201 @@
           "nota": ""
         }
       ]
+    },
+    {
+      "id": "A19",
+      "texto": "Primer cruce real de monitor@rm: racha de 7 pasos de 30 min entre las 16:30Z y las 19:30Z del 12-oct (13:30–16:30 de Chile), siempre una sola celda (−70.55, −33.45), la que contiene la EMA Tobalaba, con pico 0.41 sobre el nivel 0.267 (a*=5.5 en sombra). La sostiene solo el feed de estaciones: en esa celda 9.4 mm en los 7 pasos contra 0.3 mm de IMERG y 0.1 mm de GOES QPE, con IMERG en relleno cero (cola de latencia) desde las 16:00Z. Tobalaba midió 6.4 mm en la hora 16Z, 3.8 en la 17Z y 2.2 en la 18Z (13.0 mm en la ventana congelada 10:30–22:30Z); El Colorado 2.7, San José de Guayacán 2.2 y La Florida 0.0 mm. GLM: 1 descarga en todo el dominio en la ventana. Evidencia congelada automáticamente por freeze_evidence.py (5 ciclos, 122 archivos con sha256) y copiada a evidencia/cruce_rm_20261012/.",
+      "estado": "verificado",
+      "tema": "Monitor RM: cruce real",
+      "evidencia": [
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/cruce_rm_20261012/manifest.json",
+          "sha256": "9b06bba8fad4e8ae0dcb8b1ab89f46ac4bcbaf8acd99a7b45c9f4d977c1f2f9c",
+          "bytes": 20041
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/cruce_rm_20261012/ciclos.jsonl",
+          "sha256": "37e102a89a5c718c55bf2da18d78018c620d4d638fa2ab1bc3898d5011d56f62",
+          "bytes": 3522
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/cruce_rm_20261012/ema/resumen.json",
+          "sha256": "45690e62bd550f3b6653f5a6ff2c86f83e1b2f3f9f0ed69bbe274f5417f5c1bf",
+          "bytes": 1941
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/cruce_rm_20261012/hazard/hazard_20261012T1730.tif",
+          "sha256": "4270ad27042faa31b717b0e42bb3b4396d0f93c369a911be67d872b05d311bca",
+          "bytes": 962
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/cruce_rm_20261012/feeds/dga/step_20261012T1730.tif",
+          "sha256": "7ef2b8b719441a7a0c83e1a557246d4370a7c320d676e24d675fa826d0707611",
+          "bytes": 990
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/cruce_rm_20261012/feeds/goes/step_20261012T1730.tif",
+          "sha256": "30c03d91cbdc0f343682a64f4cb3abe7e9f644734867ad4bd0cea224be2155a6",
+          "bytes": 990
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/cruce_rm_20261012/glm/counts.json",
+          "sha256": "62022d9aaf892563de75b2a47bceae73073777b37e09d4ade3e080630e8aa634",
+          "bytes": 2364
+        },
+        {
+          "tipo": "comando",
+          "cmd": "PATH=/home/franciscoparrao/nowcast-monitor/venv/bin:$PATH python3 -W ignore docs/informes/frente-2026-10/scripts/cruce_rm_20261012.py",
+          "cwd": ".",
+          "exit": 0,
+          "sha256": "57e36d7041e0bf0da7a4726b86cf179382ec31922ac2d76211ab8a94486f09d4",
+          "salida": "racha {'ep_first': '20261012T1630', 'ep_last': '20261012T1930'} | ventana congelada 20261012T1030–20261012T2230 | 5 ciclos, 122 archivos, commit 0fc3d75\nfeeds: {'primary': (15, 'último real 20261012T1730'), 'goes': (24, 'último real 20261012T2200'), 'dga': (24, 'último real 20261012T2200')}\nIMERG en relleno cero (cola de latencia) desde: 20261012T1600\n\navisos 'CRUCE NUEVO' entregados: 4 → 2026-10-12T17:46:13Z, 2026-10-12T18:14:13Z, 2026-10-12T18:44:08Z, 2026-10-12T18:49:54Z\n  primer aviso: 2026-10-12T17:46:13Z | 5 paso(s) en alerta (nivel 0.267); último: paso 106 con 1 celda(s) (1% del dominio), pico de la ventana 0.39.\ncorroboraciones registradas: 8; primera 2026-10-12T19:16:25Z → lluvia 3 h en celdas en alerta: imerg 0.0 mm, goes 0.0 mm, dga 12.4 mm; rayos GLM 0; sostienen: dga\n  todas sostenidas solo por DGA: True\n\npaso UTC       peligro máx  celda (lon,lat)        IMERG   GOES    DGA   (mm/30 min en esa celda)\n20261012T1630        0.388  (-70.55,-33.45) 1 celda(s)    0.16   0.00   3.39\n20261012T1700        0.297  (-70.55,-33.45) 1 celda(s)    0.09   0.00   0.60\n20261012T1730        0.412  (-70.55,-33.45) 1 celda(s)    0.03   0.00   3.19\n20261012T1800        0.408  (-70.55,-33.45) 1 celda(s)    0.00   0.03   1.40\n20261012T1830        0.382  (-70.55,-33.45) 1 celda(s)    0.00   0.00   0.80\n20261012T1900        0.328  (-70.55,-33.45) 1 celda(s)    0.00   0.03   0.00\n20261012T1930        0.283  (-70.55,-33.45) 1 celda(s)    0.00   0.00   0.00\nceldas en alerta en la racha: [(np.float64(-70.55), np.float64(-33.45))] | acumulado en la celda, 7 pasos: primary 0.3 mm, goes 0.1 mm, dga 9.4 mm\n\nEMAs DMC (archivo archive_ema), mm por hora UTC, 14Z–21Z:\nestación                        14Z    15Z    16Z    17Z    18Z    19Z    20Z    21Z   total ventana\n330077 El Colorado 2750m        0.0    0.0    0.5    0.6    0.7    0.7    0.2    0.0   2.7 mm (676 registros)\n330112 San Jose Guayacan        0.0    0.0    0.2    0.2    1.3    0.5    0.0    0.0   2.2 mm (676 registros)\n330122 Aguas Andinas La Flor    0.0    0.0    0.0    0.0    0.0    0.0    0.0    0.0   0.0 mm (676 registros)\n330019 Tobalaba Ad.             0.0    0.4    6.4    3.8    2.2    0.0    0.2    0.0   13.0 mm (683 registros)\n\nGLM: 1 descargas en el dominio en 13 pasos de la ventana; máx por paso 1\nciclos.jsonl: 5 ciclos, veredictos [1, 1, 1, 1, 1], sostienen ['dga'], títulos ['ALERTA I-D persiste en el dominio']\n\nTobalaba 14Z–21Z (mm/h): [0.0, 0.4, 6.4, 3.8, 2.2, 0.0, 0.2, 0.0]\n  a=14.82: excedencia máxima E=0.45 → no cruza (E≥1 = sobre la curva I-D)\n  a= 5.50: excedencia máxima E=1.22 → CRUZA (E≥1 = sobre la curva I-D)",
+          "fecha": "2026-10-12T20:16:41-03:00",
+          "segundos": 0.37
+        }
+      ]
+    },
+    {
+      "id": "A20",
+      "texto": "Cronología de los avisos, de la bitácora del monitor: el ciclo de las 17:15Z ya tenía el paso de las 16:30Z en alerta (pico 0.387, último paso real de DGA 16:30Z) y la histéresis de estado lo suprimió ('notify suprimida por histéresis (alert)'): el modo de falla previsto en A7 ocurrió tal cual, con el cruce real tapado por la marca de la falsa alarma del sábado. El primer aviso 'CRUCE NUEVO' salió a las 17:46Z (14:46 de Chile), en el primer ciclo que corrió con la histéresis por cruce (commit 8e28bad de las 14:28), 46 minutos después del fin del primer paso en alerta. Los ciclos de las 18:14Z y 18:44Z volvieron a avisar 'CRUCE NUEVO' por un error nuevo: las claves de tiempo de la racha salían vacías cuando los pasos en alerta eran los de la unión más nuevos que IMERG (justo donde caen los cruces en vivo), y cada ciclo lo tomaba por racha nueva; corregido en 8bbf8c6 (claves desde span[0] de fusion.json), con una corrida manual a las 18:49Z. Desde las 19:16Z hay 8 corroboraciones registradas, todas 'sostienen: dga'.",
+      "estado": "verificado",
+      "tema": "Monitor RM: cruce real",
+      "depende_de": [
+        "A5"
+      ],
+      "evidencia": [
+        {
+          "tipo": "codigo",
+          "ruta": "monitor/monitor.sh",
+          "lineas": [
+            480,
+            483
+          ],
+          "sha256": "f6e72ae3746cc2c34244909080d242135fd7f9b2b94d2ef28689cdbe228938e8",
+          "extracto": "# La clave de tiempo sale de span[0] + 30 min × índice: la UNIÓN puede tener\n# más pasos que la lista del primario (cola DGA/GOES más nueva que IMERG), y\n# justo ahí caen los cruces en vivo (12-oct-2026: pasos 103-106 solo-DGA).\nfrom datetime import datetime, timedelta"
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/cruce_rm_20261012/monitor_log_extracto.txt",
+          "sha256": "59cec2493e414d0bb7f63b62f57e07ad08b4522f9091ba42f6bf446765f015d6",
+          "bytes": 5504
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/cruce_rm_20261012/runs/history_run_20261012T1715.json",
+          "sha256": "3dccbd53323ff5d720472ee1cd5590c4caf095d87ac101460d0e63e9bbf1d898",
+          "bytes": 7210
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/cruce_rm_20261012/runs/history_run_20261012T1746.json",
+          "sha256": "3c9ce9ddff03f035266041b9a957b7466b0339ed1bbbe521e65d9efdc376e169",
+          "bytes": 7297
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/cruce_rm_20261012/runs/history_run_20261012T1814_primer_aviso.json",
+          "sha256": "c77a193fbf64a88e71683892de97f7885263d47eed093b0c38ef7bfcbbb8c4fc",
+          "bytes": 7382
+        }
+      ]
+    },
+    {
+      "id": "A21",
+      "texto": "Con el intercepto de Caine global (a=14.82) el episodio no cruza: sobre la lluvia horaria de Tobalaba la excedencia máxima I/(a·D^−0.39) para D=1–3 h es 0.45, contra 1.22 con el intercepto regional a*=5.5 con que monitor@rm corre en sombra. Es el mismo contraste de la retrospectiva del 8-oct (A8): un pluviómetro con 6–8 mm/h en una hora solo cruza con el intercepto calibrado en el Maipo.",
+      "estado": "verificado",
+      "tema": "Monitor RM: cruce real",
+      "depende_de": [
+        "A19"
+      ],
+      "evidencia": [
+        {
+          "tipo": "comando",
+          "cmd": "PATH=/home/franciscoparrao/nowcast-monitor/venv/bin:$PATH python3 -W ignore docs/informes/frente-2026-10/scripts/cruce_rm_20261012.py | tail -3",
+          "cwd": ".",
+          "exit": 0,
+          "sha256": "1ab7eb87e31b02b27a30d4a2f3d965f99ff79350037ae54fb10e30b61042183b",
+          "salida": "Tobalaba 14Z–21Z (mm/h): [0.0, 0.4, 6.4, 3.8, 2.2, 0.0, 0.2, 0.0]\n  a=14.82: excedencia máxima E=0.45 → no cruza (E≥1 = sobre la curva I-D)\n  a= 5.50: excedencia máxima E=1.22 → CRUZA (E≥1 = sobre la curva I-D)",
+          "fecha": "2026-10-12T20:16:41-03:00",
+          "segundos": 0.39
+        }
+      ]
+    },
+    {
+      "id": "A22",
+      "texto": "Desde el commit 832c7e1 el ramo de alerta de monitor.sh congela la evidencia de cada racha en WORK_DIR/evidence/<racha>/ (pasos de los tres feeds, peligro renombrado por clave de tiempo, GLM, registros crudos de las cuatro EMAs archivadas con resumen horario, run.json y fusion.json del ciclo, config con credenciales tachadas, ciclos.jsonl con el veredicto de corroboración y manifest.json con sha256 por archivo), añadiendo sin pisar mientras la racha persista y también para alertas no corroboradas. Es la respuesta a A4: la alerta del 10-oct quedó sin verificar porque la ventana de la API DMC y la rotación de pasos ya habían avanzado cuando se fue a mirar. Primera corrida real: ciclo de las 20:48Z, 90 archivos; a las 22:47Z iba en 5 ciclos y 122 archivos.",
+      "estado": "verificado",
+      "tema": "Monitor RM: evidencia",
+      "depende_de": [
+        "A4"
+      ],
+      "evidencia": [
+        {
+          "tipo": "codigo",
+          "ruta": "monitor/monitor.sh",
+          "lineas": [
+            443,
+            459
+          ],
+          "sha256": "6c73de3b3be9f409ac54669dd5c2b99fdf119bddc5d59c8c2ec7bcef89a1cf78",
+          "extracto": "# --- 3c. Congelado de evidencia por alerta (freeze_evidence.py) -------------\n# La alerta del 10-oct-2026 quedó sin verificar porque, al ir a mirar, la API\n# DMC ya no cubría la hora del cruce, los pasos habían rotado y los rásters de\n# peligro tenían otros índices. Ahora cada ciclo en alerta deja en\n# $FREEZE_DIR/<racha>/ los pasos de los 3 feeds, el peligro por clave de\n# tiempo, los registros crudos de las EMAs archivadas, el GLM, el run.json y\n# el veredicto de corroboración (ciclos.jsonl), con sha256 por archivo. Añade\n# sin pisar; también para alertas NO corroboradas (son las que hay que revisar).\n# Nunca tumba el ciclo: cualquier error es un \"skip\" en el log.\nfreeze_evidence() {   # $1 corrob(0/1) $2 feeds $3 detalle $4 título $5 entregado(0/1)\n    [[ \"${FREEZE_EVIDENCE:-1}\" == \"1\" && -n \"${EP_FIRST:-}\" ]] || return 0\n    local hz=\"-\" glm=\"-\" out\n    [[ \"${WRITE_HAZARD_TIFS:-0}\" == \"1\" ]] && hz=\"$WORK_DIR/out/hazard\"\n    [[ \"${GLM_ENABLED:-0}\" == \"1\" && -d \"$WORK_DIR/feeds/glm\" ]] && glm=\"$WORK_DIR/feeds/glm\"\n    out=$(python3 \"$HERE/freeze_evidence.py\" \"$RUN_JSON\" \"$FUSION_JSON\" \"$WORK_DIR\" \"$EP_FIRST\" \"$EP_LAST\"         \"${FREEZE_DIR:-$WORK_DIR/evidence}\" --hazard-dir \"$hz\" --glm-dir \"$glm\"         --ema-dir \"${EMA_ARCHIVE_DIR:-$HERE/data/ema}\" --stations \"${DGA_STATIONS:-}\"         --pre-h \"${FREEZE_PRE_H:-6}\" --post-h \"${FREEZE_POST_H:-3}\"         --corrob \"$1\" --corrob-feeds \"$2\" --corrob-det \"$3\" --titulo \"$4\" --delivered \"$5\"         --config \"$CONFIG\" --repo \"$HERE\" --min-free-mb \"${FREEZE_MIN_FREE_MB:-500}\" 2>>\"$LOG\")         || out=\"skip freeze_evidence.py salió $? (ver log)\"\n    log \"evidencia congelada: $out\"\n}"
+        },
+        {
+          "tipo": "codigo",
+          "ruta": "monitor/freeze_evidence.py",
+          "lineas": [
+            2,
+            36
+          ],
+          "sha256": "f1630964cf5a0c595a39cee1243dff3b0da4696e67d913e071bccc47001616eb",
+          "extracto": "\"\"\"Congela la evidencia de una alerta I-D del monitor (2026-10-12).\n\nPOR QUÉ. La primera alerta de monitor@rm (10-oct, 22:30Z, solo GOES) quedó\nSIN verificar: cuando se fue a mirar, la ventana de ~12 h de la API DMC ya\nempezaba 2 h después del cruce, los pasos de la ventana rodante ya habían\nrotado y los rásters de peligro se habían reescrito con otros índices. La\nevidencia de un cruce se pierde en horas si nadie la guarda EN EL MOMENTO.\nEste script la deja congelada en el ciclo de la alerta, para que un informe\ntrazable (docs/informes/) pueda citarla después con su hash.\n\nQUÉ GUARDA. En `EVID_DIR/<EP_FIRST>/` (una carpeta por RACHA, nombrada por\nla clave de tiempo de su primer paso en alerta; mientras la racha persista\ncada ciclo AÑADE lo nuevo y NUNCA sobreescribe lo ya congelado):\n  feeds/<feed>/step_<clave>.tif   pasos de cada feed de fusion.json en la\n                                  ventana [EP_FIRST − PRE_H, EP_LAST + POST_H]\n                                  (+ gapmark_<clave> si el feed marcó hueco;\n                                  los zerofill del primario se registran en\n                                  el manifiesto, no se copian)\n  hazard/hazard_<clave>.tif       peligro por paso, renombrado por CLAVE DE\n                                  TIEMPO (el índice hazard_%04d cambia con\n                                  cada rotación de la ventana)\n  glm/steps/step_<clave>.tif, glm/counts.json, glm/status_<ciclo>.json\n  ema/<code>.jsonl                registros CRUDOS de archive_ema en la ventana\n  ema/resumen.json                lluvia horaria por estación (mm)\n  runs/run_<ciclo>.json, runs/fusion_<ciclo>.json\n  config.env                      snapshot de la config (credenciales tachadas)\n  ciclos.jsonl                    una línea por ciclo: racha, veredicto de\n                                  corroboración, título, entrega, GLM\n  manifest.json                   ventana, commit del monitor, sha256 de cada\n                                  archivo congelado\nGuarda TAMBIÉN las alertas \"NO corroboradas\": justamente son las que hay que\npoder revisar (la falsa alarma del 10-oct es el caso de uso).\n\nSalida (stdout, una línea): `<dir> <archivos_nuevos> <archivos_total>` o\n`skip <motivo>`. Nunca falla el ciclo: cualquier error interno se reporta en"
+        },
+        {
+          "tipo": "comando",
+          "cmd": "PATH=/home/franciscoparrao/nowcast-monitor/venv/bin:$PATH python3 -W ignore monitor/freeze_evidence.py --selftest 2>&1 | tail -1",
+          "cwd": ".",
+          "exit": 0,
+          "sha256": "9c0aa183a7ca334b7b79188ab84e99066dad1f02f31ae7c82044cb3bf716304f",
+          "salida": "[selftest freeze_evidence] TODO OK",
+          "fecha": "2026-10-12T20:16:43-03:00",
+          "segundos": 0.96
+        }
+      ]
+    },
+    {
+      "id": "A23",
+      "texto": "El cruce del 12-oct no se puede clasificar todavía como acierto ni como falsa alarma: no hay inventario ni reporte de daño conocido al cierre de este informe, y la lluvia fue más baja que la del 8-oct (6.4 contra 8.2 mm/h en la hora pico; 13.0 mm en 3 h contra 12.6 en 4 h) y de carácter frontal, no convectivo (1 descarga GLM contra 233; los dos QPE satelitales en cero sobre el piedemonte). Lo que sí deja establecido es que, también en lluvia frontal, el feed de estaciones es el único que ve el piedemonte de Las Condes, y que a*=5.5 marca episodios de 6 mm/h que Caine global ignora: el costo en falsas alarmas de ese intercepto se mide en la temporada, no en un evento.",
+      "estado": "inferido",
+      "confianza": "probable",
+      "tema": "Monitor RM: cruce real",
+      "depende_de": [
+        "A19",
+        "A21"
+      ],
+      "evidencia": []
     }
   ],
   "pendientes": [
-    "Cambiar la histéresis del monitor para que avise cuando el paso en alerta más reciente sea más nuevo que el último avisado (hoy notifica estados, no cruces).",
+    "Clasificar el cruce del 12-oct (acierto o falsa alarma) cuando haya inventario o reportes de daño del piedemonte de Las Condes; seguir la racha en ~/nowcast-monitor-rm/evidence/20261012T1630/ciclos.jsonl.",
     "Verificar la alerta del 10-oct cuando haya otra fuente para Tobalaba/La Florida/San José de Guayacán; desde el 11-oct las cuatro EMAs se archivan cada hora.",
-    "Revisar el lunes en la noche out/last_run.json de monitor@rm y cruzar cualquier alerta con monitor/data/ema/*-2026-10.jsonl.",
     "Validar las máscaras de Ñuble–Biobío contra un perímetro oficial (CONAF/SENAPRED) cuando exista; descartar cortes de plantación.",
-    "Fuente in situ densa para el piedemonte (Netatmo, enlaces de microondas): ningún producto satelital vio la ráfaga del 8-oct.",
-    "Feed GLM (rayos) en el monitor: flashes por 10 min sobre el dominio y las cicatrices como corroborador y gatillo de vigilancia reforzada; validar sobre más eventos (¿todas las ráfagas de piedemonte tienen rayos?).",
-    "Feed GLM (rayos) en el monitor: flashes por 10 min sobre el dominio y las cicatrices como corroborador y gatillo de vigilancia reforzada; validar sobre más eventos (¿todas las ráfagas de piedemonte tienen rayos?)."
+    "Fuente in situ densa para el piedemonte (Netatmo, enlaces de microondas): ningún producto satelital vio la ráfaga del 8-oct ni la lluvia frontal del 12-oct.",
+    "Validar los umbrales del feed GLM (10 descargas sobre cicatriz, 50 en el dominio) y de la corroboración (1 mm, 3 h, fracción 0.5) sobre más eventos: ¿todas las ráfagas de piedemonte tienen rayos?",
+    "Retención de WORK_DIR/evidence/: nadie lo poda (hoy ~3 MB por racha, casi todo registros crudos de EMAs)."
   ],
   "reproducir": [
     "Reproduce el pronóstico: python3 docs/informes/frente-2026-10/scripts/pronostico_rm.py ~/nowcast-forecast/20261012T06z",
     "Reproduce los cruces por dominio: python3 docs/informes/frente-2026-10/scripts/otros_lugares.py ~/nowcast-forecast/20261012T06z (venv-forecast)",
     "Reproduce la revisión de la alerta: python3 docs/informes/frente-2026-10/scripts/alerta_rm_20261010.py (lee evidencia/alerta_rm_20261010/)",
     "Reproduce las cicatrices: python3 docs/informes/frente-2026-10/scripts/cicatrices.py <comunas.geojson> y susc_en_cicatriz.py (requiere KINGSTON montado)",
-    "Recalcula una cicatriz: monitor/postfire_scar.py --nombre … --pre … --post … --bbox … --fecha-incendio … --basin … (ver meta.json de cada una)"
+    "Recalcula una cicatriz: monitor/postfire_scar.py --nombre … --pre … --post … --bbox … --fecha-incendio … --basin … (ver meta.json de cada una)",
+    "Reproduce el cruce real del 12-oct: PATH=~/nowcast-monitor/venv/bin:$PATH python3 docs/informes/frente-2026-10/scripts/cruce_rm_20261012.py (lee evidencia/cruce_rm_20261012/)"
   ]
 }
