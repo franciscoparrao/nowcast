@@ -102,6 +102,17 @@ if [[ "${SKIP_FETCH:-0}" != "1" ]]; then
                 high goes_fetch_fail "${RESTALE_HOURS:-12}"
         fi
     fi
+    if [[ "${GLM_ENABLED:-0}" == "1" ]]; then
+        # Rayos: diagnóstico de convección, NO forzante (ver fetch_glm.py).
+        if ! WORK_DIR="$WORK_DIR/feeds/glm" GLM_BUCKET="${GLM_BUCKET:-${GOES_BUCKET:-noaa-goes19}}" \
+                GLM_LOOKBACK_MIN="${GLM_LOOKBACK_MIN:-60}" GLM_BACKFILL_MIN="${GLM_BACKFILL_MIN:-120}" \
+                GLM_SCAR_BUFFER_KM="${GLM_SCAR_BUFFER_KM:-5}" GLM_STALE_HOURS="${GLM_STALE_HOURS:-1}" \
+                python3 "$HERE/fetch_glm.py" >>"$LOG" 2>&1; then
+            notify "nowcast-monitor: ingesta GLM (rayos) falló" \
+                "El fetch de rayos GLM falló; el ciclo sigue sin el indicador de convección. Ver $LOG." \
+                high glm_fetch_fail "${RESTALE_HOURS:-12}"
+        fi
+    fi
     if [[ "${DGA_ENABLED:-0}" == "1" ]]; then
         if ! WORK_DIR="$WORK_DIR/feeds/dga" DMC_USUARIO="${DMC_USUARIO:-}" \
                 DMC_TOKEN="${DMC_TOKEN:-}" DGA_STATIONS="${DGA_STATIONS:-}" \
@@ -183,9 +194,10 @@ fi
 # queden) pero SÍ se avisa: perder GOES es perder la capa de baja latencia y
 # eso el operador tiene que saberlo — silencio de feed ≠ calma, también aquí.
 FUSION_NOTE=""
-for FEED in goes dga; do
+for FEED in goes dga glm; do
     EN_VAR="GOES_ENABLED"; STALE_VAR="${GOES_STALE_HOURS:-1}"
     [[ "$FEED" == "dga" ]] && { EN_VAR="DGA_ENABLED"; STALE_VAR="${DGA_STALE_HOURS:-3}"; }
+    [[ "$FEED" == "glm" ]] && { EN_VAR="GLM_ENABLED"; STALE_VAR="${GLM_STALE_HOURS:-1}"; }
     [[ "${!EN_VAR:-0}" != "1" ]] && continue
     FSTATUS="$WORK_DIR/feeds/$FEED/status.json"
     read -r F_DISABLED F_STALE F_NEWEST < <(python3 - "$FSTATUS" "$STALE_VAR" <<'EOF'
@@ -210,6 +222,47 @@ EOF
         FUSION_NOTE="$FUSION_NOTE [$FEED caído]"
     fi
 done
+
+# --- 2c. Convección (rayos GLM) — diagnóstico, no forzante -------------------
+# El 8-oct-2026 los QPE satelitales no vieron la ráfaga de Las Condes y el GLM
+# sí (pico 30 min antes del aluvión). Aquí no se toca el peligro: se resume la
+# actividad eléctrica de los últimos GLM_LOOKBACK_MIN min en el cuerpo de los
+# avisos y se manda un aviso propio cuando una cicatriz post-incendio (con
+# buffer) o el dominio superan los umbrales. Hysteresis por clase; al quedar
+# en cero se reinicia, para que el próximo episodio avise de inmediato.
+GLM_NOTE=""
+if [[ "${GLM_ENABLED:-0}" == "1" && -s "$WORK_DIR/feeds/glm/status.json" ]]; then
+    read -r GLM_DOM GLM_SCAR_N GLM_SCAR GLM_CELL < <(python3 - "$WORK_DIR/feeds/glm/status.json" <<'EOF'
+import json, sys
+try:
+    r = json.load(open(sys.argv[1]))["recent"]
+    ts = r.get("top_scar") or {}
+    cell = r.get("max_cell_lonlat") or ["-", "-"]
+    print(int(r.get("domain", 0)), int(ts.get("flashes") or 0), ts.get("nombre") or "-",
+          f"{r.get('max_cell', 0)}@({cell[0]},{cell[1]})")
+except Exception as e:
+    print(-1, 0, "-", f"ilegible:{e.__class__.__name__}")
+EOF
+    )
+    if [[ "$GLM_DOM" == "-1" ]]; then
+        log "WARN: status GLM ilegible ($GLM_CELL)"
+    else
+        GLM_NOTE=" Rayos GLM ${GLM_LOOKBACK_MIN:-60} min: $GLM_DOM en el dominio (máx celda $GLM_CELL)"
+        [[ "$GLM_SCAR" != "-" ]] && GLM_NOTE="$GLM_NOTE, $GLM_SCAR_N sobre $GLM_SCAR."
+        log "rayos GLM:$GLM_NOTE"
+        if (( GLM_SCAR_N >= ${GLM_ALERT_FLASHES:-10} )); then
+            notify "nowcast-monitor: CONVECCIÓN sobre cicatriz post-incendio" \
+                "$GLM_SCAR_N descargas GLM en ${GLM_LOOKBACK_MIN:-60} min sobre $GLM_SCAR (+${GLM_SCAR_BUFFER_KM:-5} km); $GLM_DOM en el dominio. Es el patrón del 8-oct-2026 (ráfaga convectiva que los QPE no ven): revisar estaciones y GOES ahora. Diagnóstico, no cambia el peligro I-D." \
+                urgent glm_conv_scar "${GLM_REALERT_HOURS:-2}"
+        elif (( GLM_DOM >= ${GLM_ALERT_FLASHES_DOMAIN:-50} )); then
+            notify "nowcast-monitor: convección eléctrica en el dominio" \
+                "$GLM_DOM descargas GLM en ${GLM_LOOKBACK_MIN:-60} min; máx por celda $GLM_CELL. Diagnóstico, no cambia el peligro I-D." \
+                high glm_conv_dom "${GLM_REALERT_HOURS:-2}"
+        fi
+        (( GLM_SCAR_N == 0 )) && rm -f "$WORK_DIR/state/glm_conv_scar"
+        (( GLM_DOM == 0 )) && rm -f "$WORK_DIR/state/glm_conv_dom"
+    fi
+fi
 
 # --- 3. Correr el motor sobre la ventana rodante (fusionada si hay feeds) ------
 # prepare_fusion.py alinea los feeds sobre la unión de ventanas: la cola
@@ -394,7 +447,7 @@ case $RC in
     # notifique de inmediato (notificamos cruces, no estados).
     rm -f "$WORK_DIR/state/alert" "$WORK_DIR/state/alert_episode"
     mark_ok "$WORK_DIR/state"
-    log "quiet — $UNION_N pasos reales en la unión (primario $N_STEPS, último $NEWEST; unión hasta $UNION_NEWEST)$DEGRADED$FLOOD_NOTE"
+    log "quiet — $UNION_N pasos reales en la unión (primario $N_STEPS, último $NEWEST; unión hasta $UNION_NEWEST)$DEGRADED$FLOOD_NOTE$GLM_NOTE"
     ;;
 2)
     # El EPISODIO es la racha más reciente de pasos consecutivos en alerta,
@@ -406,15 +459,18 @@ r = json.load(open(sys.argv[1]))
 idx = [s["step"] for s in r["steps"] if s.get("alert")]
 if not idx:
     sys.exit(0)
-keys = None
+# La clave de tiempo sale de span[0] + 30 min × índice: la UNIÓN puede tener
+# más pasos que la lista del primario (cola DGA/GOES más nueva que IMERG), y
+# justo ahí caen los cruces en vivo (12-oct-2026: pasos 103-106 solo-DGA).
+from datetime import datetime, timedelta
+t0 = None
 try:
-    fz = json.load(open(sys.argv[2]))
-    keys = [os.path.basename(p)[5:-4] for p in fz["feeds"]["primary"]["list"].split(",")]
+    t0 = datetime.strptime(json.load(open(sys.argv[2]))["span"][0], "%Y%m%dT%H%M")
 except Exception:
     pass
 def key(i):
-    if keys and 0 <= i < len(keys):
-        return keys[i]
+    if t0 is not None:
+        return (t0 + timedelta(minutes=30 * i)).strftime("%Y%m%dT%H%M")
     return f"step{i:04d}"
 last = idx[-1]; first = last
 for i in reversed(idx[:-1]):
@@ -498,7 +554,7 @@ EOF
         TITULO="nowcast-monitor: ALERTA I-D persiste en el dominio"; HORAS="${REALERT_HOURS:-6}"
     fi
     notify "$TITULO" \
-        "$DETAIL. Último dato IMERG: $NEWEST (~4 h de latencia)$DEGRADED$FUSION_NOTE$FLOOD_NOTE$H0_NOTE. Feeds: $FUSE_SUMMARY. Detalle: $RUN_JSON" \
+        "$DETAIL. Último dato IMERG: $NEWEST (~4 h de latencia)$DEGRADED$FUSION_NOTE$FLOOD_NOTE$H0_NOTE.$GLM_NOTE Feeds: $FUSE_SUMMARY. Detalle: $RUN_JSON" \
         urgent alert "$HORAS"
     if [[ "$NOTIFY_DELIVERED" == 1 && -n "$EP_FIRST" ]]; then
         echo "$EP_FIRST $EP_LAST" > "$WORK_DIR/state/alert_episode"

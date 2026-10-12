@@ -580,6 +580,29 @@ OBSERVADA en Tobalaba (8.2 mm/h, a*=5.5 → gatillo 0.88) la cicatriz pasa de
 0.30 a 0.60 (mediana), y con Caine global (0.14) no cruza nada. La cascada
 corrige el terreno; el cuello sigue siendo la forzante sub-horaria.
 
+**Feed de RAYOS GLM en el monitor (2026-10-12, `monitor/fetch_glm.py`)**: el
+8-oct los dos QPE satelitales no vieron la ráfaga de Las Condes y el sensor de
+rayos del mismo GOES-19 sí: 233 descargas sobre el piedemonte, pico de 82 en
+10 min a las 19:30Z (16:30 Chile), 30 min ANTES del aluvión (barrido de 1.080
+archivos GLM-L2-LCFA; evidencia en `docs/informes/frente-2026-10/`). Lo que
+falla es la estimación de lluvia, no el satélite. El feed cuenta descargas por
+paso semihorario en la grilla 0.1° (`feeds/glm/steps`, acumulado entre ciclos)
+y dentro de cada cicatriz vigente de `scars.json` que toque el dominio
+(+`GLM_SCAR_BUFFER_KM`=5, por el error de geolocalización), incremental por
+`state.json`, ~90 archivos de 20 s por ciclo en memoria con 8 descargas en
+paralelo (medido: 359 archivos en 66 s). **NO entra a la fusión ni toca el
+peligro**: es diagnóstico. `monitor.sh` (bloque 2c) pone el resumen de los
+últimos `GLM_LOOKBACK_MIN`=60 min en el cuerpo de avisos y en el log, y manda
+un aviso propio "CONVECCIÓN sobre cicatriz" (urgent, ≥`GLM_ALERT_FLASHES`=10
+sobre una cicatriz) o "convección eléctrica en el dominio" (high,
+≥`GLM_ALERT_FLASHES_DOMAIN`=50), con histéresis `GLM_REALERT_HOURS`=2 que se
+reinicia al quedar en cero. Validado en UN evento: los umbrales son
+provisionales y hay que medir en más ráfagas si todas tienen rayos. Activo en
+`monitor@rm` (config del dominio); el template lo trae en 0. Autotests:
+`fetch_glm.py --selftest` (binning, paso, buffer, resumen) y `selftest.py --glm`
+(aviso sobre umbral, silencio bajo umbral, histéresis, reinicio en cero, aviso
+de dominio; el peligro I-D sigue quiet).
+
 **Histéresis por CRUCE en el monitor (2026-10-12)**: `monitor.sh` avisaba el
 ESTADO del dominio (marca `state/alert` re-estampada cada `REALERT_HOURS`=6
 mientras hubiera algún paso en alerta en la ventana), aunque el comentario
@@ -598,7 +621,12 @@ Autotest `selftest.py --alert-episode` (racha vieja avisa; misma racha se
 suprime; racha nueva 15 h después avisa con la marca fresca; quiet olvida).
 OJO al diseñar tests: una ráfaga de 150 mm deja la I-D excedida ~40 h, así que
 "otra ráfaga" es la misma racha; con 36 mm la alerta dura ~4 h. `selftest.py`
-usa `~/nowcast-monitor/bin/nowcast` si no hay `target/`.
+usa `~/nowcast-monitor/bin/nowcast` si no hay `target/`. **Las claves de
+tiempo de la racha salen de `span[0]` + 30 min × índice**, no de la lista del
+primario: la unión puede tener más pasos que IMERG (cola DGA/GOES) y justo ahí
+caen los cruces en vivo; el 12-oct el primer cruce real (pasos 103-106,
+solo-DGA, Tobalaba 6.4 mm/h con IMERG y GOES en 0) salió con claves vacías y
+`state/alert_episode` quedó corrupto hasta el arreglo.
 
 **Cicatrices del megaincendio de enero-2026 registradas (2026-10-12)**: tres
 entradas más en `scars.json`, todas con fecha 2026-01-14, factor 2.0 y vigencia

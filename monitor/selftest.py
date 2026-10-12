@@ -634,6 +634,75 @@ def alert_episode_selftest():
     return 0 if not fallos else 1
 
 
+def glm_selftest():
+    """Rayos GLM como diagnóstico (2026-10-12): con un status.json sintético el
+    ciclo avisa CONVECCIÓN sobre cicatriz cuando la cuenta supera
+    GLM_ALERT_FLASHES, no avisa bajo el umbral, repite por histéresis, y el
+    peligro I-D NO cambia (quiet sigue quiet). fetch_glm.py --selftest cubre el
+    binning sin red."""
+    import http.server
+    import subprocess
+    import threading
+
+    class H(http.server.BaseHTTPRequestHandler):   # ntfy local: sin entrega no hay histéresis
+        def do_POST(self):
+            self.send_response(200); self.end_headers(); self.wfile.write(b'{"id":"selftest"}')
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now -= timedelta(minutes=now.minute % 30)
+    write_steps(os.path.join(BASE, "steps"), now, 96, burst_last=0)
+    write_status(os.path.join(BASE, "status.json"), now, 96)
+    write_config(fusion=False)
+    cfg = os.path.join(BASE, "config_glm.env")
+    with open(cfg, "w") as f:
+        f.write(open(os.path.join(BASE, "config.env")).read()
+                + f'\nNTFY_TOPIC="selftest"\nNTFY_URL="http://127.0.0.1:{srv.server_address[1]}"\n'
+                + '\nGLM_ENABLED=1\nGLM_ALERT_FLASHES=10\nGLM_ALERT_FLASHES_DOMAIN=50\nGLM_REALERT_HOURS=2\n')
+    shutil.rmtree(os.path.join(BASE, "state"), ignore_errors=True)
+    gdir = os.path.join(BASE, "feeds", "glm")
+    os.makedirs(gdir, exist_ok=True)
+
+    def status(dom, scar):
+        json.dump({"utc": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "feed": "glm:selftest",
+                   "newest_step": now.strftime("%Y%m%dT%H%M"), "stale_minutes": 1.0,
+                   "recent": {"minutes": 60, "domain": dom, "max_cell": max(1, dom // 3),
+                              "max_cell_lonlat": [-70.45, -33.35], "scars": {"cicatriz_x": scar},
+                              "top_scar": {"nombre": "cicatriz_x", "flashes": scar}}},
+                  open(os.path.join(gdir, "status.json"), "w"))
+
+    def ciclo():
+        r = subprocess.run([os.path.join(REPO, "monitor", "monitor.sh")],
+                           env={**os.environ, "SKIP_FETCH": "1", "CONFIG": cfg},
+                           capture_output=True, text=True, timeout=1800)
+        return r.stdout + r.stderr
+
+    fallos = []
+
+    def caso(nombre, salida, espera_aviso, texto):
+        hay = any(("NOTIFY" in l and texto in l) for l in salida.splitlines())
+        quiet = "quiet —" in salida
+        ok = (hay == espera_aviso) and quiet
+        print(f"  {'ok  ' if ok else 'FALLA'} {nombre:52s} aviso={'sí' if hay else 'no'} (esp. {'sí' if espera_aviso else 'no'}) quiet={'sí' if quiet else 'no'}")
+        if not ok:
+            fallos.append(nombre)
+            print("      " + "\n      ".join(l for l in salida.splitlines() if "NOTIFY" in l or "GLM" in l or "FATAL" in l)[:800])
+
+    status(3, 2);   caso("2 flashes sobre cicatriz → sin aviso, quiet", ciclo(), False, "CONVECCI")
+    status(30, 12); caso("12 sobre cicatriz → CONVECCIÓN sobre cicatriz, quiet", ciclo(), True, "CONVECCIÓN sobre cicatriz")
+    status(40, 15); caso("sigue (15) → suprimido por histéresis 2 h", ciclo(), False, "CONVECCIÓN sobre cicatriz")
+    status(0, 0);   caso("en cero → nada y se reinicia la histéresis", ciclo(), False, "CONVECCI")
+    status(80, 0);  caso("80 en el dominio, 0 en cicatriz → aviso de dominio", ciclo(), True, "convección eléctrica en el dominio")
+    status(50, 11); caso("vuelve sobre cicatriz tras el cero → avisa de nuevo", ciclo(), True, "CONVECCIÓN sobre cicatriz")
+    srv.shutdown()
+    print(f"\n[selftest glm] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 HDF5_FAMILIA = ("xarray", "h5py", "h5netcdf", "netCDF4", "cfgrib")
 
 
@@ -894,6 +963,8 @@ if __name__ == "__main__":
         sys.exit(notify_contract_selftest())
     if "--alert-episode" in sys.argv:
         sys.exit(alert_episode_selftest())
+    if "--glm" in sys.argv:
+        sys.exit(glm_selftest())
     if "--flood" in sys.argv:
         sys.exit(flood_selftest())
     if "--h0" in sys.argv:

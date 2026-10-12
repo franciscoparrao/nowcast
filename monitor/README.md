@@ -54,6 +54,7 @@ systemd timer (30 min)
        ├─ dead-man switch        # por feed: primario aborta, secundarios avisan
        ├─ prepare_fusion.py      # unión de ventanas + cero-relleno CONTADO
        ├─ nowcast run --rain-rasters ... --fuse-rasters ... --combine noisy-or
+       ├─ rayos GLM (fetch_glm.py, GLM_ENABLED): convección sobre cicatrices/dominio → aviso propio, no toca el peligro
        └─ notificación con histéresis por CRUCE: racha nueva (>ALERT_EPISODE_GAP_H h
           tras la última avisada) avisa de inmediato; la misma racha re-avisa c/6 h
 ```
