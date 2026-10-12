@@ -445,7 +445,7 @@ case $RC in
 0)
     # Al volver a quiet, resetear la histéresis para que la PRÓXIMA alerta
     # notifique de inmediato (notificamos cruces, no estados).
-    rm -f "$WORK_DIR/state/alert" "$WORK_DIR/state/alert_episode"
+    rm -f "$WORK_DIR/state/alert" "$WORK_DIR/state/alert_episode" "$WORK_DIR/state/alert_uncorrob"
     mark_ok "$WORK_DIR/state"
     log "quiet — $UNION_N pasos reales en la unión (primario $N_STEPS, último $NEWEST; unión hasta $UNION_NEWEST)$DEGRADED$FLOOD_NOTE$GLM_NOTE"
     ;;
@@ -533,6 +533,28 @@ EOF
     # la misma racha, se repite cada REALERT_HOURS como antes. La racha
     # avisada se guarda en state/alert_episode solo tras entrega confirmada
     # (NOTIFY_DELIVERED), y se borra al volver a quiet.
+    # Corroboración entre feeds (2026-10-12, corroborate.py): la fusión es
+    # noisy-OR y un solo feed basta para cruzar. Si la racha la sostiene SOLO
+    # GOES QPE (sin IMERG, sin estación, sin rayos GLM) el aviso sale como
+    # "NO corroborada" (prioridad default, histéresis propia) y NO estampa la
+    # racha: si en un ciclo posterior otra fuente la respalda, saldrá como
+    # cruce nuevo urgente. Un cruce solo-DGA es legítimo (es la única fuente
+    # que ve el piedemonte: Tobalaba 6.4 mm/h con IMERG y GOES en 0, 12-oct).
+    CORROB=1; CORROB_DET=""
+    if [[ "${CORROB_ENABLED:-1}" == "1" ]]; then
+        HZ_DIR="-"; [[ "${WRITE_HAZARD_TIFS:-0}" == "1" ]] && HZ_DIR="$WORK_DIR/out/hazard"
+        GLM_ST="-"; [[ "${GLM_ENABLED:-0}" == "1" && -s "$WORK_DIR/feeds/glm/status.json" ]] && GLM_ST="$WORK_DIR/feeds/glm/status.json"
+        read -r CORROB CORROB_FEEDS CORROB_DET < <(python3 "$HERE/corroborate.py" "$RUN_JSON" "$FUSION_JSON" \
+            "$HZ_DIR" "$GLM_ST" "${CORROB_MIN_MM:-1.0}" "${CORROB_HOURS:-3}" "${CORROB_GLM_FLASHES:-3}" \
+            "$ALERT_LEVEL" "${CORROB_FRACTION:-0.5}" 2>>"$LOG" || echo "1 error corroborate.py falló (ver log): se asume corroborada")
+        log "corroboración: ${CORROB} (${CORROB_FEEDS}) — $CORROB_DET"
+    fi
+    if [[ "$CORROB" != 1 ]]; then
+        notify "nowcast-monitor: alerta I-D NO corroborada (solo GOES QPE)" \
+            "$DETAIL. Solo el QPE de GOES sostiene el cruce ($CORROB_DET). GOES sobreestima chubascos (falsa alarma del 10-oct-2026): se avisa en prioridad baja hasta que IMERG, una estación o rayos GLM lo respalden. Último dato IMERG: $NEWEST.$GLM_NOTE Detalle: $RUN_JSON" \
+            default alert_uncorrob "${REALERT_HOURS:-6}"
+        exit 0
+    fi
     NUEVO=1
     if [[ -n "$EP_FIRST" && -s "$WORK_DIR/state/alert_episode" ]]; then
         read -r AV_FIRST AV_LAST <"$WORK_DIR/state/alert_episode"
@@ -554,7 +576,7 @@ EOF
         TITULO="nowcast-monitor: ALERTA I-D persiste en el dominio"; HORAS="${REALERT_HOURS:-6}"
     fi
     notify "$TITULO" \
-        "$DETAIL. Último dato IMERG: $NEWEST (~4 h de latencia)$DEGRADED$FUSION_NOTE$FLOOD_NOTE$H0_NOTE.$GLM_NOTE Feeds: $FUSE_SUMMARY. Detalle: $RUN_JSON" \
+        "$DETAIL. Sostienen: ${CORROB_FEEDS:-?}. Último dato IMERG: $NEWEST (~4 h de latencia)$DEGRADED$FUSION_NOTE$FLOOD_NOTE$H0_NOTE.$GLM_NOTE Feeds: $FUSE_SUMMARY. Detalle: $RUN_JSON" \
         urgent alert "$HORAS"
     if [[ "$NOTIFY_DELIVERED" == 1 && -n "$EP_FIRST" ]]; then
         echo "$EP_FIRST $EP_LAST" > "$WORK_DIR/state/alert_episode"

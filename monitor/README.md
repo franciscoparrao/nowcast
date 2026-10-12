@@ -55,6 +55,7 @@ systemd timer (30 min)
        ├─ prepare_fusion.py      # unión de ventanas + cero-relleno CONTADO
        ├─ nowcast run --rain-rasters ... --fuse-rasters ... --combine noisy-or
        ├─ rayos GLM (fetch_glm.py, GLM_ENABLED): convección sobre cicatrices/dominio → aviso propio, no toca el peligro
+       ├─ corroboración (corroborate.py): cruce que sostiene solo GOES QPE → aviso 'NO corroborada' (default)
        └─ notificación con histéresis por CRUCE: racha nueva (>ALERT_EPISODE_GAP_H h
           tras la última avisada) avisa de inmediato; la misma racha re-avisa c/6 h
 ```

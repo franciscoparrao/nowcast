@@ -580,6 +580,28 @@ OBSERVADA en Tobalaba (8.2 mm/h, a*=5.5 → gatillo 0.88) la cicatriz pasa de
 0.30 a 0.60 (mediana), y con Caine global (0.14) no cruza nada. La cascada
 corrige el terreno; el cuello sigue siendo la forzante sub-horaria.
 
+**Corroboración entre feeds (2026-10-12, `monitor/corroborate.py`)**: la
+fusión es noisy-OR y un solo feed basta para cruzar; medido en monitor@rm que
+"solo un feed" no vale lo mismo según cuál sea: el 10-oct GOES QPE solo
+(3.8 mm/30 min, estaciones en ~0) dio una falsa alarma, y el 12-oct el primer
+cruce real lo sostuvo SOLO el feed de estaciones (Tobalaba 6.4 mm/h con IMERG
+y GOES en 0). La regla, en el ramo de alerta de `monitor.sh` antes de la
+histéresis: sobre la racha más reciente, en las celdas que cruzan el nivel
+(rásters `out/hazard`, o todo el dominio si `WRITE_HAZARD_TIFS=0`), suma la
+lluvia de cada feed en las últimas `CORROB_HOURS`=3 h; un feed sostiene si
+acumula ≥`CORROB_MIN_MM`=1 y, salvo DGA, ≥`CORROB_FRACTION`=0.5 del feed
+mayor (la llovizna de IMERG, 1.2 mm, no respalda una ráfaga de 36 mm que solo
+trae GOES: lo midió el autotest). Corroborada si sostiene DGA o IMERG, o GOES
+con rayos GLM (≥`CORROB_GLM_FLASHES`=3 en el dominio) o con IMERG; si solo
+sostiene GOES el aviso sale "NO corroborada (solo GOES QPE)" en prioridad
+default con histéresis propia (`state/alert_uncorrob`) y NO estampa la racha,
+así que si otra fuente la respalda después sale como cruce nuevo urgente.
+`CORROB_ENABLED=0` apaga la regla. Autotests `corroborate.py --selftest` (11
+casos) y `selftest.py --corrob` (solo-GOES → default sin racha; GOES+DGA,
+solo-DGA → urgente con racha; apagada → como antes). OJO en tests: los casos
+se construyen antes del bucle, así que los archivos sintéticos necesitan
+nombre único por caso (dos rásters con el mismo nombre se pisaron).
+
 **Feed de RAYOS GLM en el monitor (2026-10-12, `monitor/fetch_glm.py`)**: el
 8-oct los dos QPE satelitales no vieron la ráfaga de Las Condes y el sensor de
 rayos del mismo GOES-19 sí: 233 descargas sobre el piedemonte, pico de 82 en

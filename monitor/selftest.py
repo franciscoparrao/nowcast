@@ -703,6 +703,74 @@ def glm_selftest():
     return 0 if not fallos else 1
 
 
+def corrob_selftest():
+    """Corroboración entre feeds (2026-10-12): una ráfaga que trae SOLO GOES
+    sale como 'NO corroborada' (default) y no estampa racha; la misma ráfaga
+    con el feed DGA (o IMERG) sale como CRUCE NUEVO urgente. Sin rásters de
+    peligro (WRITE_HAZARD_TIFS=0) el criterio es todo el dominio."""
+    import http.server
+    import subprocess
+    import threading
+
+    recibidos = []
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            recibidos.append((self.headers.get("Priority", ""), self.headers.get("Title", "")))
+            self.send_response(200); self.end_headers(); self.wfile.write(b'{"id":"selftest"}')
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now -= timedelta(minutes=now.minute % 30)
+    # primario en llovizna y al día; la ráfaga va en los feeds secundarios
+    write_steps(os.path.join(BASE, "steps"), now, 96, burst_last=0)
+    write_status(os.path.join(BASE, "status.json"), now, 96)
+    shutil.rmtree(os.path.join(BASE, "feeds"), ignore_errors=True)
+    for feed in ("goes", "dga"):
+        d = os.path.join(BASE, "feeds", feed)
+        write_steps(os.path.join(d, "steps"), now, 96, burst_last=6, burst_mm=6.0)
+        write_status(os.path.join(d, "status.json"), now, 96, {"feed": f"{feed}:selftest"})
+    write_config(fusion=True)
+    base_cfg = open(os.path.join(BASE, "config.env")).read()
+    fallos = []
+
+    def ciclo(override):
+        cfg = os.path.join(BASE, "config_corrob.env")
+        with open(cfg, "w") as f:
+            f.write(base_cfg + f'\nNTFY_TOPIC="selftest"\nNTFY_URL="http://127.0.0.1:{srv.server_address[1]}"\n' + override + "\n")
+        shutil.rmtree(os.path.join(BASE, "state"), ignore_errors=True)
+        antes = len(recibidos)
+        r = subprocess.run([os.path.join(REPO, "monitor", "monitor.sh")],
+                           env={**os.environ, "SKIP_FETCH": "1", "CONFIG": cfg},
+                           capture_output=True, text=True, timeout=1800)
+        return r.stdout + r.stderr, recibidos[antes:]
+
+    def caso(nombre, salida, got, prio, texto, episodio_esperado):
+        hay = any(p == prio and texto in t for p, t in got)
+        ep = os.path.exists(os.path.join(BASE, "state", "alert_episode"))
+        ok = hay and ep == episodio_esperado
+        print(f"  {'ok  ' if ok else 'FALLA'} {nombre:50s} entregados={got or '—'} racha={'sí' if ep else 'no'}")
+        if not ok:
+            fallos.append(nombre)
+            print("      " + "\n      ".join(l for l in salida.splitlines() if "NOTIFY" in l or "corrobor" in l or "FATAL" in l or "ERROR" in l)[:900])
+
+    out, got = ciclo("GOES_ENABLED=1\nDGA_ENABLED=0")
+    caso("ráfaga solo-GOES → NO corroborada (default), sin racha", out, got, "default", "NO corroborada", False)
+    out, got = ciclo("GOES_ENABLED=1\nDGA_ENABLED=1")
+    caso("ráfaga GOES + DGA → CRUCE NUEVO urgente, con racha", out, got, "urgent", "CRUCE NUEVO", True)
+    out, got = ciclo("GOES_ENABLED=0\nDGA_ENABLED=1")
+    caso("ráfaga solo-DGA → CRUCE NUEVO urgente (in situ vale solo)", out, got, "urgent", "CRUCE NUEVO", True)
+    out, got = ciclo("GOES_ENABLED=1\nDGA_ENABLED=0\nCORROB_ENABLED=0")
+    caso("regla apagada: solo-GOES → urgente como antes", out, got, "urgent", "CRUCE NUEVO", True)
+    srv.shutdown()
+    print(f"\n[selftest corrob] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 HDF5_FAMILIA = ("xarray", "h5py", "h5netcdf", "netCDF4", "cfgrib")
 
 
@@ -965,6 +1033,8 @@ if __name__ == "__main__":
         sys.exit(alert_episode_selftest())
     if "--glm" in sys.argv:
         sys.exit(glm_selftest())
+    if "--corrob" in sys.argv:
+        sys.exit(corrob_selftest())
     if "--flood" in sys.argv:
         sys.exit(flood_selftest())
     if "--h0" in sys.argv:
