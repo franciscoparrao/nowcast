@@ -440,6 +440,24 @@ EOF
     esac
 fi
 
+# --- 3c. Congelado de evidencia por alerta (freeze_evidence.py) -------------
+# La alerta del 10-oct-2026 quedó sin verificar porque, al ir a mirar, la API
+# DMC ya no cubría la hora del cruce, los pasos habían rotado y los rásters de
+# peligro tenían otros índices. Ahora cada ciclo en alerta deja en
+# $FREEZE_DIR/<racha>/ los pasos de los 3 feeds, el peligro por clave de
+# tiempo, los registros crudos de las EMAs archivadas, el GLM, el run.json y
+# el veredicto de corroboración (ciclos.jsonl), con sha256 por archivo. Añade
+# sin pisar; también para alertas NO corroboradas (son las que hay que revisar).
+# Nunca tumba el ciclo: cualquier error es un "skip" en el log.
+freeze_evidence() {   # $1 corrob(0/1) $2 feeds $3 detalle $4 título $5 entregado(0/1)
+    [[ "${FREEZE_EVIDENCE:-1}" == "1" && -n "${EP_FIRST:-}" ]] || return 0
+    local hz="-" glm="-" out
+    [[ "${WRITE_HAZARD_TIFS:-0}" == "1" ]] && hz="$WORK_DIR/out/hazard"
+    [[ "${GLM_ENABLED:-0}" == "1" && -d "$WORK_DIR/feeds/glm" ]] && glm="$WORK_DIR/feeds/glm"
+    out=$(python3 "$HERE/freeze_evidence.py" "$RUN_JSON" "$FUSION_JSON" "$WORK_DIR" "$EP_FIRST" "$EP_LAST"         "${FREEZE_DIR:-$WORK_DIR/evidence}" --hazard-dir "$hz" --glm-dir "$glm"         --ema-dir "${EMA_ARCHIVE_DIR:-$HERE/data/ema}" --stations "${DGA_STATIONS:-}"         --pre-h "${FREEZE_PRE_H:-6}" --post-h "${FREEZE_POST_H:-3}"         --corrob "$1" --corrob-feeds "$2" --corrob-det "$3" --titulo "$4" --delivered "$5"         --config "$CONFIG" --repo "$HERE" --min-free-mb "${FREEZE_MIN_FREE_MB:-500}" 2>>"$LOG")         || out="skip freeze_evidence.py salió $? (ver log)"
+    log "evidencia congelada: $out"
+}
+
 # --- 4. Interpretar y notificar ------------------------------------------------
 case $RC in
 0)
@@ -553,6 +571,7 @@ EOF
         notify "nowcast-monitor: alerta I-D NO corroborada (solo GOES QPE)" \
             "$DETAIL. Solo el QPE de GOES sostiene el cruce ($CORROB_DET). GOES sobreestima chubascos (falsa alarma del 10-oct-2026): se avisa en prioridad baja hasta que IMERG, una estación o rayos GLM lo respalden. Último dato IMERG: $NEWEST.$GLM_NOTE Detalle: $RUN_JSON" \
             default alert_uncorrob "${REALERT_HOURS:-6}"
+        freeze_evidence 0 "${CORROB_FEEDS:-ninguno}" "$CORROB_DET" "alerta I-D NO corroborada (solo GOES QPE)" "$NOTIFY_DELIVERED"
         exit 0
     fi
     NUEVO=1
@@ -581,6 +600,7 @@ EOF
     if [[ "$NOTIFY_DELIVERED" == 1 && -n "$EP_FIRST" ]]; then
         echo "$EP_FIRST $EP_LAST" > "$WORK_DIR/state/alert_episode"
     fi
+    freeze_evidence "$CORROB" "${CORROB_FEEDS:-?}" "$CORROB_DET" "${TITULO#nowcast-monitor: }" "$NOTIFY_DELIVERED"
     ;;
 *)
     notify "nowcast-monitor: ERROR del motor (rc=$RC)" \

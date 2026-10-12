@@ -602,6 +602,32 @@ solo-DGA → urgente con racha; apagada → como antes). OJO en tests: los casos
 se construyen antes del bucle, así que los archivos sintéticos necesitan
 nombre único por caso (dos rásters con el mismo nombre se pisaron).
 
+**Evidencia congelada por alerta (2026-10-12, `monitor/freeze_evidence.py`)**:
+la alerta solo-GOES del 10-oct quedó SIN verificar: al ir a mirar, la API DMC
+(~12 h) ya empezaba 2 h después del cruce, los pasos de la ventana habían
+rotado y los `hazard_%04d.tif` tenían otros índices. Ahora el ramo de alerta
+de `monitor.sh` (bloque 3c; corroborada O no) congela en
+`WORK_DIR/evidence/<EP_FIRST>/` la ventana `[primer paso en alerta −
+FREEZE_PRE_H=6, último + FREEZE_POST_H=3]`: pasos de cada feed de
+`fusion.json` (`feeds/<feed>/step_<clave>.tif`, gapmarks; los zerofill del
+primario se anotan en el manifiesto, no se copian), peligro renombrado POR
+CLAVE DE TIEMPO (`hazard/hazard_<clave>.tif`: el índice cambia con cada
+rotación), `glm/` (pasos, counts filtrado, status por ciclo), `ema/<code>.jsonl`
+(registros CRUDOS de `archive_ema` en la ventana, `EMA_ARCHIVE_DIR`, default
+`monitor/data/ema`) + `ema/resumen.json` horario, `runs/run_<ciclo>.json` y
+`fusion_<ciclo>.json`, `config.env` con credenciales tachadas, `ciclos.jsonl`
+(una línea por ciclo: racha, veredicto de corroboración, título, entregado,
+GLM reciente, mm de EMAs) y `manifest.json` (commit del monitor, sha256 por
+archivo). Mientras la racha persista cada ciclo AÑADE y NUNCA pisa (el motor
+reescribe `out/hazard` cada ciclo; lo congelado es lo que vio el ciclo de la
+alerta). La clave de ciclo lleva SEGUNDOS: dos ciclos en el mismo minuto
+(pasa en los tests) colisionaban en `run_<ciclo>.json`. Nunca tumba el ciclo
+(`skip …` en el log); se omite con <`FREEZE_MIN_FREE_MB`=500 libres;
+`FREEZE_EVIDENCE=0` lo apaga. Autotests `freeze_evidence.py --selftest` (17
+casos) y `selftest.py --freeze` (ciclo real: congela; 2º ciclo añade línea sin
+pisar; solo-GOES congela con veredicto 0; apagado no crea nada). Nadie poda
+`evidence/`; por alerta ~0.3 MB de rásters + ~0.5 MB por EMA y día de ventana.
+
 **Feed de RAYOS GLM en el monitor (2026-10-12, `monitor/fetch_glm.py`)**: el
 8-oct los dos QPE satelitales no vieron la ráfaga de Las Condes y el sensor de
 rayos del mismo GOES-19 sí: 233 descargas sobre el piedemonte, pico de 82 en

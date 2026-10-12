@@ -56,9 +56,25 @@ systemd timer (30 min)
        ├─ nowcast run --rain-rasters ... --fuse-rasters ... --combine noisy-or
        ├─ rayos GLM (fetch_glm.py, GLM_ENABLED): convección sobre cicatrices/dominio → aviso propio, no toca el peligro
        ├─ corroboración (corroborate.py): cruce que sostiene solo GOES QPE → aviso 'NO corroborada' (default)
-       └─ notificación con histéresis por CRUCE: racha nueva (>ALERT_EPISODE_GAP_H h
-          tras la última avisada) avisa de inmediato; la misma racha re-avisa c/6 h
+       ├─ notificación con histéresis por CRUCE: racha nueva (>ALERT_EPISODE_GAP_H h
+       │  tras la última avisada) avisa de inmediato; la misma racha re-avisa c/6 h
+       └─ evidencia congelada (freeze_evidence.py): cada ciclo en alerta deja en
+          evidence/<racha>/ los pasos de los feeds, el peligro por clave de tiempo,
+          las EMAs archivadas, el GLM, run.json y el veredicto (ciclos.jsonl), con sha256
 ```
+
+**Evidencia por alerta (`evidence/<racha>/`)**: la alerta del 10-oct-2026 quedó
+sin verificar porque, al ir a mirar, la API DMC ya no cubría la hora del cruce,
+los pasos habían rotado y los rásters de peligro tenían otros índices. Ahora el
+ramo de alerta (corroborada o no) llama a `freeze_evidence.py`, que congela la
+ventana `[primer paso en alerta − FREEZE_PRE_H, último + FREEZE_POST_H]`
+(6 h / 3 h) y la va extendiendo mientras la racha persista, sin pisar nada ya
+congelado. `manifest.json` lleva el commit del monitor y el sha256 de cada
+archivo, para que un informe trazable los cite. Se omite con menos de
+`FREEZE_MIN_FREE_MB` libres (500) y se apaga con `FREEZE_EVIDENCE=0`. Nadie lo
+poda: ~0.3 MB de rásters por alerta más las EMAs crudas (~0.5 MB por estación
+y día de ventana). Difiere de `ARCHIVE_STEPS` (todos los pasos de todos los
+feeds, sin peligro ni EMAs ni veredicto).
 
 Cada ciclo **re-corre la ventana rodante completa** con el motor batch. Esto
 es legítimo porque batch ≡ streaming es bit-idéntico (testeado a nivel de
@@ -209,6 +225,13 @@ python3 monitor/fanapex_localidades.py --selftest
 # real+0.5 PIERDE el evento, susc real+0.272 lo recupera. Un evento extremo
 # no distingue los tres casos — satura el gatillo y alerta igual.
 python3 monitor/selftest.py --susc
+
+# Ramo de alerta: histéresis por cruce, GLM, corroboración entre feeds y
+# congelado de evidencia (cada uno levanta un ntfy local en 127.0.0.1):
+python3 monitor/selftest.py --alert-episode
+python3 monitor/selftest.py --glm;    python3 monitor/fetch_glm.py --selftest
+python3 monitor/selftest.py --corrob; python3 monitor/corroborate.py --selftest
+python3 monitor/selftest.py --freeze; python3 monitor/freeze_evidence.py --selftest
 ```
 
 ## Retención de ciclos (el disco NO se poda solo)

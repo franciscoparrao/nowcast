@@ -771,6 +771,111 @@ def corrob_selftest():
     return 0 if not fallos else 1
 
 
+def freeze_selftest():
+    """Congelado de evidencia por alerta (2026-10-12, freeze_evidence.py): un
+    ciclo en alerta deja WORK_DIR/evidence/<racha>/ con pasos de los feeds,
+    peligro por clave, EMAs, run.json y el veredicto en ciclos.jsonl; el ciclo
+    siguiente (misma racha, aviso suprimido por histéresis) AÑADE una línea y
+    no pisa archivos; una alerta NO corroborada también se congela (veredicto
+    0); con FREEZE_EVIDENCE=0 no se crea nada."""
+    import http.server
+    import subprocess
+    import threading
+
+    recibidos = []
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            recibidos.append((self.headers.get("Priority", ""), self.headers.get("Title", "")))
+            self.send_response(200); self.end_headers(); self.wfile.write(b'{"id":"selftest"}')
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now -= timedelta(minutes=now.minute % 30)
+    write_steps(os.path.join(BASE, "steps"), now, 96, burst_last=0)
+    write_status(os.path.join(BASE, "status.json"), now, 96)
+    shutil.rmtree(os.path.join(BASE, "feeds"), ignore_errors=True)
+    for feed in ("goes", "dga"):
+        d = os.path.join(BASE, "feeds", feed)
+        write_steps(os.path.join(d, "steps"), now, 96, burst_last=6, burst_mm=6.0)
+        write_status(os.path.join(d, "status.json"), now, 96, {"feed": f"{feed}:selftest"})
+    # archivo EMA sintético: 1 mm cada 10 min durante las 3 h de la ráfaga
+    ema_dir = os.path.join(BASE, "ema"); shutil.rmtree(ema_dir, ignore_errors=True); os.makedirs(ema_dir)
+    t_ini = now - timedelta(hours=3)
+    with open(os.path.join(ema_dir, f"999999-{now:%Y-%m}.jsonl"), "w") as f:
+        for m in range(-12 * 60, 60, 10):
+            t = now + timedelta(minutes=m)
+            mm = 1.0 if t_ini <= t <= now else 0.0
+            f.write(json.dumps({"momento": t.strftime("%Y-%m-%d %H:%M"), "aguaCaidaDelMinuto": f"{mm} mm"}) + "\n")
+    write_config(fusion=True)
+    base_cfg = open(os.path.join(BASE, "config.env")).read()
+    evid = os.path.join(BASE, "evidence")
+    fallos = []
+
+    def ciclo(override, limpiar=True):
+        cfg = os.path.join(BASE, "config_freeze.env")
+        with open(cfg, "w") as f:
+            f.write(base_cfg + f'\nNTFY_TOPIC="selftest"\nNTFY_URL="http://127.0.0.1:{srv.server_address[1]}"\n'
+                    f'WRITE_HAZARD_TIFS=1\nEMA_ARCHIVE_DIR="{ema_dir}"\nDGA_STATIONS="999999:-70.5:-33.5:Sintetica"\n' + override + "\n")
+        if limpiar:
+            shutil.rmtree(os.path.join(BASE, "state"), ignore_errors=True)
+            shutil.rmtree(evid, ignore_errors=True)
+        antes = len(recibidos)
+        r = subprocess.run([os.path.join(REPO, "monitor", "monitor.sh")],
+                           env={**os.environ, "SKIP_FETCH": "1", "CONFIG": cfg},
+                           capture_output=True, text=True, timeout=1800)
+        return r.stdout + r.stderr, recibidos[antes:]
+
+    def racha_dir():
+        ds = sorted(glob.glob(os.path.join(evid, "*", "manifest.json")))
+        return os.path.dirname(ds[-1]) if ds else None
+
+    def caso(nombre, ok, salida, extra=""):
+        print(f"  {'ok  ' if ok else 'FALLA'} {nombre:58s} {extra}")
+        if not ok:
+            fallos.append(nombre)
+            print("      " + "\n      ".join(l for l in salida.splitlines() if "evidencia" in l or "corrobor" in l or "FATAL" in l or "ERROR" in l or "skip" in l)[:900])
+
+    out, got = ciclo("GOES_ENABLED=1\nDGA_ENABLED=1")
+    d = racha_dir()
+    man = json.load(open(os.path.join(d, "manifest.json"))) if d else {}
+    lineas = [json.loads(l) for l in open(os.path.join(d, "ciclos.jsonl"))] if d else []
+    hz = glob.glob(os.path.join(d or "/nonexistent", "hazard", "hazard_*.tif"))
+    hz_keys = all(len(os.path.basename(h)) == len("hazard_YYYYMMDDTHHMM.tif") for h in hz)
+    ema = json.load(open(os.path.join(d, "ema", "resumen.json"))).get("999999", {}) if d else {}
+    caso("ciclo en alerta → carpeta de la racha con manifiesto y peligro por clave",
+         bool(d) and man.get("hazard_pasos", 0) > 0 and hz_keys and len(hz) == man["hazard_pasos"], out, f"{d and os.path.basename(d)} hazard={len(hz)}")
+    caso("feeds primario/goes/dga congelados y run.json copiado",
+         all(man.get("feeds", {}).get(f, {}).get("pasos_congelados", 0) > 0 for f in ("primary", "goes", "dga"))
+         and any(k.startswith("runs/run_") for k in man.get("files", {})), out, str({k: v.get("pasos_congelados") for k, v in man.get("feeds", {}).items()}))
+    caso("EMA del archivo filtrada a la ventana (19 mm en 3 h)", ema.get("total_mm") == 19.0, out, str(ema.get("total_mm")))
+    caso("ciclos.jsonl: 1 línea, corroborada, CRUCE NUEVO, entregado",
+         len(lineas) == 1 and lineas[0]["corroborada"] == 1 and "CRUCE NUEVO" in lineas[0]["titulo"] and lineas[0]["entregado"] == 1, out, str(lineas[:1]))
+    n_files = len(man.get("files", {}))
+    shas = {k: v["sha256"] for k, v in man.get("files", {}).items() if k.startswith("hazard/")}
+    out2, got2 = ciclo("GOES_ENABLED=1\nDGA_ENABLED=1", limpiar=False)
+    man2 = json.load(open(os.path.join(d, "manifest.json")))
+    lineas2 = [json.loads(l) for l in open(os.path.join(d, "ciclos.jsonl"))]
+    caso("2º ciclo (misma racha, aviso suprimido): añade línea, no pisa peligro",
+         not got2 and len(lineas2) == 2 and lineas2[1]["entregado"] == 0 and man2["n_ciclos"] == 2
+         and all(man2["files"][k]["sha256"] == v for k, v in shas.items())
+         and len(man2["files"]) == n_files + 2, out2, f"files {n_files}→{len(man2['files'])} avisos={got2}")
+    out3, got3 = ciclo("GOES_ENABLED=1\nDGA_ENABLED=0")
+    d3 = racha_dir()
+    l3 = [json.loads(l) for l in open(os.path.join(d3, "ciclos.jsonl"))] if d3 else []
+    caso("solo-GOES (NO corroborada) también se congela, veredicto 0",
+         bool(d3) and len(l3) == 1 and l3[0]["corroborada"] == 0 and "NO corroborada" in l3[0]["titulo"], out3, str(l3[:1]))
+    out4, _ = ciclo("GOES_ENABLED=1\nDGA_ENABLED=1\nFREEZE_EVIDENCE=0")
+    caso("FREEZE_EVIDENCE=0 → no se crea nada", not os.path.exists(evid), out4)
+    srv.shutdown()
+    print(f"\n[selftest freeze] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 HDF5_FAMILIA = ("xarray", "h5py", "h5netcdf", "netCDF4", "cfgrib")
 
 
@@ -1035,6 +1140,8 @@ if __name__ == "__main__":
         sys.exit(glm_selftest())
     if "--corrob" in sys.argv:
         sys.exit(corrob_selftest())
+    if "--freeze" in sys.argv:
+        sys.exit(freeze_selftest())
     if "--flood" in sys.argv:
         sys.exit(flood_selftest())
     if "--h0" in sys.argv:
