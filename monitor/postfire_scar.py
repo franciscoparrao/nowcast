@@ -12,7 +12,7 @@ Ratio entre una escena anterior y una posterior al incendio:
     quemado = dNBR ≥ `--umbral` (0.27 = moderado-alto o más, Key & Benson 2006)
 
 Lee SOLO la ventana del bbox por /vsicurl/ desde Planetary Computer (firma SAS
-pública, sin cuenta), así que no baja escenas completas. Nubes, sombra y nieve
+pública, sin cuenta), así que no baja escenas completas. Nubes, sombra, nieve y AGUA
 se enmascaran con QA_PIXEL en cualquiera de las dos fechas. Un filtro de
 mayoría 3×3 quita el moteado de píxel aislado.
 
@@ -50,8 +50,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REGISTRO = os.path.join(HERE, "data", "postfire", "scars.json")
 # Escala Landsat Collection 2 Level-2 Surface Reflectance.
 SR_SCALE, SR_OFFSET = 0.0000275, -0.2
-# QA_PIXEL (C2): bit0 fill, bit1 dilated cloud, bit3 cloud, bit4 shadow, bit5 snow.
-QA_BAD = (1 << 0) | (1 << 1) | (1 << 3) | (1 << 4) | (1 << 5)
+# QA_PIXEL (C2): bit0 fill, bit1 dilated cloud, bit3 cloud, bit4 shadow, bit5 snow,
+# bit7 AGUA. El agua va enmascarada desde el 2026-10-12: el mar cambia de NBR entre
+# fechas (oleaje, turbidez, reflejo) y con un bbox costero el dNBR marcó como
+# "quemadas" 16.237 ha de océano frente a Tomé–Dichato en un solo cuerpo y el 26 %
+# de la bahía de Penco pegado a la cicatriz real; la cascada no tiene sentido
+# sobre agua y la máscara la inflaba a casi el doble (41.153 → ~18.400 ha).
+QA_BAD = (1 << 0) | (1 << 1) | (1 << 3) | (1 << 4) | (1 << 5) | (1 << 7)
 # Clases de severidad (Key & Benson 2006, dNBR sin escalar).
 CLASES = [("no quemado", -9.0, 0.10), ("baja", 0.10, 0.27),
           ("moderada-baja", 0.27, 0.44), ("moderada-alta", 0.44, 0.66),

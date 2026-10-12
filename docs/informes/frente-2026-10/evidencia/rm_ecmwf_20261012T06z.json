@@ -1,0 +1,32 @@
+{
+ "cycle": "20261012T00z",
+ "generated_utc": "2026-10-12T13:47Z",
+ "source": "ECMWF HRES (oper, 0.25\u00b0) via Open Data",
+ "n_steps": 40,
+ "failed_steps": 0,
+ "step_hours": 3,
+ "ventana": {
+  "n_pasos": 40,
+  "desde": "20261012T0300",
+  "hasta": "20261017T0000",
+  "horas": 120.0,
+  "nota": "periodo que realmente cubre el acumulado de esta fuente; NO comparar totales entre fuentes con ventanas distintas"
+ },
+ "variants": {
+  "caine-global": {
+   "id_a": 14.82,
+   "peak_prob": 0.078,
+   "n_alert_steps": 0
+  },
+  "regional-a5.5": {
+   "id_a": 5.5,
+   "peak_prob": 0.534,
+   "n_alert_steps": 1
+  }
+ },
+ "gfs_comparison": {
+  "gfs_cycle": "20261012T06z",
+  "gfs_regional_peak": 0.203,
+  "ecmwf_regional_peak": 0.534
+ }
+}

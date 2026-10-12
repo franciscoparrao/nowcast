@@ -580,6 +580,28 @@ OBSERVADA en Tobalaba (8.2 mm/h, a*=5.5 → gatillo 0.88) la cicatriz pasa de
 0.30 a 0.60 (mediana), y con Caine global (0.14) no cruza nada. La cascada
 corrige el terreno; el cuello sigue siendo la forzante sub-horaria.
 
+**Cicatrices del megaincendio de enero-2026 registradas (2026-10-12)**: tres
+entradas más en `scars.json`, todas con fecha 2026-01-14, factor 2.0 y vigencia
+hasta 2028-01-14: Concepción–Penco (Trinitarias + Rancho Chico, 18.533 ha, un
+cuerpo de 17.058 ha; LC09 path 001/085 24-dic → 26-feb; cuenca
+`17_costa_transfer`), Florida–Ránquil–Trehuaco–Bulnes (Monte Negro y vecinos,
+8.065 ha; path 233/086 10-ene → 19-feb; `17_costa_transfer`) y Laja–Los Ángeles
+(Rucahue Sur, 4.040 ha; `12_rio_biobio`). Coherentes con CONAF (22.772 / ~1.500+ /
+2.999–4.123 ha). En la grilla nativa la mediana de susceptibilidad en la cicatriz
+pasa 0.45→0.91, 0.41→0.81 y 0.37→0.75. Informe trazable del frente del 12-oct y
+de estas cicatrices: `docs/informes/frente-2026-10/informe.html`.
+GOTCHAS nuevos: (vi) **el agua hay que enmascararla** (QA_PIXEL bit 7, ya en
+`QA_BAD`): el mar cambia de NBR entre fechas y con un bbox costero la máscara de
+Concepción salió con 41.153 ha, de las cuales 16.237 eran un cuerpo 100 % océano
+frente a Tomé–Dichato y el 26 % del cuerpo de Penco era la bahía. (vii) Los bbox
+de cicatrices distintas **no deben solaparse**: `aplicar_cascada` multiplica por
+cada cicatriz en secuencia, y una celda en dos máscaras recibiría ×4. (viii) Las
+escenas Landsat son paralelogramos: un bbox en el borde de un path queda en
+parte sin dato (fill), y el QA lo reporta como "enmascarado" sin distinguirlo de
+nube; probar el path vecino (001/085 vs 001/086 para Concepción–Tomé). (ix) Un
+corte de plantación entre las dos fechas también da dNBR alto: las hectáreas por
+comuna son estimaciones, no cifra oficial.
+
 **`monitor@rm` EN OPERACIÓN (2026-10-11, modo sombra)**: el piloto RM de
 `config.env` NUNCA tuvo timer propio (solo corría `monitor@atacama`), y por eso
 el 8-oct nadie vio en vivo la ráfaga de Las Condes. Instancia:

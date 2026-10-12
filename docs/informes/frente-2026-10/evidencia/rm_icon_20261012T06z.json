@@ -1,0 +1,51 @@
+{
+ "cycle": "20261012T06z",
+ "generated_utc": "2026-10-12T13:49Z",
+ "source": "DWD ICON global, native icosahedral grid, ~13 km",
+ "license": "DWD Open Data / CC BY 4.0",
+ "fields": [
+  "rain_gsp",
+  "rain_con"
+ ],
+ "reprojection": "nearest-neighbour ICON cell centre -> 0.1 deg target grid",
+ "n_steps": 120,
+ "ventana": {
+  "n_pasos": 120,
+  "desde": "20261012T0700",
+  "hasta": "20261017T0600",
+  "horas": 120.0,
+  "nota": "periodo que realmente cubre el acumulado de esta fuente; NO comparar totales entre fuentes con ventanas distintas"
+ },
+ "failed_icon_steps": 2,
+ "step_hours": 1,
+ "native_step_types": [
+  "accum"
+ ],
+ "params": {
+  "id_b": 0.39,
+  "k": 4.0,
+  "alert_level": 0.5
+ },
+ "variants": {
+  "caine-global": {
+   "id_a": 14.82,
+   "n_alert_steps": 0,
+   "peak_prob": 0.11
+  },
+  "regional-a5.5": {
+   "id_a": 5.5,
+   "n_alert_steps": 9,
+   "peak_prob": 0.759
+  }
+ },
+ "gfs_comparison": {
+  "gfs_cycle": "20261012T06z",
+  "gfs_regional_peak": 0.203,
+  "icon_regional_peak": 0.759
+ },
+ "ecmwf_comparison": {
+  "ecmwf_cycle": "20261012T00z",
+  "ecmwf_regional_peak": 0.534,
+  "icon_regional_peak": 0.759
+ }
+}

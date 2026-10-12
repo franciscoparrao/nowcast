@@ -9,5 +9,38 @@
   "valid_until": "2027-12-29",
   "ha_quemadas": 670.0,
   "fuente": "dNBR landsat-c2-l2 LC09_L2SP_233083_20251201_02_T1 → LC09_L2SP_233083_20260118_02_T1, umbral 0.27"
+ },
+ {
+  "nombre": "trinitarias_rancho_chico_2026-01-14",
+  "basin": "17_costa_transfer",
+  "factor": 2.0,
+  "mask": "trinitarias_rancho_chico_2026-01-14/scar_mask.tif",
+  "fecha_incendio": "2026-01-14",
+  "valid_from": "2026-01-14",
+  "valid_until": "2028-01-14",
+  "ha_quemadas": 18533.1,
+  "fuente": "dNBR landsat-c2-l2 LC09_L2SP_001085_20251224_02_T1 → LC09_L2SP_001085_20260226_02_T1, umbral 0.27"
+ },
+ {
+  "nombre": "monte_negro_florida_ranquil_2026-01-14",
+  "basin": "17_costa_transfer",
+  "factor": 2.0,
+  "mask": "monte_negro_florida_ranquil_2026-01-14/scar_mask.tif",
+  "fecha_incendio": "2026-01-14",
+  "valid_from": "2026-01-14",
+  "valid_until": "2028-01-14",
+  "ha_quemadas": 8064.8,
+  "fuente": "dNBR landsat-c2-l2 LC08_L2SP_233086_20260110_02_T1 → LC09_L2SP_233086_20260219_02_T1, umbral 0.27"
+ },
+ {
+  "nombre": "rucahue_sur_laja_2026-01-14",
+  "basin": "12_rio_biobio",
+  "factor": 2.0,
+  "mask": "rucahue_sur_laja_2026-01-14/scar_mask.tif",
+  "fecha_incendio": "2026-01-14",
+  "valid_from": "2026-01-14",
+  "valid_until": "2028-01-14",
+  "ha_quemadas": 4039.7,
+  "fuente": "dNBR landsat-c2-l2 LC08_L2SP_233086_20260110_02_T1 → LC09_L2SP_233086_20260219_02_T1, umbral 0.27"
  }
 ]

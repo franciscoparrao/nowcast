@@ -1,0 +1,33 @@
+{
+ "nombre": "monte_negro_florida_ranquil_2026-01-14",
+ "fecha_incendio": "2026-01-14",
+ "pre": "LC08_L2SP_233086_20260110_02_T1",
+ "post": "LC09_L2SP_233086_20260219_02_T1",
+ "collection": "landsat-c2-l2",
+ "bbox_wgs84": [
+  -72.7,
+  -36.95,
+  -72.25,
+  -36.45
+ ],
+ "crs": "EPSG:32619",
+ "res_m": 30.0,
+ "umbral_dnbr": 0.27,
+ "filtro": "mayoría 3×3",
+ "fraccion_enmascarada_qa": {
+  "pre": 0.0519,
+  "post": 0.0566
+ },
+ "fraccion_sin_dato": 0.0572,
+ "ha_por_clase_dnbr": {
+  "no quemado": 178380.8,
+  "baja": 39922.7,
+  "moderada-baja": 4465.3,
+  "moderada-alta": 2586.2,
+  "alta": 1401.6
+ },
+ "ha_quemadas_mascara": 8064.8,
+ "celdas_quemadas": 89609,
+ "dnbr_p50_en_mascara": 0.436,
+ "dnbr_p90_en_mascara": 0.756
+}

@@ -1,0 +1,33 @@
+{
+ "nombre": "trinitarias_rancho_chico_2026-01-14",
+ "fecha_incendio": "2026-01-14",
+ "pre": "LC09_L2SP_001085_20251224_02_T1",
+ "post": "LC09_L2SP_001085_20260226_02_T1",
+ "collection": "landsat-c2-l2",
+ "bbox_wgs84": [
+  -73.08,
+  -36.98,
+  -72.75,
+  -36.45
+ ],
+ "crs": "EPSG:32618",
+ "res_m": 30.0,
+ "umbral_dnbr": 0.27,
+ "filtro": "mayoría 3×3",
+ "fraccion_enmascarada_qa": {
+  "pre": 0.2403,
+  "post": 0.2492
+ },
+ "fraccion_sin_dato": 0.255,
+ "ha_por_clase_dnbr": {
+  "no quemado": 101729.4,
+  "baja": 15656.9,
+  "moderada-baja": 4919.9,
+  "moderada-alta": 5655.1,
+  "alta": 8191.8
+ },
+ "ha_quemadas_mascara": 18533.1,
+ "celdas_quemadas": 205923,
+ "dnbr_p50_en_mascara": 0.619,
+ "dnbr_p90_en_mascara": 0.975
+}

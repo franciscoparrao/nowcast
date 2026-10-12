@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Frente del 12–17 de octubre de 2026: pronóstico, otros lugares con condiciones de aluvión, estado del monitor y cicatrices del megaincendio de enero</title><style>
+:root{--bg:#fbfaf7;--fg:#1d1d1b;--mute:#6b6a65;--line:#e4e1d9;--card:#fff;
+--ok:#1f7a4d;--ok-bg:#e6f4ec;--inf:#9a6200;--inf-bg:#fdf1dc;--sup:#5b4b8a;--sup-bg:#eeeaf7;
+--bad:#b3261e;--bad-bg:#fbe9e7;--code:#f4f2ec}
+@media (prefers-color-scheme:dark){:root{--bg:#171715;--fg:#ecebe6;--mute:#a09e97;
+--line:#33322e;--card:#1f1f1c;--ok:#6fcf9b;--ok-bg:#1c3328;--inf:#f0b54d;--inf-bg:#3a2c12;
+--sup:#b9a8f0;--sup-bg:#2a2540;--bad:#ff8a80;--bad-bg:#3d1c19;--code:#262622}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+font:16px/1.55 "Inter","Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif}
+main{max-width:920px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:1.5rem;margin:0 0 4px}h2{font-size:1.1rem;margin:36px 0 12px;
+border-bottom:1px solid var(--line);padding-bottom:6px}
+.meta{color:var(--mute);font-size:.9rem}
+.bluf{font-size:1.2rem;line-height:1.5;margin:20px 0;padding:16px 20px;background:var(--card);
+border:1px solid var(--line);border-left:4px solid var(--fg);border-radius:6px}
+.bluf b{display:block;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;
+color:var(--mute);margin-bottom:4px}
+.banner{padding:12px 16px;border-radius:6px;margin:16px 0;font-weight:600}
+.banner.bad{background:var(--bad-bg);color:var(--bad)}.banner.ok{background:var(--ok-bg);color:var(--ok)}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.stats button{font:inherit;font-size:.9rem;cursor:pointer;border:1px solid var(--line);
+background:var(--card);color:var(--fg);border-radius:999px;padding:4px 12px}
+.stats button[aria-pressed=true]{border-color:var(--fg);font-weight:600}
+.chip{display:inline-block;font-size:.75rem;font-weight:600;border-radius:999px;padding:1px 9px;
+white-space:nowrap}
+.verificado{color:var(--ok);background:var(--ok-bg)}.inferido{color:var(--inf);background:var(--inf-bg)}
+.supuesto{color:var(--sup);background:var(--sup-bg)}.roto{color:var(--bad);background:var(--bad-bg)}
+.af{background:var(--card);border:1px solid var(--line);border-radius:6px;margin:8px 0}
+.af.esroto{border-color:var(--bad)}
+.af summary{cursor:pointer;padding:10px 14px;display:flex;gap:10px;align-items:baseline;list-style:none}
+.af summary::-webkit-details-marker{display:none}
+.af summary .id{color:var(--mute);font:600 .8rem ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace}
+.af summary .tx{flex:1}
+.af .cuerpo{padding:0 14px 12px;border-top:1px solid var(--line)}
+.ev{margin:10px 0;font-size:.9rem}
+.ev .cab{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.ev .res{font-size:.8rem;color:var(--mute)}.ev .res.mal{color:var(--bad);font-weight:600}
+code,pre{font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;font-size:.82rem}
+pre{background:var(--code);padding:10px 12px;border-radius:4px;overflow-x:auto;margin:6px 0;max-height:420px}
+.ln{color:var(--mute);user-select:none;display:inline-block;min-width:3.2em}
+a{color:inherit}.nota{color:var(--mute);font-size:.85rem}
+ul.prob li{margin:4px 0}ol.pasos li{margin:6px 0}
+table{border-collapse:collapse;font-size:.85rem}td{padding:3px 12px 3px 0}
+.oculto{display:none}
+@media print{.stats{display:none}.af{break-inside:avoid}}
+</style></head>
+<body><main>
+<h1>Frente del 12–17 de octubre de 2026: pronóstico, otros lugares con condiciones de aluvión, estado del monitor y cicatrices del megaincendio de enero</h1><div class="meta">nowcast · Evaluar el frente anunciado para la semana del 12-oct-2026 con el pronóstico comunal, identificar lugares con condiciones de aluvión fuera de Las Condes, dejar constancia del estado operacional del monitor (primera alerta de monitor@rm, archivo de EMAs) y registrar las cicatrices del megaincendio de enero de 2026 en la cascada post-incendio · Francisco Parra O. (con Claude Fable 5.1) · creado 2026-10-12T13:24:33-03:00 · comprobado 2026-10-12T13:33:35-03:00</div>
+<div class="bluf"><b>Conclusión</b>El frente entra el lunes 12 en la tarde (ECMWF e ICON) o el martes 13 en la tarde (GFS). En el piedemonte de Las Condes los acumulados pronosticados igualan o superan los del 8 de octubre (12.7–30.7 mm en 120 h, picos de 1.4–3.2 mm/h), pero ningún modelo resuelve la ráfaga sub-horaria que gatilló ese aluvión, así que el pronóstico no confirma ni descarta una repetición. Fuera de Las Condes el único lugar con dos modelos sobre el umbral es Lonquimay; las señales de un solo modelo están en la precordillera de la RM (ICON, ocho ciclos seguidos), Machalí (ECMWF) y el secano de Coquimbo (ECMWF e ICON, lunes en la tarde). El monitor de la RM corre con los cuatro feeds al día, pero sigue en estado de alerta por una falsa alarma de GOES del sábado, de modo que un cruce real el lunes en la noche no saldría como aviso nuevo. Las tres cicatrices del megaincendio de enero (Concepción–Penco 18.533 ha, Florida–Ránquil 8.065 ha, Laja 4.040 ha) quedaron en la cascada post-incendio; esta semana no cambian ningún nivel comunal porque la lluvia pronosticada ahí es baja.</div>
+<div class="banner ok">Toda la evidencia de lo verificado está vigente.</div><div class="stats"><button data-f="todas" aria-pressed="true">Todas · 15</button><button data-f="verificado" aria-pressed="false">Verificadas · 9</button><button data-f="inferido" aria-pressed="false">Inferidas · 5</button><button data-f="supuesto" aria-pressed="false">Supuestas · 1</button></div><h2>Lo que se dio por cierto sin comprobar</h2><ul><li><code>A9</code> El frente anunciado para la semana es el que la prensa anticipaba el 8-oct para el domingo 11 y el lunes 12, con octubre ya sobre el récord histórico de lluvia en Santiago. No se encontró un aviso vigente de la DMC para la RM al 12-oct; no se verificó con la DMC directamente.</li></ul><h2>Afirmaciones</h2><h3>Pronóstico RM</h3><details class="af" data-estado="verificado" data-roto="0"><summary><span class="id">A1</span><span class="tx">En el ciclo 20261012T06z, para la celda de la cicatriz de San Carlos de Apoquindo los tres modelos dan 12.7–30.7 mm en 120 h, máximos de 24 h de 7.6–15.9 mm y picos de 1.4–3.2 mm/h; ECMWF e ICON ponen el pico el lunes 12 a las 18:00 (Chile) y GFS el martes 13 a las 20:00. El peligro con umbral regional a*=5.5 en la cicatriz no pasa de 0.32 (ICON); en San José de Maipo ICON llega a 0.54 con 43 mm.</span><span class="chip verificado">verificado</span></summary><div class="cuerpo"><div class="ev"><div class="cab">comando <code>$ PATH=/home/franciscoparrao/nowcast-monitor/venv-forecast/bin:$PATH python3 docs/informes/frente-2026-10/scripts/pronostico_rm.py /home/franciscoparrao/nowcast-forecast/20261012T06z 2&gt;/dev/null</code> <span class="chip verificado">exit 0</span> <span class="res">registrado, no re-ejecutado · exit 0 el 2026-10-12T13:25:46-03:00</span></div><div class="nota">cwd <code>.</code> · 2026-10-12T13:25:46-03:00 · 5.83 s</div><pre>== GFS: paso 1 h, 120 pasos, ventana 20261012T0700 → 20261017T0600 UTC
+  cicatriz SCA       total  17.5 mm | máx 24 h  10.8 mm | pico  2.5 mm/h el Tue 13 20:00 Chile | peligro a*=5.5 máx 0.16
+  Tobalaba           total  18.3 mm | máx 24 h  11.7 mm | pico  2.8 mm/h el Tue 13 20:00 Chile | peligro a*=5.5 máx 0.20
+  El Colorado        total   3.1 mm | máx 24 h   1.5 mm | pico  0.4 mm/h el Tue 13 17:00 Chile | peligro a*=5.5 máx 0.03
+  San José de Maipo  total  10.3 mm | máx 24 h   6.5 mm | pico  1.0 mm/h el Tue 13 20:00 Chile | peligro a*=5.5 máx 0.06
+== ECMWF: paso 3 h, 40 pasos, ventana 20261012T0300 → 20261017T0000 UTC
+  cicatriz SCA       total  12.7 mm | máx 24 h   7.6 mm | pico  1.4 mm/h el Mon 12 18:00 Chile | peligro a*=5.5 máx 0.08
+  Tobalaba           total  16.9 mm | máx 24 h   9.8 mm | pico  1.7 mm/h el Mon 12 18:00 Chile | peligro a*=5.5 máx 0.11
+  El Colorado        total   0.2 mm | máx 24 h   0.1 mm | pico  0.0 mm/h el Mon 12 21:00 Chile | peligro a*=5.5 máx 0.02
+  San José de Maipo  total   8.0 mm | máx 24 h   4.7 mm | pico  0.9 mm/h el Mon 12 18:00 Chile | peligro a*=5.5 máx 0.05
+== ICON: paso 1 h, 120 pasos, ventana 20261012T0700 → 20261017T0600 UTC
+  cicatriz SCA       total  30.7 mm | máx 24 h  15.9 mm | pico  3.2 mm/h el Mon 12 18:00 Chile | peligro a*=5.5 máx 0.32
+  Tobalaba           total  15.8 mm | máx 24 h  12.6 mm | pico  2.4 mm/h el Mon 12 18:00 Chile | peligro a*=5.5 máx 0.12
+  El Colorado        total   0.0 mm | máx 24 h   0.0 mm | pico  0.0 mm/h el Mon 12 09:00 Chile | peligro a*=5.5 máx 0.02
+  San José de Maipo  total  43.0 mm | máx 24 h  21.5 mm | pico  4.0 mm/h el Mon 12 16:00 Chile | peligro a*=5.5 máx 0.54</pre></div></div></details><h3>Otros lugares</h3><details class="af" data-estado="verificado" data-roto="0"><summary><span class="id">A2</span><span class="tx">Celdas que cruzan 0.5 (umbral regional a*=5.5) por dominio y modelo en el ciclo 20261012T06z: en la RM solo ICON (Lo Barnechea 0.76 y San José de Maipo 0.54–0.60, lunes 18:00–19:00) y ECMWF en Machalí (0.53); en Coquimbo ECMWF e ICON coinciden solo en celdas sobre el mar frente a Canela–Los Vilos, y en tierra quedan Ovalle, Combarbalá (ECMWF 0.71–0.73) y Los Vilos (ICON 0.67), todo el lunes en la tarde; GFS no cruza en Coquimbo ni en la RM. En chile-centro-sur los acuerdos GFS–ICON están en la cordillera de Ñuble–Biobío y Lonquimay, fuera del barrido comunal; ECMWF cruza en Panguipulli, Pucón y Lonquimay.</span><span class="chip verificado">verificado</span></summary><div class="cuerpo"><div class="ev"><div class="cab">comando <code>$ PATH=/home/franciscoparrao/nowcast-monitor/venv-forecast/bin:$PATH python3 docs/informes/frente-2026-10/scripts/otros_lugares.py /home/franciscoparrao/nowcast-forecast/20261012T06z 2&gt;/dev/null</code> <span class="chip verificado">exit 0</span> <span class="res">registrado, no re-ejecutado · exit 0 el 2026-10-12T13:25:53-03:00</span></div><div class="nota">cwd <code>.</code> · 2026-10-12T13:25:53-03:00 · 7.28 s</div><pre>  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.95,-38.05) — (fuera del barrido comunal: mar, cordillera o Argentina)
+  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.85,-38.05) — (fuera del barrido comunal: mar, cordillera o Argentina)
+  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.85,-38.15) — (fuera del barrido comunal: mar, cordillera o Argentina)
+  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.85,-38.25) — (fuera del barrido comunal: mar, cordillera o Argentina)
+  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.85,-38.45) — (fuera del barrido comunal: mar, cordillera o Argentina)
+  ACUERDO [&#x27;gfs&#x27;, &#x27;ecmwf&#x27;] (-70.95,-38.65) LONQUIMAY
+  ACUERDO [&#x27;gfs&#x27;, &#x27;ecmwf&#x27;] (-71.05,-38.75) LONQUIMAY
+  ACUERDO [&#x27;gfs&#x27;, &#x27;ecmwf&#x27;] (-70.95,-38.75) LONQUIMAY
+  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.85,-38.75) — (fuera del barrido comunal: mar, cordillera o Argentina)
+  ACUERDO [&#x27;gfs&#x27;, &#x27;ecmwf&#x27;, &#x27;icon&#x27;] (-70.95,-38.85) — (fuera del barrido comunal: mar, cordillera o Argentina)
+  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.85,-38.85) — (fuera del barrido comunal: mar, cordillera o Argentina)
+  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.75,-38.85) — (fuera del barrido comunal: mar, cordillera o Argentina)
+  ACUERDO [&#x27;ecmwf&#x27;, &#x27;icon&#x27;] (-70.95,-38.95) — (fuera del barrido comunal: mar, cordillera o Argentina)
+
+=== araucania
+  gfs: 7 celdas ≥0.5
+     0.93 (-72.25,-39.95) LOS LAGOS              máx Thu 15 18:00  lluvia120h 30 mm
+     0.76 (-72.35,-39.95) LOS LAGOS              máx Thu 15 18:00  lluvia120h 23 mm
+     0.63 (-71.05,-38.75) LONQUIMAY              máx Tue 13 04:00  lluvia120h 28 mm
+     0.61 (-72.25,-39.85) PANGUIPULLI            máx Thu 15 18:00  lluvia120h 25 mm
+     0.60 (-72.15,-39.95) LOS LAGOS              máx Thu 15 18:00  lluvia120h 28 mm
+     0.56 (-71.05,-38.25) LONQUIMAY              máx Tue 13 00:00  lluvia120h 38 mm
+     0.51 (-71.05,-38.65) LONQUIMAY              máx Tue 13 04:00  lluvia120h 30 mm
+  ecmwf: 0 celdas ≥0.5
+  icon: 0 celdas ≥0.5
+  sin celdas con ≥2 modelos ≥0.5
+
+=== nuble-biobio
+  gfs: 13 celdas ≥0.5
+     0.75 (-71.05,-37.75) — (fuera del barrido comunal: mar, cordillera o Argentina) máx Tue 13 22:00  lluvia120h 34 mm
+     0.74 (-71.25,-37.95) ALTO BIOBÍO            máx Tue 13 23:00  lluvia120h 36 mm
+     0.72 (-71.25,-38.05) ALTO BIOBÍO            máx Tue 13 23:00  lluvia120h 36 mm
+     0.70 (-71.75,-38.05) COLLIPULLI             máx Wed 14 19:00  lluvia120h 32 mm
+     0.69 (-71.75,-37.95) MULCHÉN                máx Wed 14 19:00  lluvia120h 30 mm
+     0.63 (-71.15,-37.75) — (fuera del barrido comunal: mar, cordillera o Argentina) máx Tue 13 22:00  lluvia120h 31 mm
+     0.61 (-71.25,-37.85) ALTO BIOBÍO            máx Tue 13 22:00  lluvia120h 32 mm
+     0.61 (-71.15,-37.95) ALTO BIOBÍO            máx Tue 13 23:00  lluvia120h 36 mm
+  ecmwf: 0 celdas ≥0.5
+  icon: 0 celdas ≥0.5
+  sin celdas con ≥2 modelos ≥0.5</pre></div></div></details><h3>Monitor RM: primera alerta</h3><details class="af" data-estado="verificado" data-roto="0"><summary><span class="id">A3</span><span class="tx">La primera alerta de monitor@rm salió en el ciclo de las 05:48Z del 11-oct (3–5 pasos entre las 22:30Z y las 23:30Z del 10-oct, pico 0.34 sobre el nivel 0.267) en dos celdas: Lo Barnechea (−70.35,−33.35) y Lampa–Colina (−70.85,−33.15). La gatilló GOES solo: 3.82 mm/30 min (7.6 mm/h) en Lo Barnechea a las 22:30Z y 3.22 mm en Lampa–Colina a las 23:00Z, con IMERG en 0.99–2.92 mm. El campo DGA (IDW de las 4 EMAs) no pasó de 0.09 mm/30 min en todo el dominio y El Colorado archivado midió 0.2 mm en la hora de las 23Z. Al ciclo de las 15:17Z del 12-oct los pasos seguían en la ventana de 54 h y el dominio seguía en estado de alerta.</span><span class="chip verificado">verificado</span></summary><div class="cuerpo"><div class="ev"><div class="cab">dato <code>docs/informes/frente-2026-10/evidencia/alerta_rm_20261010/last_run_20261012T1517Z.json</code> <span class="res">vigente</span></div><div class="nota">sha256 <code>ca16c6bab3a50b17…</code> · 7,120 bytes</div></div><div class="ev"><div class="cab">dato <code>docs/informes/frente-2026-10/evidencia/alerta_rm_20261010/goes_20261010T2230.tif</code> <span class="res">vigente</span></div><div class="nota">sha256 <code>324dd74e216aa4ad…</code> · 990 bytes</div></div><div class="ev"><div class="cab">dato <code>docs/informes/frente-2026-10/evidencia/alerta_rm_20261010/dga_20261010T2300.tif</code> <span class="res">vigente</span></div><div class="nota">sha256 <code>1276d2db3f2669bc…</code> · 990 bytes</div></div><div class="ev"><div class="cab">dato <code>docs/informes/frente-2026-10/evidencia/alerta_rm_20261010/elcolorado_330077_horario_mm.json</code> <span class="res">vigente</span></div><div class="nota">sha256 <code>734fa81ca5653dc0…</code> · 186 bytes</div></div><div class="ev"><div class="cab">comando <code>$ PATH=/home/franciscoparrao/nowcast-monitor/venv/bin:$PATH python3 docs/informes/frente-2026-10/scripts/alerta_rm_20261010.py 2&gt;/dev/null</code> <span class="chip verificado">exit 0</span> <span class="res">registrado, no re-ejecutado · exit 0 el 2026-10-12T13:27:10-03:00</span></div><div class="nota">cwd <code>.</code> · 2026-10-12T13:27:10-03:00 · 0.73 s</div><pre>last_run (ciclo 15:17Z 12-oct): 107 pasos, 3 en alerta, nivel 0.267, pico 0.340
+ventana de la fusión: [&#x27;20261010T1030&#x27;, &#x27;20261012T1530&#x27;] | feeds: {&#x27;primary&#x27;: &#x27;20261012T1030&#x27;, &#x27;goes&#x27;: &#x27;20261012T1530&#x27;, &#x27;dga&#x27;: &#x27;20261012T1530&#x27;}
+
+paso UTC        | Lo Barnechea (-70.35,-33.35) | Lampa–Colina (-70.85,-33.15) | máx dominio IMERG/GOES/DGA
+20261010T2130   |             0.09  0.00  0.00 |             0.02  0.13  0.00 |  0.23  1.00  0.00  (mm/30 min: IMERG GOES DGA)
+20261010T2200   |             0.13  0.33  0.00 |             0.39  1.22  0.00 |  0.87  2.68  0.00  (mm/30 min: IMERG GOES DGA)
+20261010T2230   |             0.99  3.82  0.00 |             0.00  0.09  0.00 |  1.87  3.82  0.00  (mm/30 min: IMERG GOES DGA)
+20261010T2300   |             0.06  0.00  0.09 |             2.92  3.22  0.02 |  2.92  3.22  0.09  (mm/30 min: IMERG GOES DGA)
+20261010T2330   |             1.10  2.67  0.09 |             0.01  0.07  0.02 |  2.07  2.70  0.09  (mm/30 min: IMERG GOES DGA)
+20261011T0000   |             0.31  0.00  0.00 |             0.00  0.00  0.00 |  1.87  2.03  0.00  (mm/30 min: IMERG GOES DGA)
+
+El Colorado 330077 (archivo DMC), mm por hora UTC: {&#x27;2026-10-10 20&#x27;: 0.0, &#x27;2026-10-10 21&#x27;: 0.0, &#x27;2026-10-10 22&#x27;: 0.0, &#x27;2026-10-10 23&#x27;: 0.2, &#x27;2026-10-11 00&#x27;: 0.0, &#x27;2026-10-11 01&#x27;: 0.0, &#x27;2026-10-11 02&#x27;: 0.0, &#x27;2026-10-11 03&#x27;: 0.0}</pre></div></div></details><details class="af" data-estado="verificado" data-roto="0"><summary><span class="id">A4</span><span class="tx">Tobalaba, La Florida y San José de Guayacán no se pudieron verificar para esa alerta: al consultar la API de la DMC el 11-oct a las 12:30Z la ventana empezaba a las 00:41Z, dos horas después de la alerta, y archive_ema solo archivaba El Colorado (330077). Desde el 11-oct a las 12:43Z el archivador guarda las cuatro EMAs del dominio RM (default 330077,330112,330122,330019) con la unit instalada y el timer horario.</span><span class="chip verificado">verificado</span></summary><div class="cuerpo"><div class="ev"><div class="cab">código <a href="file:///home/franciscoparrao/proyectos/nowcast/monitor/archive_ema.py"><code>monitor/archive_ema.py:54-61</code></a> <span class="res">vigente</span></div><pre><span class="ln">54</span>STATIONS = {
+<span class="ln">55</span>    &quot;330077&quot;: &quot;El Colorado 2750 m&quot;,
+<span class="ln">56</span>    &quot;330112&quot;: &quot;San José de Guayacán&quot;,
+<span class="ln">57</span>    &quot;330122&quot;: &quot;La Florida&quot;,
+<span class="ln">58</span>    &quot;330019&quot;: &quot;Tobalaba&quot;,
+<span class="ln">59</span>}
+<span class="ln">60</span>DEFAULT_CODE = &quot;330077&quot;          # El Colorado 2750 m (compat: crosscheck_elcolorado)
+<span class="ln">61</span>DEFAULT_CODES = &quot;,&quot;.join(STATIONS)</pre></div><div class="ev"><div class="cab">comando <code>$ ls -la monitor/data/ema/ &amp;&amp; wc -l monitor/data/ema/*-2026-10.jsonl &amp;&amp; systemctl --user cat nowcast-archive-ema.service | grep ExecStart</code> <span class="chip verificado">exit 0</span> <span class="res">registrado, no re-ejecutado · exit 0 el 2026-10-12T13:27:10-03:00</span></div><div class="nota">cwd <code>.</code> · 2026-10-12T13:27:10-03:00 · 0.04 s</div><pre>total 54688
+drwxrwxr-x 2 franciscoparrao franciscoparrao     4096 oct 12 13:07 .
+drwxrwxr-x 4 franciscoparrao franciscoparrao     4096 oct  9 11:04 ..
+-rw------- 1 franciscoparrao franciscoparrao  2156957 oct 12 13:07 330019-2026-10.jsonl
+-rw------- 1 franciscoparrao franciscoparrao 34253063 sep 30 22:06 330077-2026-09.jsonl
+-rw------- 1 franciscoparrao franciscoparrao 15390778 oct 12 13:07 330077-2026-10.jsonl
+-rw------- 1 franciscoparrao franciscoparrao  2026240 oct 12 13:07 330112-2026-10.jsonl
+-rw------- 1 franciscoparrao franciscoparrao  2152230 oct 12 13:07 330122-2026-10.jsonl
+    2352 monitor/data/ema/330019-2026-10.jsonl
+   16786 monitor/data/ema/330077-2026-10.jsonl
+    2210 monitor/data/ema/330112-2026-10.jsonl
+    2345 monitor/data/ema/330122-2026-10.jsonl
+   23693 total
+ExecStart=%h/proyectos/nowcast/monitor/archive_ema.py --code 330077,330112,330122,330019</pre></div></div></details><h3>Monitor RM: histéresis</h3><details class="af" data-estado="verificado" data-roto="0"><summary><span class="id">A5</span><span class="tx">La notificación de alerta del monitor se repite cada REALERT_HOURS=6 mientras el dominio siga en alerta y solo se reinicia al volver a quiet: la marca state/alert se re-estampa con cada entrega confirmada (monitor@rm: 13:45Z del 12-oct). El comentario del código dice que se notifican cruces y no estados, pero la implementación notifica el estado del dominio.</span><span class="chip verificado">verificado</span></summary><div class="cuerpo"><div class="ev"><div class="cab">código <a href="file:///home/franciscoparrao/proyectos/nowcast/monitor/monitor.sh"><code>monitor/monitor.sh:393-396</code></a> <span class="res">vigente</span></div><pre><span class="ln">393</span>    # Al volver a quiet, resetear la histéresis para que la PRÓXIMA alerta
+<span class="ln">394</span>    # notifique de inmediato (notificamos cruces, no estados).
+<span class="ln">395</span>    rm -f &quot;$WORK_DIR/state/alert&quot;
+<span class="ln">396</span>    mark_ok &quot;$WORK_DIR/state&quot;</pre></div><div class="ev"><div class="cab">código <a href="file:///home/franciscoparrao/proyectos/nowcast/monitor/monitor.sh"><code>monitor/monitor.sh:433-433</code></a> <span class="res">vigente</span></div><pre><span class="ln">433</span>        urgent alert &quot;${REALERT_HOURS:-6}&quot;</pre></div><div class="ev"><div class="cab">código <a href="file:///home/franciscoparrao/proyectos/nowcast/monitor/lib_notify.sh"><code>monitor/lib_notify.sh:14-24</code></a> <span class="res">vigente</span></div><pre><span class="ln">14</span>notify() {
+<span class="ln">15</span>    local title=&quot;$1&quot; body=&quot;$2&quot; prio=&quot;$3&quot; hfile=&quot;${4:-}&quot; hours=&quot;${5:-0}&quot;
+<span class="ln">16</span>    local now last window entregado=0
+<span class="ln">17</span>    now=$(date -u +%s)
+<span class="ln">18</span>    if [[ -n &quot;$hfile&quot; ]]; then
+<span class="ln">19</span>        last=$(cat &quot;$NOTIFY_STATE_DIR/$hfile&quot; 2&gt;/dev/null || echo 0)
+<span class="ln">20</span>        window=$(python3 -c &quot;print(int(float(&#x27;$hours&#x27;) * 3600))&quot;)
+<span class="ln">21</span>        if (( now - last &lt; window )); then
+<span class="ln">22</span>            log &quot;notify suprimida por histéresis ($hfile): $title&quot;
+<span class="ln">23</span>            return 0
+<span class="ln">24</span>        fi</pre></div><div class="ev"><div class="cab">comando <code>$ date -u +%Y-%m-%dT%H:%MZ; echo -n &#x27;state/alert = &#x27;; date -u -d @$(cat /home/franciscoparrao/nowcast-monitor-rm/state/alert) +%Y-%m-%dT%H:%MZ; grep -n REALERT_HOURS monitor/config.env</code> <span class="chip verificado">exit 0</span> <span class="res">registrado, no re-ejecutado · exit 0 el 2026-10-12T13:27:10-03:00</span></div><div class="nota">cwd <code>.</code> · 2026-10-12T13:27:10-03:00 · 0.02 s</div><pre>2026-10-12T16:27Z
+state/alert = 2026-10-12T13:45Z
+112:REALERT_HOURS=6</pre></div></div></details><h3>Monitor RM: primera alerta</h3><details class="af" data-estado="inferido" data-roto="0"><summary><span class="id">A6</span><span class="tx">La alerta del 10-oct fue una falsa alarma por sobreestimación de GOES QPE en una banda de chubascos: los dos productos satelitales vieron lluvia, pero las cuatro EMAs (campo IDW ≤0.09 mm/30 min) y El Colorado (0.2 mm/h) no la respaldan, y 7.6 mm/h frente a ≤0.2 mm/h no se explica por la distancia entre estaciones. Queda abierta porque tres de las cuatro EMAs no se pudieron leer.</span><span class="chip inferido">inferido · muy probable (80-95 %)</span></summary><div class="cuerpo"><div class="nota">Depende de: <code>A3</code>, <code>A4</code></div><div class="nota">Sin evidencia adjunta.</div></div></details><h3>Monitor RM: histéresis</h3><details class="af" data-estado="inferido" data-roto="0"><summary><span class="id">A7</span><span class="tx">Un cruce real en la RM entre las 18:00 y las 21:00 de Chile del lunes 12 no saldría como aviso nuevo: el dominio ya está en alerta por los pasos del 10-oct (que salen de la ventana de 54 h recién a las 02:30 de Chile del martes) y la histéresis re-estampada a las 13:45Z silencia hasta las 19:45Z; después el aviso repetido mezclaría ambas señales. Para esta noche hay que mirar out/last_run.json a mano o cambiar la histéresis para que avise cuando el paso en alerta más reciente sea más nuevo que el último avisado.</span><span class="chip inferido">inferido · muy probable (80-95 %)</span></summary><div class="cuerpo"><div class="nota">Depende de: <code>A5</code>, <code>A3</code></div><div class="nota">Sin evidencia adjunta.</div></div></details><h3>Pronóstico RM</h3><details class="af" data-estado="inferido" data-roto="0"><summary><span class="id">A8</span><span class="tx">Las condiciones de fondo del frente igualan o superan las del 8-oct en el piedemonte de Las Condes: ese día GFS daba 2.4 mm/h y Tobalaba midió 8.2 mm/h en una hora y 12.6 mm en cuatro; hoy los modelos dan picos de 2.5–3.2 mm/h y 8–16 mm en 24 h, con la cicatriz activa y suelos más húmedos. Lo que decide es si vuelve a formarse una celda convectiva de una hora sobre el piedemonte, y eso no lo resuelve ningún producto que lea el sistema; el pronóstico no confirma ni descarta una repetición.</span><span class="chip inferido">inferido · probable (55-80 %)</span></summary><div class="cuerpo"><div class="nota">Depende de: <code>A1</code></div><div class="ev"><div class="cab">código <a href="file:///home/franciscoparrao/proyectos/nowcast/CLAUDE.md"><code>CLAUDE.md:626-640</code></a> <span class="res">vigente</span></div><pre><span class="ln">626</span>**Retrospectiva del 8-oct (IMERG+GOES, 84 h, susc con cascada) — RESULTADO
+<span class="ln">627</span>NEGATIVO decisivo**: los DOS productos satelitales se perdieron la ráfaga del
+<span class="ln">628</span>piedemonte. En la celda de Tobalaba, 17-21Z: IMERG 0.37 mm y GOES 1.66 mm contra
+<span class="ln">629</span>12.6 mm observados (8.2 en la hora previa al aluvión) → ×34 y ×8 por debajo; en
+<span class="ln">630</span>la cicatriz IMERG 1.0 / GOES 2.6 mm. Peligro en la cicatriz ≤0.04 con Caine y
+<span class="ln">631</span>≤0.05 con a*=5.5: **el monitor con forzante satelital NO habría alertado**. Lo
+<span class="ln">632</span>único que vio la ráfaga fue el pluviómetro a 7 km; simulado el feed DGA (IDW de
+<span class="ln">633</span>las 4 EMAs) sobre la cicatriz: 5.5 mm/h → Caine 0.04 (nada), a*=5.5 0.29
+<span class="ln">634</span>(ALERTA a la hora del evento, sin lead). Por eso `monitor@rm` corre con
+<span class="ln">635</span>**ID_A=5.5 en SOMBRA** (atacama sigue en Caine): costo medido 17/168 pasos con
+<span class="ln">636</span>alguna celda en alerta en la ventana 7-9 oct (cordillera SE, sin verificar).
+<span class="ln">637</span>Conclusión que apunta a las fuentes: para ráfagas convectivas de piedemonte no
+<span class="ln">638</span>hay forzante satelital que sirva; hace falta red densa in situ (EMAs, estaciones
+<span class="ln">639</span>personales, enlaces de microondas). OJO: los fetchers miden la ventana hacia atrás desde AHORA y
+<span class="ln">640</span>GOES escribe en `WORK_DIR/steps` → para una retrospectiva el GOES va con</pre></div></div></details><h3>Contexto</h3><details class="af" data-estado="supuesto" data-roto="0"><summary><span class="id">A9</span><span class="tx">El frente anunciado para la semana es el que la prensa anticipaba el 8-oct para el domingo 11 y el lunes 12, con octubre ya sobre el récord histórico de lluvia en Santiago. No se encontró un aviso vigente de la DMC para la RM al 12-oct; no se verificó con la DMC directamente.</span><span class="chip supuesto">supuesto</span></summary><div class="cuerpo"><div class="ev"><div class="cab">referencia <a href="https://eldesconcierto.cl/actualidad/siguen-las-lluvias-zona-central-anticipan-nuevo-sistema-frontal-que-aumentara-precipitaciones-octubre-n5462950">https://eldesconcierto.cl/actualidad/siguen-las-lluvias-zona-central-anticipan-nuevo-sistema-frontal-que-aumentara-precipitaciones-octubre-n5462950</a> <span class="res">referencia externa</span></div><div class="nota"></div></div></div></details><h3>Otros lugares</h3><details class="af" data-estado="verificado" data-roto="0"><summary><span class="id">A10</span><span class="tx">ICON cruza el umbral regional en la precordillera de la RM en los ocho ciclos del 10-oct 12z al 12-oct 06z (pico 0.48–0.82, 0–30 pasos), con 0.64→0.76 en los cuatro últimos; GFS lo hizo una vez (11-oct 06z, 0.62) y ECMWF subió de 0.20 a 0.53 en los dos últimos ciclos. Ninguna celda de la RM tiene dos modelos sobre 0.5 en el ciclo 06z del 12-oct.</span><span class="chip verificado">verificado</span></summary><div class="cuerpo"><div class="nota">Depende de: <code>A2</code></div><div class="ev"><div class="cab">comando <code>$ python3 docs/informes/frente-2026-10/scripts/tendencia_rm.py /home/franciscoparrao/nowcast-forecast 20261010T12z 20261012T06z</code> <span class="chip verificado">exit 0</span> <span class="res">registrado, no re-ejecutado · exit 0 el 2026-10-12T13:30:38-03:00</span></div><div class="nota">cwd <code>.</code> · 2026-10-12T13:30:38-03:00 · 0.07 s</div><pre>20261010T12z | GFS pico 0.17 pasos 0 | ECMWF pico 0.20 pasos 0 | ICON pico 0.82 pasos 30
+20261010T18z | GFS pico 0.39 pasos 0 | ECMWF pico 0.20 pasos 0 | ICON pico 0.66 pasos 10
+20261011T00z | GFS pico 0.25 pasos 0 | ECMWF pico 0.21 pasos 0 | ICON pico 0.56 pasos 3
+20261011T06z | GFS pico 0.62 pasos 1 | ECMWF pico 0.21 pasos 0 | ICON pico 0.48 pasos 0
+20261011T12z | GFS pico 0.20 pasos 0 | ECMWF pico 0.22 pasos 0 | ICON pico 0.64 pasos 4
+20261011T18z | GFS pico 0.24 pasos 0 | ECMWF pico 0.22 pasos 0 | ICON pico 0.65 pasos 8
+20261012T00z | GFS pico 0.23 pasos 0 | ECMWF pico 0.53 pasos 1 | ICON pico 0.71 pasos 8
+20261012T06z | GFS pico 0.20 pasos 0 | ECMWF pico 0.53 pasos 1 | ICON pico 0.76 pasos 9</pre></div></div></details><h3>Cicatrices</h3><details class="af" data-estado="verificado" data-roto="0"><summary><span class="id">A11</span><span class="tx">Quedaron registradas en scars.json tres cicatrices del megaincendio de enero de 2026 (fecha de incendio 2026-01-14, factor 2.0, vigentes hasta 2028-01-14), calculadas por dNBR Landsat C2 L2 con umbral 0.27 y mayoría 3×3: Concepción–Penco (Trinitarias y Rancho Chico, 18.533 ha, un cuerpo de 17.058 ha, LC09 path 001/085 24-dic-2025 → 26-feb-2026, cuenca 17_costa_transfer); Florida–Ránquil–Trehuaco–Bulnes (Monte Negro y vecinos, 8.065 ha, cuerpos de 2.712, 1.463, 832 y 488 ha, path 233/086 10-ene → 19-feb, 17_costa_transfer); y Laja–Los Ángeles (Rucahue Sur, 4.040 ha, cuerpo mayor 1.633 ha, 12_rio_biobio). Los tres bbox no se solapan entre sí, para que ninguna celda reciba el factor dos veces.</span><span class="chip verificado">verificado</span></summary><div class="cuerpo"><div class="ev"><div class="cab">dato <code>monitor/data/postfire/scars.json</code> <span class="res">vigente</span></div><div class="nota">sha256 <code>39a3b7c4e586430e…</code> · 1,591 bytes</div></div><div class="ev"><div class="cab">dato <code>monitor/data/postfire/trinitarias_rancho_chico_2026-01-14/scar_mask.tif</code> <span class="res">vigente</span></div><div class="nota">sha256 <code>1c81850fedfccfe9…</code> · 42,183 bytes</div></div><div class="ev"><div class="cab">dato <code>monitor/data/postfire/monte_negro_florida_ranquil_2026-01-14/scar_mask.tif</code> <span class="res">vigente</span></div><div class="nota">sha256 <code>53db18ed18e3339d…</code> · 35,490 bytes</div></div><div class="ev"><div class="cab">dato <code>monitor/data/postfire/rucahue_sur_laja_2026-01-14/scar_mask.tif</code> <span class="res">vigente</span></div><div class="nota">sha256 <code>235b69032a2ab2dc…</code> · 31,943 bytes</div></div><div class="ev"><div class="cab">dato <code>monitor/data/postfire/trinitarias_rancho_chico_2026-01-14/meta.json</code> <span class="res">vigente</span></div><div class="nota">sha256 <code>36bb225094a115a1…</code> · 716 bytes</div></div><div class="ev"><div class="cab">comando <code>$ PATH=/home/franciscoparrao/nowcast-monitor/venv-forecast/bin:$PATH python3 docs/informes/frente-2026-10/scripts/cicatrices.py /home/franciscoparrao/nowcast-forecast/web/latest/comunas.geojson 2&gt;/dev/null</code> <span class="chip verificado">exit 0</span> <span class="res">registrado, no re-ejecutado · exit 0 el 2026-10-12T13:32:51-03:00</span></div><div class="nota">cwd <code>.</code> · 2026-10-12T13:32:51-03:00 · 2.9 s</div><pre>== san_carlos_apoquindo_2025-12-29: cuenca 09_rio_maipo, factor 2.0, incendio 2025-12-29, vigente hasta 2027-12-29
+   dNBR landsat-c2-l2 LC09_L2SP_233083_20251201_02_T1 → LC09_L2SP_233083_20260118_02_T1, umbral 0.27; QA enmascarada pre/post {&#x27;pre&#x27;: 0.0006, &#x27;post&#x27;: 0.0}; dNBR mediana en la máscara 0.346
+   máscara: 670 ha en 12 cuerpos; sin dato 0.1%
+     cuerpo     656 ha  lon -70.494..-70.453  lat -33.428..-33.394  LAS CONDES
+     cuerpo       5 ha  lon -70.491..-70.490  lat -33.421..-33.417  LAS CONDES
+     cuerpo       5 ha  lon -70.477..-70.473  lat -33.421..-33.419  LAS CONDES
+     cuerpo       1 ha  lon -70.462..-70.461  lat -33.397..-33.396  LAS CONDES
+== trinitarias_rancho_chico_2026-01-14: cuenca 17_costa_transfer, factor 2.0, incendio 2026-01-14, vigente hasta 2028-01-14
+   dNBR landsat-c2-l2 LC09_L2SP_001085_20251224_02_T1 → LC09_L2SP_001085_20260226_02_T1, umbral 0.27; QA enmascarada pre/post {&#x27;pre&#x27;: 0.2403, &#x27;post&#x27;: 0.2492}; dNBR mediana en la máscara 0.619
+   máscara: 18533 ha en 874 cuerpos; sin dato 25.4%
+     cuerpo   17058 ha  lon -73.026..-72.865  lat -36.929..-36.651  CONCEPCIÓN
+     cuerpo     197 ha  lon -72.881..-72.855  lat -36.853..-36.835  CONCEPCIÓN
+     cuerpo      98 ha  lon -72.796..-72.779  lat -36.829..-36.818  FLORIDA
+     cuerpo      36 ha  lon -72.872..-72.864  lat -36.794..-36.788  PENCO
+== monte_negro_florida_ranquil_2026-01-14: cuenca 17_costa_transfer, factor 2.0, incendio 2026-01-14, vigente hasta 2028-01-14
+   dNBR landsat-c2-l2 LC08_L2SP_233086_20260110_02_T1 → LC09_L2SP_233086_20260219_02_T1, umbral 0.27; QA enmascarada pre/post {&#x27;pre&#x27;: 0.0519, &#x27;post&#x27;: 0.0566}; dNBR mediana en la máscara 0.436
+   máscara: 8065 ha en 836 cuerpos; sin dato 5.7%
+     cuerpo    2712 ha  lon -72.682..-72.584  lat -36.812..-36.732  FLORIDA
+     cuerpo    1463 ha  lon -72.645..-72.564  lat -36.623..-36.575  RÁNQUIL
+     cuerpo     832 ha  lon -72.608..-72.554  lat -36.553..-36.513  TREHUACO
+     cuerpo     488 ha  lon -72.424..-72.397  lat -36.817..-36.773  BULNES
+== rucahue_sur_laja_2026-01-14: cuenca 12_rio_biobio, factor 2.0, incendio 2026-01-14, vigente hasta 2028-01-14
+   dNBR landsat-c2-l2 LC08_L2SP_233086_20260110_02_T1 → LC09_L2SP_233086_20260219_02_T1, umbral 0.27; QA enmascarada pre/post {&#x27;pre&#x27;: 0.0442, &#x27;post&#x27;: 0.0467}; dNBR mediana en la máscara 0.412
+   máscara: 4040 ha en 634 cuerpos; sin dato 5.0%
+     cuerpo    1633 ha  lon -72.665..-72.604  lat -37.371..-37.308  LAJA
+     cuerpo     345 ha  lon -72.620..-72.596  lat -37.505..-37.471  LOS ÁNGELES
+     cuerpo     291 ha  lon -72.631..-72.616  lat -37.309..-37.270  LAJA
+     cuerpo     200 ha  lon -72.633..-72.618  lat -37.269..-37.241  LAJA</pre></div></div></details><details class="af" data-estado="verificado" data-roto="0"><summary><span class="id">A12</span><span class="tx">En la grilla nativa de cada cuenca la cascada duplica la susceptibilidad dentro de la cicatriz y la recorta a 1: Concepción–Penco mediana 0.454 → 0.909 (celdas ≥0.5 del 43 % al 84 %), Florida–Ránquil 0.406 → 0.812 (31 % → 81 %), Laja 0.373 → 0.747 (28 % → 72 %); fuera de cada cicatriz, en la misma ventana, la mediana queda en 0.38–0.43. Las de Ñuble–Biobío caen sobre capas de transferencia sin validar en destino (17_costa_transfer) salvo Laja, que está en el RandomForest propio del Biobío.</span><span class="chip verificado">verificado</span></summary><div class="cuerpo"><div class="nota">Depende de: <code>A11</code></div><div class="ev"><div class="cab">comando <code>$ PATH=/home/franciscoparrao/nowcast-monitor/venv-forecast/bin:$PATH python3 docs/informes/frente-2026-10/scripts/susc_en_cicatriz.py 2&gt;/dev/null</code> <span class="chip verificado">exit 0</span> <span class="res">registrado, no re-ejecutado · exit 0 el 2026-10-12T13:32:54-03:00</span></div><div class="nota">cwd <code>.</code> · 2026-10-12T13:32:54-03:00 · 2.64 s</div><pre>== san_carlos_apoquindo_2025-12-29 × 09_rio_maipo/susceptibility_RandomForest.tif: 7444 celdas nativas con dato en la cicatriz; susc mediana 0.343 → 0.686; ≥0.5: 25% → 65%; fuera de la cicatriz (misma ventana) mediana 0.341
+== trinitarias_rancho_chico_2026-01-14 × 17_costa_transfer/susceptibility_transfer_biobio_centro.tif: 22918 celdas nativas con dato en la cicatriz; susc mediana 0.454 → 0.909; ≥0.5: 43% → 84%; fuera de la cicatriz (misma ventana) mediana 0.433
+== monte_negro_florida_ranquil_2026-01-14 × 17_costa_transfer/susceptibility_transfer_biobio_centro.tif: 9921 celdas nativas con dato en la cicatriz; susc mediana 0.406 → 0.812; ≥0.5: 31% → 81%; fuera de la cicatriz (misma ventana) mediana 0.384
+== rucahue_sur_laja_2026-01-14 × 12_rio_biobio/susceptibility_RandomForest.tif: 44886 celdas nativas con dato en la cicatriz; susc mediana 0.373 → 0.747; ≥0.5: 28% → 72%; fuera de la cicatriz (misma ventana) mediana 0.416</pre></div></div></details><details class="af" data-estado="verificado" data-roto="0"><summary><span class="id">A13</span><span class="tx">postfire_scar.py enmascara ahora el agua (QA_PIXEL bit 7). Antes de ese cambio la misma corrida de Concepción–Tomé daba 41.153 ha: 16.237 ha eran un cuerpo 100 % océano frente a Tomé–Dichato y el 26 % del cuerpo de Penco era la bahía, porque el mar cambia de NBR entre fechas. El autotest de la cascada sigue en verde.</span><span class="chip verificado">verificado</span></summary><div class="cuerpo"><div class="ev"><div class="cab">código <a href="file:///home/franciscoparrao/proyectos/nowcast/monitor/postfire_scar.py"><code>monitor/postfire_scar.py:51-58</code></a> <span class="res">vigente</span></div><pre><span class="ln">51</span># Escala Landsat Collection 2 Level-2 Surface Reflectance.
+<span class="ln">52</span>SR_SCALE, SR_OFFSET = 0.0000275, -0.2
+<span class="ln">53</span># QA_PIXEL (C2): bit0 fill, bit1 dilated cloud, bit3 cloud, bit4 shadow, bit5 snow,
+<span class="ln">54</span># bit7 AGUA. El agua va enmascarada desde el 2026-10-12: el mar cambia de NBR entre
+<span class="ln">55</span># fechas (oleaje, turbidez, reflejo) y con un bbox costero el dNBR marcó como
+<span class="ln">56</span># &quot;quemadas&quot; 16.237 ha de océano frente a Tomé–Dichato en un solo cuerpo y el 26 %
+<span class="ln">57</span># de la bahía de Penco pegado a la cicatriz real; la cascada no tiene sentido
+<span class="ln">58</span># sobre agua y la máscara la inflaba a casi el doble (41.153 → ~18.400 ha).</pre></div><div class="ev"><div class="cab">comando <code>$ PATH=/home/franciscoparrao/nowcast-monitor/venv/bin:$PATH python3 monitor/selftest.py --susc-overlay 2&gt;&amp;1 | grep -E &#x27;OK|FALLA|TODO&#x27;</code> <span class="chip verificado">exit 0</span> <span class="res">registrado, no re-ejecutado · exit 0 el 2026-10-12T13:32:58-03:00</span></div><div class="nota">cwd <code>.</code> · 2026-10-12T13:32:58-03:00 · 4.01 s</div><pre>[selftest susc_overlay] KINGSTON vacío → exit 1, FATAL=True, susc escrita=False OK
+[selftest susc_overlay] 1 cuenca presente → exit 0, susc_max finita y =0.6: True OK
+[selftest susc_overlay] cicatriz vigente → norte 1.00 (esperado 1.0), sur 0.60 (esperado 0.6) OK
+[selftest susc_overlay] cicatriz vencida → norte 0.60 (esperado 0.6), sur 0.60 (esperado 0.6) OK
+[selftest susc_overlay] TODO OK</pre></div></div></details><details class="af" data-estado="inferido" data-roto="0"><summary><span class="id">A14</span><span class="tx">Las máscaras son coherentes con las cifras oficiales: CONAF daba 15.541 ha para Trinitarias y 7.231 para Rancho Chico (22.772 en total; aquí 18.533, 81 %), 2.999–4.123 ha para Rucahue Sur (aquí 4.040) y 1.500 para Monte Negro más otros focos de Ñuble (aquí 8.065 repartidas en Florida, Ránquil, Trehuaco, Bulnes y Quillón). El faltante de Concepción puede ser área de severidad baja (dNBR 0.10–0.27, 15.657 ha en la ventana) o zonas al sur del bbox; un corte de plantación entre las dos fechas también daría dNBR alto, así que las cifras por comuna son estimaciones.</span><span class="chip inferido">inferido · probable (55-80 %)</span></summary><div class="cuerpo"><div class="nota">Depende de: <code>A11</code></div><div class="ev"><div class="cab">referencia <a href="https://es.wikipedia.org/wiki/Incendios_forestales_en_%C3%91uble_y_Biob%C3%ADo_de_2026">https://es.wikipedia.org/wiki/Incendios_forestales_en_%C3%91uble_y_Biob%C3%ADo_de_2026</a> <span class="res">referencia externa</span></div><div class="nota"></div></div><div class="ev"><div class="cab">referencia <a href="https://www.latercera.com/nacional/noticia/conaf-reporta-mas-de-42-mil-hectareas-afectadas-por-incendios-forestales-en-el-centro-sur-del-pais/">https://www.latercera.com/nacional/noticia/conaf-reporta-mas-de-42-mil-hectareas-afectadas-por-incendios-forestales-en-el-centro-sur-del-pais/</a> <span class="res">referencia externa</span></div><div class="nota"></div></div></div></details><details class="af" data-estado="inferido" data-roto="0"><summary><span class="id">A15</span><span class="tx">Esta semana la cascada no cambia el nivel comunal en Ñuble–Biobío: a las comunas con cicatriz les llegan 11–20 mm en 120 h y el gatillo no pasa de 0.24 (ECMWF en Nacimiento); como el índice de terreno es gatillo × susceptibilidad y la susceptibilidad se recorta a 1, el pico queda ≤0.24, bajo el 0.5 de MEDIO. La cascada importa para el próximo frente que sí cruce ahí.</span><span class="chip inferido">inferido · casi seguro (95-99 %)</span></summary><div class="cuerpo"><div class="nota">Depende de: <code>A2</code>, <code>A11</code></div><div class="nota">Sin evidencia adjunta.</div></div></details><h2>Pendiente</h2><ul><li>Cambiar la histéresis del monitor para que avise cuando el paso en alerta más reciente sea más nuevo que el último avisado (hoy notifica estados, no cruces).</li><li>Verificar la alerta del 10-oct cuando haya otra fuente para Tobalaba/La Florida/San José de Guayacán; desde el 11-oct las cuatro EMAs se archivan cada hora.</li><li>Revisar el lunes en la noche out/last_run.json de monitor@rm y cruzar cualquier alerta con monitor/data/ema/*-2026-10.jsonl.</li><li>Validar las máscaras de Ñuble–Biobío contra un perímetro oficial (CONAF/SENAPRED) cuando exista; descartar cortes de plantación.</li><li>Fuente in situ densa para el piedemonte (Netatmo, enlaces de microondas): ningún producto satelital vio la ráfaga del 8-oct.</li></ul><h2>Cómo reproducir</h2><ol class="pasos"><li>Reproduce el pronóstico: python3 docs/informes/frente-2026-10/scripts/pronostico_rm.py ~/nowcast-forecast/20261012T06z</li><li>Reproduce los cruces por dominio: python3 docs/informes/frente-2026-10/scripts/otros_lugares.py ~/nowcast-forecast/20261012T06z (venv-forecast)</li><li>Reproduce la revisión de la alerta: python3 docs/informes/frente-2026-10/scripts/alerta_rm_20261010.py (lee evidencia/alerta_rm_20261010/)</li><li>Reproduce las cicatrices: python3 docs/informes/frente-2026-10/scripts/cicatrices.py &lt;comunas.geojson&gt; y susc_en_cicatriz.py (requiere KINGSTON montado)</li><li>Recalcula una cicatriz: monitor/postfire_scar.py --nombre … --pre … --post … --bbox … --fecha-incendio … --basin … (ver meta.json de cada una)</li></ol><h2>Cómo leer este informe</h2><p class="nota"><b>Verificado</b>: comprobado con evidencia que esta herramienta generó y vuelve a comprobar. <b>Inferido</b>: juicio razonado, con su probabilidad. <b>Supuesto</b>: se dio por cierto sin comprobar. Escala de confianza (ICD 203):</p><table><tr><td>casi seguro</td><td>95-99 %</td></tr><tr><td>muy probable</td><td>80-95 %</td></tr><tr><td>probable</td><td>55-80 %</td></tr><tr><td>tan probable como no</td><td>45-55 %</td></tr><tr><td>improbable</td><td>20-45 %</td></tr><tr><td>muy improbable</td><td>5-20 %</td></tr><tr><td>casi imposible</td><td>1-5 %</td></tr></table><details><summary class="nota">Informe en JSON (sha256 33c8816d063f208a…)</summary><pre>{
+  &quot;version&quot;: 1,
+  &quot;meta&quot;: {
+    &quot;titulo&quot;: &quot;Frente del 12–17 de octubre de 2026: pronóstico, otros lugares con condiciones de aluvión, estado del monitor y cicatrices del megaincendio de enero&quot;,
+    &quot;proyecto&quot;: &quot;nowcast&quot;,
+    &quot;tarea&quot;: &quot;Evaluar el frente anunciado para la semana del 12-oct-2026 con el pronóstico comunal, identificar lugares con condiciones de aluvión fuera de Las Condes, dejar constancia del estado operacional del monitor (primera alerta de monitor@rm, archivo de EMAs) y registrar las cicatrices del megaincendio de enero de 2026 en la cascada post-incendio&quot;,
+    &quot;autor&quot;: &quot;Francisco Parra O. (con Claude Fable 5.1)&quot;,
+    &quot;fecha&quot;: &quot;2026-10-12T13:24:33-03:00&quot;,
+    &quot;root&quot;: &quot;../../..&quot;
+  },
+  &quot;bluf&quot;: &quot;El frente entra el lunes 12 en la tarde (ECMWF e ICON) o el martes 13 en la tarde (GFS). En el piedemonte de Las Condes los acumulados pronosticados igualan o superan los del 8 de octubre (12.7–30.7 mm en 120 h, picos de 1.4–3.2 mm/h), pero ningún modelo resuelve la ráfaga sub-horaria que gatilló ese aluvión, así que el pronóstico no confirma ni descarta una repetición. Fuera de Las Condes el único lugar con dos modelos sobre el umbral es Lonquimay; las señales de un solo modelo están en la precordillera de la RM (ICON, ocho ciclos seguidos), Machalí (ECMWF) y el secano de Coquimbo (ECMWF e ICON, lunes en la tarde). El monitor de la RM corre con los cuatro feeds al día, pero sigue en estado de alerta por una falsa alarma de GOES del sábado, de modo que un cruce real el lunes en la noche no saldría como aviso nuevo. Las tres cicatrices del megaincendio de enero (Concepción–Penco 18.533 ha, Florida–Ránquil 8.065 ha, Laja 4.040 ha) quedaron en la cascada post-incendio; esta semana no cambian ningún nivel comunal porque la lluvia pronosticada ahí es baja.&quot;,
+  &quot;afirmaciones&quot;: [
+    {
+      &quot;id&quot;: &quot;A1&quot;,
+      &quot;texto&quot;: &quot;En el ciclo 20261012T06z, para la celda de la cicatriz de San Carlos de Apoquindo los tres modelos dan 12.7–30.7 mm en 120 h, máximos de 24 h de 7.6–15.9 mm y picos de 1.4–3.2 mm/h; ECMWF e ICON ponen el pico el lunes 12 a las 18:00 (Chile) y GFS el martes 13 a las 20:00. El peligro con umbral regional a*=5.5 en la cicatriz no pasa de 0.32 (ICON); en San José de Maipo ICON llega a 0.54 con 43 mm.&quot;,
+      &quot;estado&quot;: &quot;verificado&quot;,
+      &quot;tema&quot;: &quot;Pronóstico RM&quot;,
+      &quot;evidencia&quot;: [
+        {
+          &quot;tipo&quot;: &quot;comando&quot;,
+          &quot;cmd&quot;: &quot;PATH=/home/franciscoparrao/nowcast-monitor/venv-forecast/bin:$PATH python3 docs/informes/frente-2026-10/scripts/pronostico_rm.py /home/franciscoparrao/nowcast-forecast/20261012T06z 2&gt;/dev/null&quot;,
+          &quot;cwd&quot;: &quot;.&quot;,
+          &quot;exit&quot;: 0,
+          &quot;sha256&quot;: &quot;757322be370e9bb1e74b6d2544b4b28e0bac917c6c953d8138020ec9bca062a5&quot;,
+          &quot;salida&quot;: &quot;== GFS: paso 1 h, 120 pasos, ventana 20261012T0700 → 20261017T0600 UTC\n  cicatriz SCA       total  17.5 mm | máx 24 h  10.8 mm | pico  2.5 mm/h el Tue 13 20:00 Chile | peligro a*=5.5 máx 0.16\n  Tobalaba           total  18.3 mm | máx 24 h  11.7 mm | pico  2.8 mm/h el Tue 13 20:00 Chile | peligro a*=5.5 máx 0.20\n  El Colorado        total   3.1 mm | máx 24 h   1.5 mm | pico  0.4 mm/h el Tue 13 17:00 Chile | peligro a*=5.5 máx 0.03\n  San José de Maipo  total  10.3 mm | máx 24 h   6.5 mm | pico  1.0 mm/h el Tue 13 20:00 Chile | peligro a*=5.5 máx 0.06\n== ECMWF: paso 3 h, 40 pasos, ventana 20261012T0300 → 20261017T0000 UTC\n  cicatriz SCA       total  12.7 mm | máx 24 h   7.6 mm | pico  1.4 mm/h el Mon 12 18:00 Chile | peligro a*=5.5 máx 0.08\n  Tobalaba           total  16.9 mm | máx 24 h   9.8 mm | pico  1.7 mm/h el Mon 12 18:00 Chile | peligro a*=5.5 máx 0.11\n  El Colorado        total   0.2 mm | máx 24 h   0.1 mm | pico  0.0 mm/h el Mon 12 21:00 Chile | peligro a*=5.5 máx 0.02\n  San José de Maipo  total   8.0 mm | máx 24 h   4.7 mm | pico  0.9 mm/h el Mon 12 18:00 Chile | peligro a*=5.5 máx 0.05\n== ICON: paso 1 h, 120 pasos, ventana 20261012T0700 → 20261017T0600 UTC\n  cicatriz SCA       total  30.7 mm | máx 24 h  15.9 mm | pico  3.2 mm/h el Mon 12 18:00 Chile | peligro a*=5.5 máx 0.32\n  Tobalaba           total  15.8 mm | máx 24 h  12.6 mm | pico  2.4 mm/h el Mon 12 18:00 Chile | peligro a*=5.5 máx 0.12\n  El Colorado        total   0.0 mm | máx 24 h   0.0 mm | pico  0.0 mm/h el Mon 12 09:00 Chile | peligro a*=5.5 máx 0.02\n  San José de Maipo  total  43.0 mm | máx 24 h  21.5 mm | pico  4.0 mm/h el Mon 12 16:00 Chile | peligro a*=5.5 máx 0.54&quot;,
+          &quot;fecha&quot;: &quot;2026-10-12T13:25:46-03:00&quot;,
+          &quot;segundos&quot;: 5.83
+        }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;A2&quot;,
+      &quot;texto&quot;: &quot;Celdas que cruzan 0.5 (umbral regional a*=5.5) por dominio y modelo en el ciclo 20261012T06z: en la RM solo ICON (Lo Barnechea 0.76 y San José de Maipo 0.54–0.60, lunes 18:00–19:00) y ECMWF en Machalí (0.53); en Coquimbo ECMWF e ICON coinciden solo en celdas sobre el mar frente a Canela–Los Vilos, y en tierra quedan Ovalle, Combarbalá (ECMWF 0.71–0.73) y Los Vilos (ICON 0.67), todo el lunes en la tarde; GFS no cruza en Coquimbo ni en la RM. En chile-centro-sur los acuerdos GFS–ICON están en la cordillera de Ñuble–Biobío y Lonquimay, fuera del barrido comunal; ECMWF cruza en Panguipulli, Pucón y Lonquimay.&quot;,
+      &quot;estado&quot;: &quot;verificado&quot;,
+      &quot;tema&quot;: &quot;Otros lugares&quot;,
+      &quot;evidencia&quot;: [
+        {
+          &quot;tipo&quot;: &quot;comando&quot;,
+          &quot;cmd&quot;: &quot;PATH=/home/franciscoparrao/nowcast-monitor/venv-forecast/bin:$PATH python3 docs/informes/frente-2026-10/scripts/otros_lugares.py /home/franciscoparrao/nowcast-forecast/20261012T06z 2&gt;/dev/null&quot;,
+          &quot;cwd&quot;: &quot;.&quot;,
+          &quot;exit&quot;: 0,
+          &quot;sha256&quot;: &quot;edbce9cd3c29119eacfeae59db620ffe3633c92741c6176b62ccafd83d217507&quot;,
+          &quot;salida&quot;: &quot;  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.95,-38.05) — (fuera del barrido comunal: mar, cordillera o Argentina)\n  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.85,-38.05) — (fuera del barrido comunal: mar, cordillera o Argentina)\n  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.85,-38.15) — (fuera del barrido comunal: mar, cordillera o Argentina)\n  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.85,-38.25) — (fuera del barrido comunal: mar, cordillera o Argentina)\n  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.85,-38.45) — (fuera del barrido comunal: mar, cordillera o Argentina)\n  ACUERDO [&#x27;gfs&#x27;, &#x27;ecmwf&#x27;] (-70.95,-38.65) LONQUIMAY\n  ACUERDO [&#x27;gfs&#x27;, &#x27;ecmwf&#x27;] (-71.05,-38.75) LONQUIMAY\n  ACUERDO [&#x27;gfs&#x27;, &#x27;ecmwf&#x27;] (-70.95,-38.75) LONQUIMAY\n  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.85,-38.75) — (fuera del barrido comunal: mar, cordillera o Argentina)\n  ACUERDO [&#x27;gfs&#x27;, &#x27;ecmwf&#x27;, &#x27;icon&#x27;] (-70.95,-38.85) — (fuera del barrido comunal: mar, cordillera o Argentina)\n  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.85,-38.85) — (fuera del barrido comunal: mar, cordillera o Argentina)\n  ACUERDO [&#x27;gfs&#x27;, &#x27;icon&#x27;] (-70.75,-38.85) — (fuera del barrido comunal: mar, cordillera o Argentina)\n  ACUERDO [&#x27;ecmwf&#x27;, &#x27;icon&#x27;] (-70.95,-38.95) — (fuera del barrido comunal: mar, cordillera o Argentina)\n\n=== araucania\n  gfs: 7 celdas ≥0.5\n     0.93 (-72.25,-39.95) LOS LAGOS              máx Thu 15 18:00  lluvia120h 30 mm\n     0.76 (-72.35,-39.95) LOS LAGOS              máx Thu 15 18:00  lluvia120h 23 mm\n     0.63 (-71.05,-38.75) LONQUIMAY              máx Tue 13 04:00  lluvia120h 28 mm\n     0.61 (-72.25,-39.85) PANGUIPULLI            máx Thu 15 18:00  lluvia120h 25 mm\n     0.60 (-72.15,-39.95) LOS LAGOS              máx Thu 15 18:00  lluvia120h 28 mm\n     0.56 (-71.05,-38.25) LONQUIMAY              máx Tue 13 00:00  lluvia120h 38 mm\n     0.51 (-71.05,-38.65) LONQUIMAY              máx Tue 13 04:00  lluvia120h 30 mm\n  ecmwf: 0 celdas ≥0.5\n  icon: 0 celdas ≥0.5\n  sin celdas con ≥2 modelos ≥0.5\n\n=== nuble-biobio\n  gfs: 13 celdas ≥0.5\n     0.75 (-71.05,-37.75) — (fuera del barrido comunal: mar, cordillera o Argentina) máx Tue 13 22:00  lluvia120h 34 mm\n     0.74 (-71.25,-37.95) ALTO BIOBÍO            máx Tue 13 23:00  lluvia120h 36 mm\n     0.72 (-71.25,-38.05) ALTO BIOBÍO            máx Tue 13 23:00  lluvia120h 36 mm\n     0.70 (-71.75,-38.05) COLLIPULLI             máx Wed 14 19:00  lluvia120h 32 mm\n     0.69 (-71.75,-37.95) MULCHÉN                máx Wed 14 19:00  lluvia120h 30 mm\n     0.63 (-71.15,-37.75) — (fuera del barrido comunal: mar, cordillera o Argentina) máx Tue 13 22:00  lluvia120h 31 mm\n     0.61 (-71.25,-37.85) ALTO BIOBÍO            máx Tue 13 22:00  lluvia120h 32 mm\n     0.61 (-71.15,-37.95) ALTO BIOBÍO            máx Tue 13 23:00  lluvia120h 36 mm\n  ecmwf: 0 celdas ≥0.5\n  icon: 0 celdas ≥0.5\n  sin celdas con ≥2 modelos ≥0.5&quot;,
+          &quot;fecha&quot;: &quot;2026-10-12T13:25:53-03:00&quot;,
+          &quot;segundos&quot;: 7.28
+        }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;A3&quot;,
+      &quot;texto&quot;: &quot;La primera alerta de monitor@rm salió en el ciclo de las 05:48Z del 11-oct (3–5 pasos entre las 22:30Z y las 23:30Z del 10-oct, pico 0.34 sobre el nivel 0.267) en dos celdas: Lo Barnechea (−70.35,−33.35) y Lampa–Colina (−70.85,−33.15). La gatilló GOES solo: 3.82 mm/30 min (7.6 mm/h) en Lo Barnechea a las 22:30Z y 3.22 mm en Lampa–Colina a las 23:00Z, con IMERG en 0.99–2.92 mm. El campo DGA (IDW de las 4 EMAs) no pasó de 0.09 mm/30 min en todo el dominio y El Colorado archivado midió 0.2 mm en la hora de las 23Z. Al ciclo de las 15:17Z del 12-oct los pasos seguían en la ventana de 54 h y el dominio seguía en estado de alerta.&quot;,
+      &quot;estado&quot;: &quot;verificado&quot;,
+      &quot;tema&quot;: &quot;Monitor RM: primera alerta&quot;,
+      &quot;evidencia&quot;: [
+        {
+          &quot;tipo&quot;: &quot;dato&quot;,
+          &quot;ruta&quot;: &quot;docs/informes/frente-2026-10/evidencia/alerta_rm_20261010/last_run_20261012T1517Z.json&quot;,
+          &quot;sha256&quot;: &quot;ca16c6bab3a50b17b02c3222d84348681c1e61f09f59c7e3fe81e254ba58bf43&quot;,
+          &quot;bytes&quot;: 7120
+        },
+        {
+          &quot;tipo&quot;: &quot;dato&quot;,
+          &quot;ruta&quot;: &quot;docs/informes/frente-2026-10/evidencia/alerta_rm_20261010/goes_20261010T2230.tif&quot;,
+          &quot;sha256&quot;: &quot;324dd74e216aa4ad40f0001373c47bf4db34d68633344a99c26e25573df2f1d6&quot;,
+          &quot;bytes&quot;: 990
+        },
+        {
+          &quot;tipo&quot;: &quot;dato&quot;,
+          &quot;ruta&quot;: &quot;docs/informes/frente-2026-10/evidencia/alerta_rm_20261010/dga_20261010T2300.tif&quot;,
+          &quot;sha256&quot;: &quot;1276d2db3f2669bc8d2e4d9bdded8ca83065058a3e049aaf80ebb23ffa9957cd&quot;,
+          &quot;bytes&quot;: 990
+        },
+        {
+          &quot;tipo&quot;: &quot;dato&quot;,
+          &quot;ruta&quot;: &quot;docs/informes/frente-2026-10/evidencia/alerta_rm_20261010/elcolorado_330077_horario_mm.json&quot;,
+          &quot;sha256&quot;: &quot;734fa81ca5653dc0dd8fc0003b4fd82c90bdffa7d718922f692b5e0f4fcaf9b5&quot;,
+          &quot;bytes&quot;: 186
+        },
+        {
+          &quot;tipo&quot;: &quot;comando&quot;,
+          &quot;cmd&quot;: &quot;PATH=/home/franciscoparrao/nowcast-monitor/venv/bin:$PATH python3 docs/informes/frente-2026-10/scripts/alerta_rm_20261010.py 2&gt;/dev/null&quot;,
+          &quot;cwd&quot;: &quot;.&quot;,
+          &quot;exit&quot;: 0,
+          &quot;sha256&quot;: &quot;9b9bf74bb22fa51e721a32662c7ce5f3eeea035358af35130d8a66733ffa2feb&quot;,
+          &quot;salida&quot;: &quot;last_run (ciclo 15:17Z 12-oct): 107 pasos, 3 en alerta, nivel 0.267, pico 0.340\nventana de la fusión: [&#x27;20261010T1030&#x27;, &#x27;20261012T1530&#x27;] | feeds: {&#x27;primary&#x27;: &#x27;20261012T1030&#x27;, &#x27;goes&#x27;: &#x27;20261012T1530&#x27;, &#x27;dga&#x27;: &#x27;20261012T1530&#x27;}\n\npaso UTC        | Lo Barnechea (-70.35,-33.35) | Lampa–Colina (-70.85,-33.15) | máx dominio IMERG/GOES/DGA\n20261010T2130   |             0.09  0.00  0.00 |             0.02  0.13  0.00 |  0.23  1.00  0.00  (mm/30 min: IMERG GOES DGA)\n20261010T2200   |             0.13  0.33  0.00 |             0.39  1.22  0.00 |  0.87  2.68  0.00  (mm/30 min: IMERG GOES DGA)\n20261010T2230   |             0.99  3.82  0.00 |             0.00  0.09  0.00 |  1.87  3.82  0.00  (mm/30 min: IMERG GOES DGA)\n20261010T2300   |             0.06  0.00  0.09 |             2.92  3.22  0.02 |  2.92  3.22  0.09  (mm/30 min: IMERG GOES DGA)\n20261010T2330   |             1.10  2.67  0.09 |             0.01  0.07  0.02 |  2.07  2.70  0.09  (mm/30 min: IMERG GOES DGA)\n20261011T0000   |             0.31  0.00  0.00 |             0.00  0.00  0.00 |  1.87  2.03  0.00  (mm/30 min: IMERG GOES DGA)\n\nEl Colorado 330077 (archivo DMC), mm por hora UTC: {&#x27;2026-10-10 20&#x27;: 0.0, &#x27;2026-10-10 21&#x27;: 0.0, &#x27;2026-10-10 22&#x27;: 0.0, &#x27;2026-10-10 23&#x27;: 0.2, &#x27;2026-10-11 00&#x27;: 0.0, &#x27;2026-10-11 01&#x27;: 0.0, &#x27;2026-10-11 02&#x27;: 0.0, &#x27;2026-10-11 03&#x27;: 0.0}&quot;,
+          &quot;fecha&quot;: &quot;2026-10-12T13:27:10-03:00&quot;,
+          &quot;segundos&quot;: 0.73
+        }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;A4&quot;,
+      &quot;texto&quot;: &quot;Tobalaba, La Florida y San José de Guayacán no se pudieron verificar para esa alerta: al consultar la API de la DMC el 11-oct a las 12:30Z la ventana empezaba a las 00:41Z, dos horas después de la alerta, y archive_ema solo archivaba El Colorado (330077). Desde el 11-oct a las 12:43Z el archivador guarda las cuatro EMAs del dominio RM (default 330077,330112,330122,330019) con la unit instalada y el timer horario.&quot;,
+      &quot;estado&quot;: &quot;verificado&quot;,
+      &quot;tema&quot;: &quot;Monitor RM: primera alerta&quot;,
+      &quot;evidencia&quot;: [
+        {
+          &quot;tipo&quot;: &quot;codigo&quot;,
+          &quot;ruta&quot;: &quot;monitor/archive_ema.py&quot;,
+          &quot;lineas&quot;: [
+            54,
+            61
+          ],
+          &quot;sha256&quot;: &quot;455852f15141ade7efb7f59c97eca5dcdae517650f13012ff8f91c891f72b6a1&quot;,
+          &quot;extracto&quot;: &quot;STATIONS = {\n    \&quot;330077\&quot;: \&quot;El Colorado 2750 m\&quot;,\n    \&quot;330112\&quot;: \&quot;San José de Guayacán\&quot;,\n    \&quot;330122\&quot;: \&quot;La Florida\&quot;,\n    \&quot;330019\&quot;: \&quot;Tobalaba\&quot;,\n}\nDEFAULT_CODE = \&quot;330077\&quot;          # El Colorado 2750 m (compat: crosscheck_elcolorado)\nDEFAULT_CODES = \&quot;,\&quot;.join(STATIONS)&quot;
+        },
+        {
+          &quot;tipo&quot;: &quot;comando&quot;,
+          &quot;cmd&quot;: &quot;ls -la monitor/data/ema/ &amp;&amp; wc -l monitor/data/ema/*-2026-10.jsonl &amp;&amp; systemctl --user cat nowcast-archive-ema.service | grep ExecStart&quot;,
+          &quot;cwd&quot;: &quot;.&quot;,
+          &quot;exit&quot;: 0,
+          &quot;sha256&quot;: &quot;40b932126ab23a6b268e71e3521819476b3d60a9d80e7faf5512e4ed42f522d7&quot;,
+          &quot;salida&quot;: &quot;total 54688\ndrwxrwxr-x 2 franciscoparrao franciscoparrao     4096 oct 12 13:07 .\ndrwxrwxr-x 4 franciscoparrao franciscoparrao     4096 oct  9 11:04 ..\n-rw------- 1 franciscoparrao franciscoparrao  2156957 oct 12 13:07 330019-2026-10.jsonl\n-rw------- 1 franciscoparrao franciscoparrao 34253063 sep 30 22:06 330077-2026-09.jsonl\n-rw------- 1 franciscoparrao franciscoparrao 15390778 oct 12 13:07 330077-2026-10.jsonl\n-rw------- 1 franciscoparrao franciscoparrao  2026240 oct 12 13:07 330112-2026-10.jsonl\n-rw------- 1 franciscoparrao franciscoparrao  2152230 oct 12 13:07 330122-2026-10.jsonl\n    2352 monitor/data/ema/330019-2026-10.jsonl\n   16786 monitor/data/ema/330077-2026-10.jsonl\n    2210 monitor/data/ema/330112-2026-10.jsonl\n    2345 monitor/data/ema/330122-2026-10.jsonl\n   23693 total\nExecStart=%h/proyectos/nowcast/monitor/archive_ema.py --code 330077,330112,330122,330019&quot;,
+          &quot;fecha&quot;: &quot;2026-10-12T13:27:10-03:00&quot;,
+          &quot;segundos&quot;: 0.04
+        }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;A5&quot;,
+      &quot;texto&quot;: &quot;La notificación de alerta del monitor se repite cada REALERT_HOURS=6 mientras el dominio siga en alerta y solo se reinicia al volver a quiet: la marca state/alert se re-estampa con cada entrega confirmada (monitor@rm: 13:45Z del 12-oct). El comentario del código dice que se notifican cruces y no estados, pero la implementación notifica el estado del dominio.&quot;,
+      &quot;estado&quot;: &quot;verificado&quot;,
+      &quot;tema&quot;: &quot;Monitor RM: histéresis&quot;,
+      &quot;evidencia&quot;: [
+        {
+          &quot;tipo&quot;: &quot;codigo&quot;,
+          &quot;ruta&quot;: &quot;monitor/monitor.sh&quot;,
+          &quot;lineas&quot;: [
+            393,
+            396
+          ],
+          &quot;sha256&quot;: &quot;c405179b4c4e017940179121fac4a45ae5683a4c4fe69379317dc33b569fe0ec&quot;,
+          &quot;extracto&quot;: &quot;    # Al volver a quiet, resetear la histéresis para que la PRÓXIMA alerta\n    # notifique de inmediato (notificamos cruces, no estados).\n    rm -f \&quot;$WORK_DIR/state/alert\&quot;\n    mark_ok \&quot;$WORK_DIR/state\&quot;&quot;
+        },
+        {
+          &quot;tipo&quot;: &quot;codigo&quot;,
+          &quot;ruta&quot;: &quot;monitor/monitor.sh&quot;,
+          &quot;lineas&quot;: [
+            433,
+            433
+          ],
+          &quot;sha256&quot;: &quot;a61710a74d82256f58119e7d6e5f3b81681a240b78b4dbbc04fe1d10d231adfb&quot;,
+          &quot;extracto&quot;: &quot;        urgent alert \&quot;${REALERT_HOURS:-6}\&quot;&quot;
+        },
+        {
+          &quot;tipo&quot;: &quot;codigo&quot;,
+          &quot;ruta&quot;: &quot;monitor/lib_notify.sh&quot;,
+          &quot;lineas&quot;: [
+            14,
+            24
+          ],
+          &quot;sha256&quot;: &quot;737202cca2f5f33d41e10aaf1c11db2d0bffb6d6b116a6770e8d19427fe7ed0e&quot;,
+          &quot;extracto&quot;: &quot;notify() {\n    local title=\&quot;$1\&quot; body=\&quot;$2\&quot; prio=\&quot;$3\&quot; hfile=\&quot;${4:-}\&quot; hours=\&quot;${5:-0}\&quot;\n    local now last window entregado=0\n    now=$(date -u +%s)\n    if [[ -n \&quot;$hfile\&quot; ]]; then\n        last=$(cat \&quot;$NOTIFY_STATE_DIR/$hfile\&quot; 2&gt;/dev/null || echo 0)\n        window=$(python3 -c \&quot;print(int(float(&#x27;$hours&#x27;) * 3600))\&quot;)\n        if (( now - last &lt; window )); then\n            log \&quot;notify suprimida por histéresis ($hfile): $title\&quot;\n            return 0\n        fi&quot;
+        },
+        {
+          &quot;tipo&quot;: &quot;comando&quot;,
+          &quot;cmd&quot;: &quot;date -u +%Y-%m-%dT%H:%MZ; echo -n &#x27;state/alert = &#x27;; date -u -d @$(cat /home/franciscoparrao/nowcast-monitor-rm/state/alert) +%Y-%m-%dT%H:%MZ; grep -n REALERT_HOURS monitor/config.env&quot;,
+          &quot;cwd&quot;: &quot;.&quot;,
+          &quot;exit&quot;: 0,
+          &quot;sha256&quot;: &quot;c513aa7fc13e402612a99a42bf43c79cd01190ae6cc6a90083d1d751bbe8f947&quot;,
+          &quot;salida&quot;: &quot;2026-10-12T16:27Z\nstate/alert = 2026-10-12T13:45Z\n112:REALERT_HOURS=6&quot;,
+          &quot;fecha&quot;: &quot;2026-10-12T13:27:10-03:00&quot;,
+          &quot;segundos&quot;: 0.02
+        }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;A6&quot;,
+      &quot;texto&quot;: &quot;La alerta del 10-oct fue una falsa alarma por sobreestimación de GOES QPE en una banda de chubascos: los dos productos satelitales vieron lluvia, pero las cuatro EMAs (campo IDW ≤0.09 mm/30 min) y El Colorado (0.2 mm/h) no la respaldan, y 7.6 mm/h frente a ≤0.2 mm/h no se explica por la distancia entre estaciones. Queda abierta porque tres de las cuatro EMAs no se pudieron leer.&quot;,
+      &quot;estado&quot;: &quot;inferido&quot;,
+      &quot;confianza&quot;: &quot;muy probable&quot;,
+      &quot;tema&quot;: &quot;Monitor RM: primera alerta&quot;,
+      &quot;depende_de&quot;: [
+        &quot;A3&quot;,
+        &quot;A4&quot;
+      ],
+      &quot;evidencia&quot;: []
+    },
+    {
+      &quot;id&quot;: &quot;A7&quot;,
+      &quot;texto&quot;: &quot;Un cruce real en la RM entre las 18:00 y las 21:00 de Chile del lunes 12 no saldría como aviso nuevo: el dominio ya está en alerta por los pasos del 10-oct (que salen de la ventana de 54 h recién a las 02:30 de Chile del martes) y la histéresis re-estampada a las 13:45Z silencia hasta las 19:45Z; después el aviso repetido mezclaría ambas señales. Para esta noche hay que mirar out/last_run.json a mano o cambiar la histéresis para que avise cuando el paso en alerta más reciente sea más nuevo que el último avisado.&quot;,
+      &quot;estado&quot;: &quot;inferido&quot;,
+      &quot;confianza&quot;: &quot;muy probable&quot;,
+      &quot;tema&quot;: &quot;Monitor RM: histéresis&quot;,
+      &quot;depende_de&quot;: [
+        &quot;A5&quot;,
+        &quot;A3&quot;
+      ],
+      &quot;evidencia&quot;: []
+    },
+    {
+      &quot;id&quot;: &quot;A8&quot;,
+      &quot;texto&quot;: &quot;Las condiciones de fondo del frente igualan o superan las del 8-oct en el piedemonte de Las Condes: ese día GFS daba 2.4 mm/h y Tobalaba midió 8.2 mm/h en una hora y 12.6 mm en cuatro; hoy los modelos dan picos de 2.5–3.2 mm/h y 8–16 mm en 24 h, con la cicatriz activa y suelos más húmedos. Lo que decide es si vuelve a formarse una celda convectiva de una hora sobre el piedemonte, y eso no lo resuelve ningún producto que lea el sistema; el pronóstico no confirma ni descarta una repetición.&quot;,
+      &quot;estado&quot;: &quot;inferido&quot;,
+      &quot;confianza&quot;: &quot;probable&quot;,
+      &quot;tema&quot;: &quot;Pronóstico RM&quot;,
+      &quot;depende_de&quot;: [
+        &quot;A1&quot;
+      ],
+      &quot;evidencia&quot;: [
+        {
+          &quot;tipo&quot;: &quot;codigo&quot;,
+          &quot;ruta&quot;: &quot;CLAUDE.md&quot;,
+          &quot;lineas&quot;: [
+            626,
+            640
+          ],
+          &quot;sha256&quot;: &quot;76bfbaca07e505e1d0ab52973eaa61656085d77430befbb568871332a90b57b2&quot;,
+          &quot;extracto&quot;: &quot;**Retrospectiva del 8-oct (IMERG+GOES, 84 h, susc con cascada) — RESULTADO\nNEGATIVO decisivo**: los DOS productos satelitales se perdieron la ráfaga del\npiedemonte. En la celda de Tobalaba, 17-21Z: IMERG 0.37 mm y GOES 1.66 mm contra\n12.6 mm observados (8.2 en la hora previa al aluvión) → ×34 y ×8 por debajo; en\nla cicatriz IMERG 1.0 / GOES 2.6 mm. Peligro en la cicatriz ≤0.04 con Caine y\n≤0.05 con a*=5.5: **el monitor con forzante satelital NO habría alertado**. Lo\núnico que vio la ráfaga fue el pluviómetro a 7 km; simulado el feed DGA (IDW de\nlas 4 EMAs) sobre la cicatriz: 5.5 mm/h → Caine 0.04 (nada), a*=5.5 0.29\n(ALERTA a la hora del evento, sin lead). Por eso `monitor@rm` corre con\n**ID_A=5.5 en SOMBRA** (atacama sigue en Caine): costo medido 17/168 pasos con\nalguna celda en alerta en la ventana 7-9 oct (cordillera SE, sin verificar).\nConclusión que apunta a las fuentes: para ráfagas convectivas de piedemonte no\nhay forzante satelital que sirva; hace falta red densa in situ (EMAs, estaciones\npersonales, enlaces de microondas). OJO: los fetchers miden la ventana hacia atrás desde AHORA y\nGOES escribe en `WORK_DIR/steps` → para una retrospectiva el GOES va con&quot;
+        }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;A9&quot;,
+      &quot;texto&quot;: &quot;El frente anunciado para la semana es el que la prensa anticipaba el 8-oct para el domingo 11 y el lunes 12, con octubre ya sobre el récord histórico de lluvia en Santiago. No se encontró un aviso vigente de la DMC para la RM al 12-oct; no se verificó con la DMC directamente.&quot;,
+      &quot;estado&quot;: &quot;supuesto&quot;,
+      &quot;tema&quot;: &quot;Contexto&quot;,
+      &quot;evidencia&quot;: [
+        {
+          &quot;tipo&quot;: &quot;referencia&quot;,
+          &quot;ref&quot;: &quot;https://eldesconcierto.cl/actualidad/siguen-las-lluvias-zona-central-anticipan-nuevo-sistema-frontal-que-aumentara-precipitaciones-octubre-n5462950&quot;,
+          &quot;nota&quot;: &quot;&quot;
+        }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;A10&quot;,
+      &quot;texto&quot;: &quot;ICON cruza el umbral regional en la precordillera de la RM en los ocho ciclos del 10-oct 12z al 12-oct 06z (pico 0.48–0.82, 0–30 pasos), con 0.64→0.76 en los cuatro últimos; GFS lo hizo una vez (11-oct 06z, 0.62) y ECMWF subió de 0.20 a 0.53 en los dos últimos ciclos. Ninguna celda de la RM tiene dos modelos sobre 0.5 en el ciclo 06z del 12-oct.&quot;,
+      &quot;estado&quot;: &quot;verificado&quot;,
+      &quot;tema&quot;: &quot;Otros lugares&quot;,
+      &quot;depende_de&quot;: [
+        &quot;A2&quot;
+      ],
+      &quot;evidencia&quot;: [
+        {
+          &quot;tipo&quot;: &quot;comando&quot;,
+          &quot;cmd&quot;: &quot;python3 docs/informes/frente-2026-10/scripts/tendencia_rm.py /home/franciscoparrao/nowcast-forecast 20261010T12z 20261012T06z&quot;,
+          &quot;cwd&quot;: &quot;.&quot;,
+          &quot;exit&quot;: 0,
+          &quot;sha256&quot;: &quot;8fa7704edb5e77cdd9efd7d028fc3f79626b87299b2e7f1b3d095ef6b094b50f&quot;,
+          &quot;salida&quot;: &quot;20261010T12z | GFS pico 0.17 pasos 0 | ECMWF pico 0.20 pasos 0 | ICON pico 0.82 pasos 30\n20261010T18z | GFS pico 0.39 pasos 0 | ECMWF pico 0.20 pasos 0 | ICON pico 0.66 pasos 10\n20261011T00z | GFS pico 0.25 pasos 0 | ECMWF pico 0.21 pasos 0 | ICON pico 0.56 pasos 3\n20261011T06z | GFS pico 0.62 pasos 1 | ECMWF pico 0.21 pasos 0 | ICON pico 0.48 pasos 0\n20261011T12z | GFS pico 0.20 pasos 0 | ECMWF pico 0.22 pasos 0 | ICON pico 0.64 pasos 4\n20261011T18z | GFS pico 0.24 pasos 0 | ECMWF pico 0.22 pasos 0 | ICON pico 0.65 pasos 8\n20261012T00z | GFS pico 0.23 pasos 0 | ECMWF pico 0.53 pasos 1 | ICON pico 0.71 pasos 8\n20261012T06z | GFS pico 0.20 pasos 0 | ECMWF pico 0.53 pasos 1 | ICON pico 0.76 pasos 9&quot;,
+          &quot;fecha&quot;: &quot;2026-10-12T13:30:38-03:00&quot;,
+          &quot;segundos&quot;: 0.07
+        }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;A11&quot;,
+      &quot;texto&quot;: &quot;Quedaron registradas en scars.json tres cicatrices del megaincendio de enero de 2026 (fecha de incendio 2026-01-14, factor 2.0, vigentes hasta 2028-01-14), calculadas por dNBR Landsat C2 L2 con umbral 0.27 y mayoría 3×3: Concepción–Penco (Trinitarias y Rancho Chico, 18.533 ha, un cuerpo de 17.058 ha, LC09 path 001/085 24-dic-2025 → 26-feb-2026, cuenca 17_costa_transfer); Florida–Ránquil–Trehuaco–Bulnes (Monte Negro y vecinos, 8.065 ha, cuerpos de 2.712, 1.463, 832 y 488 ha, path 233/086 10-ene → 19-feb, 17_costa_transfer); y Laja–Los Ángeles (Rucahue Sur, 4.040 ha, cuerpo mayor 1.633 ha, 12_rio_biobio). Los tres bbox no se solapan entre sí, para que ninguna celda reciba el factor dos veces.&quot;,
+      &quot;estado&quot;: &quot;verificado&quot;,
+      &quot;tema&quot;: &quot;Cicatrices&quot;,
+      &quot;evidencia&quot;: [
+        {
+          &quot;tipo&quot;: &quot;dato&quot;,
+          &quot;ruta&quot;: &quot;monitor/data/postfire/scars.json&quot;,
+          &quot;sha256&quot;: &quot;39a3b7c4e586430e15dbe02f725e557bb7d15a7cfd49d3dbadc1a1b244223b0d&quot;,
+          &quot;bytes&quot;: 1591
+        },
+        {
+          &quot;tipo&quot;: &quot;dato&quot;,
+          &quot;ruta&quot;: &quot;monitor/data/postfire/trinitarias_rancho_chico_2026-01-14/scar_mask.tif&quot;,
+          &quot;sha256&quot;: &quot;1c81850fedfccfe999a4aed27e1b8e25f5421a6fe39d144acd17cdf95d97aefb&quot;,
+          &quot;bytes&quot;: 42183
+        },
+        {
+          &quot;tipo&quot;: &quot;dato&quot;,
+          &quot;ruta&quot;: &quot;monitor/data/postfire/monte_negro_florida_ranquil_2026-01-14/scar_mask.tif&quot;,
+          &quot;sha256&quot;: &quot;53db18ed18e3339d0a6afbefb9fb17d3b84f614fa7fd8da76c037801ca1a3b80&quot;,
+          &quot;bytes&quot;: 35490
+        },
+        {
+          &quot;tipo&quot;: &quot;dato&quot;,
+          &quot;ruta&quot;: &quot;monitor/data/postfire/rucahue_sur_laja_2026-01-14/scar_mask.tif&quot;,
+          &quot;sha256&quot;: &quot;235b69032a2ab2dc1215e8be9ee38bb35c3ef2d7d2fc00ccde1d13113e15e71d&quot;,
+          &quot;bytes&quot;: 31943
+        },
+        {
+          &quot;tipo&quot;: &quot;dato&quot;,
+          &quot;ruta&quot;: &quot;monitor/data/postfire/trinitarias_rancho_chico_2026-01-14/meta.json&quot;,
+          &quot;sha256&quot;: &quot;36bb225094a115a19e9ac8aa374fc6529887db532894c9ba23f1e146bf400ae1&quot;,
+          &quot;bytes&quot;: 716
+        },
+        {
+          &quot;tipo&quot;: &quot;comando&quot;,
+          &quot;cmd&quot;: &quot;PATH=/home/franciscoparrao/nowcast-monitor/venv-forecast/bin:$PATH python3 docs/informes/frente-2026-10/scripts/cicatrices.py /home/franciscoparrao/nowcast-forecast/web/latest/comunas.geojson 2&gt;/dev/null&quot;,
+          &quot;cwd&quot;: &quot;.&quot;,
+          &quot;exit&quot;: 0,
+          &quot;sha256&quot;: &quot;d73290b3f5bc57e91709591cb05b4cfd74da54d59a1693ed5030ec068dc92ac0&quot;,
+          &quot;salida&quot;: &quot;== san_carlos_apoquindo_2025-12-29: cuenca 09_rio_maipo, factor 2.0, incendio 2025-12-29, vigente hasta 2027-12-29\n   dNBR landsat-c2-l2 LC09_L2SP_233083_20251201_02_T1 → LC09_L2SP_233083_20260118_02_T1, umbral 0.27; QA enmascarada pre/post {&#x27;pre&#x27;: 0.0006, &#x27;post&#x27;: 0.0}; dNBR mediana en la máscara 0.346\n   máscara: 670 ha en 12 cuerpos; sin dato 0.1%\n     cuerpo     656 ha  lon -70.494..-70.453  lat -33.428..-33.394  LAS CONDES\n     cuerpo       5 ha  lon -70.491..-70.490  lat -33.421..-33.417  LAS CONDES\n     cuerpo       5 ha  lon -70.477..-70.473  lat -33.421..-33.419  LAS CONDES\n     cuerpo       1 ha  lon -70.462..-70.461  lat -33.397..-33.396  LAS CONDES\n== trinitarias_rancho_chico_2026-01-14: cuenca 17_costa_transfer, factor 2.0, incendio 2026-01-14, vigente hasta 2028-01-14\n   dNBR landsat-c2-l2 LC09_L2SP_001085_20251224_02_T1 → LC09_L2SP_001085_20260226_02_T1, umbral 0.27; QA enmascarada pre/post {&#x27;pre&#x27;: 0.2403, &#x27;post&#x27;: 0.2492}; dNBR mediana en la máscara 0.619\n   máscara: 18533 ha en 874 cuerpos; sin dato 25.4%\n     cuerpo   17058 ha  lon -73.026..-72.865  lat -36.929..-36.651  CONCEPCIÓN\n     cuerpo     197 ha  lon -72.881..-72.855  lat -36.853..-36.835  CONCEPCIÓN\n     cuerpo      98 ha  lon -72.796..-72.779  lat -36.829..-36.818  FLORIDA\n     cuerpo      36 ha  lon -72.872..-72.864  lat -36.794..-36.788  PENCO\n== monte_negro_florida_ranquil_2026-01-14: cuenca 17_costa_transfer, factor 2.0, incendio 2026-01-14, vigente hasta 2028-01-14\n   dNBR landsat-c2-l2 LC08_L2SP_233086_20260110_02_T1 → LC09_L2SP_233086_20260219_02_T1, umbral 0.27; QA enmascarada pre/post {&#x27;pre&#x27;: 0.0519, &#x27;post&#x27;: 0.0566}; dNBR mediana en la máscara 0.436\n   máscara: 8065 ha en 836 cuerpos; sin dato 5.7%\n     cuerpo    2712 ha  lon -72.682..-72.584  lat -36.812..-36.732  FLORIDA\n     cuerpo    1463 ha  lon -72.645..-72.564  lat -36.623..-36.575  RÁNQUIL\n     cuerpo     832 ha  lon -72.608..-72.554  lat -36.553..-36.513  TREHUACO\n     cuerpo     488 ha  lon -72.424..-72.397  lat -36.817..-36.773  BULNES\n== rucahue_sur_laja_2026-01-14: cuenca 12_rio_biobio, factor 2.0, incendio 2026-01-14, vigente hasta 2028-01-14\n   dNBR landsat-c2-l2 LC08_L2SP_233086_20260110_02_T1 → LC09_L2SP_233086_20260219_02_T1, umbral 0.27; QA enmascarada pre/post {&#x27;pre&#x27;: 0.0442, &#x27;post&#x27;: 0.0467}; dNBR mediana en la máscara 0.412\n   máscara: 4040 ha en 634 cuerpos; sin dato 5.0%\n     cuerpo    1633 ha  lon -72.665..-72.604  lat -37.371..-37.308  LAJA\n     cuerpo     345 ha  lon -72.620..-72.596  lat -37.505..-37.471  LOS ÁNGELES\n     cuerpo     291 ha  lon -72.631..-72.616  lat -37.309..-37.270  LAJA\n     cuerpo     200 ha  lon -72.633..-72.618  lat -37.269..-37.241  LAJA&quot;,
+          &quot;fecha&quot;: &quot;2026-10-12T13:32:51-03:00&quot;,
+          &quot;segundos&quot;: 2.9
+        }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;A12&quot;,
+      &quot;texto&quot;: &quot;En la grilla nativa de cada cuenca la cascada duplica la susceptibilidad dentro de la cicatriz y la recorta a 1: Concepción–Penco mediana 0.454 → 0.909 (celdas ≥0.5 del 43 % al 84 %), Florida–Ránquil 0.406 → 0.812 (31 % → 81 %), Laja 0.373 → 0.747 (28 % → 72 %); fuera de cada cicatriz, en la misma ventana, la mediana queda en 0.38–0.43. Las de Ñuble–Biobío caen sobre capas de transferencia sin validar en destino (17_costa_transfer) salvo Laja, que está en el RandomForest propio del Biobío.&quot;,
+      &quot;estado&quot;: &quot;verificado&quot;,
+      &quot;tema&quot;: &quot;Cicatrices&quot;,
+      &quot;depende_de&quot;: [
+        &quot;A11&quot;
+      ],
+      &quot;evidencia&quot;: [
+        {
+          &quot;tipo&quot;: &quot;comando&quot;,
+          &quot;cmd&quot;: &quot;PATH=/home/franciscoparrao/nowcast-monitor/venv-forecast/bin:$PATH python3 docs/informes/frente-2026-10/scripts/susc_en_cicatriz.py 2&gt;/dev/null&quot;,
+          &quot;cwd&quot;: &quot;.&quot;,
+          &quot;exit&quot;: 0,
+          &quot;sha256&quot;: &quot;018e7100f8814c627aca6eb80aa6856f755aea8846422659be683791775b8ad5&quot;,
+          &quot;salida&quot;: &quot;== san_carlos_apoquindo_2025-12-29 × 09_rio_maipo/susceptibility_RandomForest.tif: 7444 celdas nativas con dato en la cicatriz; susc mediana 0.343 → 0.686; ≥0.5: 25% → 65%; fuera de la cicatriz (misma ventana) mediana 0.341\n== trinitarias_rancho_chico_2026-01-14 × 17_costa_transfer/susceptibility_transfer_biobio_centro.tif: 22918 celdas nativas con dato en la cicatriz; susc mediana 0.454 → 0.909; ≥0.5: 43% → 84%; fuera de la cicatriz (misma ventana) mediana 0.433\n== monte_negro_florida_ranquil_2026-01-14 × 17_costa_transfer/susceptibility_transfer_biobio_centro.tif: 9921 celdas nativas con dato en la cicatriz; susc mediana 0.406 → 0.812; ≥0.5: 31% → 81%; fuera de la cicatriz (misma ventana) mediana 0.384\n== rucahue_sur_laja_2026-01-14 × 12_rio_biobio/susceptibility_RandomForest.tif: 44886 celdas nativas con dato en la cicatriz; susc mediana 0.373 → 0.747; ≥0.5: 28% → 72%; fuera de la cicatriz (misma ventana) mediana 0.416&quot;,
+          &quot;fecha&quot;: &quot;2026-10-12T13:32:54-03:00&quot;,
+          &quot;segundos&quot;: 2.64
+        }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;A13&quot;,
+      &quot;texto&quot;: &quot;postfire_scar.py enmascara ahora el agua (QA_PIXEL bit 7). Antes de ese cambio la misma corrida de Concepción–Tomé daba 41.153 ha: 16.237 ha eran un cuerpo 100 % océano frente a Tomé–Dichato y el 26 % del cuerpo de Penco era la bahía, porque el mar cambia de NBR entre fechas. El autotest de la cascada sigue en verde.&quot;,
+      &quot;estado&quot;: &quot;verificado&quot;,
+      &quot;tema&quot;: &quot;Cicatrices&quot;,
+      &quot;evidencia&quot;: [
+        {
+          &quot;tipo&quot;: &quot;codigo&quot;,
+          &quot;ruta&quot;: &quot;monitor/postfire_scar.py&quot;,
+          &quot;lineas&quot;: [
+            51,
+            58
+          ],
+          &quot;sha256&quot;: &quot;ee2aa9f1201ee68af55600be30f3208b3af743067536ca4209df232405a25025&quot;,
+          &quot;extracto&quot;: &quot;# Escala Landsat Collection 2 Level-2 Surface Reflectance.\nSR_SCALE, SR_OFFSET = 0.0000275, -0.2\n# QA_PIXEL (C2): bit0 fill, bit1 dilated cloud, bit3 cloud, bit4 shadow, bit5 snow,\n# bit7 AGUA. El agua va enmascarada desde el 2026-10-12: el mar cambia de NBR entre\n# fechas (oleaje, turbidez, reflejo) y con un bbox costero el dNBR marcó como\n# \&quot;quemadas\&quot; 16.237 ha de océano frente a Tomé–Dichato en un solo cuerpo y el 26 %\n# de la bahía de Penco pegado a la cicatriz real; la cascada no tiene sentido\n# sobre agua y la máscara la inflaba a casi el doble (41.153 → ~18.400 ha).&quot;
+        },
+        {
+          &quot;tipo&quot;: &quot;comando&quot;,
+          &quot;cmd&quot;: &quot;PATH=/home/franciscoparrao/nowcast-monitor/venv/bin:$PATH python3 monitor/selftest.py --susc-overlay 2&gt;&amp;1 | grep -E &#x27;OK|FALLA|TODO&#x27;&quot;,
+          &quot;cwd&quot;: &quot;.&quot;,
+          &quot;exit&quot;: 0,
+          &quot;sha256&quot;: &quot;c080fec3fa11c20394f07f7b184127cf1ced169d484cda3fa7ae7334292f6609&quot;,
+          &quot;salida&quot;: &quot;[selftest susc_overlay] KINGSTON vacío → exit 1, FATAL=True, susc escrita=False OK\n[selftest susc_overlay] 1 cuenca presente → exit 0, susc_max finita y =0.6: True OK\n[selftest susc_overlay] cicatriz vigente → norte 1.00 (esperado 1.0), sur 0.60 (esperado 0.6) OK\n[selftest susc_overlay] cicatriz vencida → norte 0.60 (esperado 0.6), sur 0.60 (esperado 0.6) OK\n[selftest susc_overlay] TODO OK&quot;,
+          &quot;fecha&quot;: &quot;2026-10-12T13:32:58-03:00&quot;,
+          &quot;segundos&quot;: 4.01
+        }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;A14&quot;,
+      &quot;texto&quot;: &quot;Las máscaras son coherentes con las cifras oficiales: CONAF daba 15.541 ha para Trinitarias y 7.231 para Rancho Chico (22.772 en total; aquí 18.533, 81 %), 2.999–4.123 ha para Rucahue Sur (aquí 4.040) y 1.500 para Monte Negro más otros focos de Ñuble (aquí 8.065 repartidas en Florida, Ránquil, Trehuaco, Bulnes y Quillón). El faltante de Concepción puede ser área de severidad baja (dNBR 0.10–0.27, 15.657 ha en la ventana) o zonas al sur del bbox; un corte de plantación entre las dos fechas también daría dNBR alto, así que las cifras por comuna son estimaciones.&quot;,
+      &quot;estado&quot;: &quot;inferido&quot;,
+      &quot;confianza&quot;: &quot;probable&quot;,
+      &quot;tema&quot;: &quot;Cicatrices&quot;,
+      &quot;depende_de&quot;: [
+        &quot;A11&quot;
+      ],
+      &quot;evidencia&quot;: [
+        {
+          &quot;tipo&quot;: &quot;referencia&quot;,
+          &quot;ref&quot;: &quot;https://es.wikipedia.org/wiki/Incendios_forestales_en_%C3%91uble_y_Biob%C3%ADo_de_2026&quot;,
+          &quot;nota&quot;: &quot;&quot;
+        },
+        {
+          &quot;tipo&quot;: &quot;referencia&quot;,
+          &quot;ref&quot;: &quot;https://www.latercera.com/nacional/noticia/conaf-reporta-mas-de-42-mil-hectareas-afectadas-por-incendios-forestales-en-el-centro-sur-del-pais/&quot;,
+          &quot;nota&quot;: &quot;&quot;
+        }
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;A15&quot;,
+      &quot;texto&quot;: &quot;Esta semana la cascada no cambia el nivel comunal en Ñuble–Biobío: a las comunas con cicatriz les llegan 11–20 mm en 120 h y el gatillo no pasa de 0.24 (ECMWF en Nacimiento); como el índice de terreno es gatillo × susceptibilidad y la susceptibilidad se recorta a 1, el pico queda ≤0.24, bajo el 0.5 de MEDIO. La cascada importa para el próximo frente que sí cruce ahí.&quot;,
+      &quot;estado&quot;: &quot;inferido&quot;,
+      &quot;confianza&quot;: &quot;casi seguro&quot;,
+      &quot;tema&quot;: &quot;Cicatrices&quot;,
+      &quot;depende_de&quot;: [
+        &quot;A2&quot;,
+        &quot;A11&quot;
+      ],
+      &quot;evidencia&quot;: []
+    }
+  ],
+  &quot;pendientes&quot;: [
+    &quot;Cambiar la histéresis del monitor para que avise cuando el paso en alerta más reciente sea más nuevo que el último avisado (hoy notifica estados, no cruces).&quot;,
+    &quot;Verificar la alerta del 10-oct cuando haya otra fuente para Tobalaba/La Florida/San José de Guayacán; desde el 11-oct las cuatro EMAs se archivan cada hora.&quot;,
+    &quot;Revisar el lunes en la noche out/last_run.json de monitor@rm y cruzar cualquier alerta con monitor/data/ema/*-2026-10.jsonl.&quot;,
+    &quot;Validar las máscaras de Ñuble–Biobío contra un perímetro oficial (CONAF/SENAPRED) cuando exista; descartar cortes de plantación.&quot;,
+    &quot;Fuente in situ densa para el piedemonte (Netatmo, enlaces de microondas): ningún producto satelital vio la ráfaga del 8-oct.&quot;
+  ],
+  &quot;reproducir&quot;: [
+    &quot;Reproduce el pronóstico: python3 docs/informes/frente-2026-10/scripts/pronostico_rm.py ~/nowcast-forecast/20261012T06z&quot;,
+    &quot;Reproduce los cruces por dominio: python3 docs/informes/frente-2026-10/scripts/otros_lugares.py ~/nowcast-forecast/20261012T06z (venv-forecast)&quot;,
+    &quot;Reproduce la revisión de la alerta: python3 docs/informes/frente-2026-10/scripts/alerta_rm_20261010.py (lee evidencia/alerta_rm_20261010/)&quot;,
+    &quot;Reproduce las cicatrices: python3 docs/informes/frente-2026-10/scripts/cicatrices.py &lt;comunas.geojson&gt; y susc_en_cicatriz.py (requiere KINGSTON montado)&quot;,
+    &quot;Recalcula una cicatriz: monitor/postfire_scar.py --nombre … --pre … --post … --bbox … --fecha-incendio … --basin … (ver meta.json de cada una)&quot;
+  ]
+}</pre></details>
+<p class="nota">Generado por trazar.py v1. Raíz del proyecto: <code>/home/franciscoparrao/proyectos/nowcast</code></p>
+</main><script>
+document.querySelectorAll('.stats button').forEach(b=>b.addEventListener('click',()=>{
+ const f=b.dataset.f;document.querySelectorAll('.stats button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+ document.querySelectorAll('.af').forEach(a=>{const ok=f==='todas'||a.dataset.estado===f||(f==='roto'&&a.dataset.roto==='1');
+ a.classList.toggle('oculto',!ok)});}));
+</script></body></html>

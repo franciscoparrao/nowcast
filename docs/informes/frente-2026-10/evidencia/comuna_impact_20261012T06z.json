@@ -1,0 +1,217 @@
+{
+ "alert_level": 0.5,
+ "n_comunas_barrido": 275,
+ "n_alto": 11,
+ "n_medio": 31,
+ "poblacion_total_barrido": 16073075,
+ "poblacion_en_comunas_alto": 181390,
+ "poblacion_en_comunas_medio": 759912,
+ "por_region": [
+  {
+   "REGION": "ATACAMA",
+   "n_comunas": 9,
+   "n_alto": 0,
+   "n_medio": 0,
+   "poblacion": 299180,
+   "peak_worst_region": 0.03908518701791763
+  },
+  {
+   "REGION": "BIOBÍO",
+   "n_comunas": 33,
+   "n_alto": 1,
+   "n_medio": 6,
+   "poblacion": 1613059,
+   "peak_worst_region": 0.8384315967559814
+  },
+  {
+   "REGION": "COQUIMBO",
+   "n_comunas": 15,
+   "n_alto": 0,
+   "n_medio": 1,
+   "poblacion": 832864,
+   "peak_worst_region": 0.43282222747802734
+  },
+  {
+   "REGION": "LA ARAUCANÍA",
+   "n_comunas": 32,
+   "n_alto": 7,
+   "n_medio": 15,
+   "poblacion": 1010423,
+   "peak_worst_region": 0.9823155403137207
+  },
+  {
+   "REGION": "LIBERTADOR GENERAL BERNARDO O'HIGGINS",
+   "n_comunas": 33,
+   "n_alto": 0,
+   "n_medio": 0,
+   "poblacion": 987228,
+   "peak_worst_region": 0.19173632562160492
+  },
+  {
+   "REGION": "LOS RÍOS",
+   "n_comunas": 12,
+   "n_alto": 3,
+   "n_medio": 7,
+   "poblacion": 398230,
+   "peak_worst_region": 0.9484446048736572
+  },
+  {
+   "REGION": "MAULE",
+   "n_comunas": 30,
+   "n_alto": 0,
+   "n_medio": 2,
+   "poblacion": 1123008,
+   "peak_worst_region": 0.4303124248981476
+  },
+  {
+   "REGION": "METROPOLITANA DE SANTIAGO",
+   "n_comunas": 52,
+   "n_alto": 0,
+   "n_medio": 0,
+   "poblacion": 7400741,
+   "peak_worst_region": 0.20343135297298431
+  },
+  {
+   "REGION": "VALPARAÍSO",
+   "n_comunas": 38,
+   "n_alto": 0,
+   "n_medio": 0,
+   "poblacion": 1896053,
+   "peak_worst_region": 0.16217291355133057
+  },
+  {
+   "REGION": "ÑUBLE",
+   "n_comunas": 21,
+   "n_alto": 0,
+   "n_medio": 0,
+   "poblacion": 512289,
+   "peak_worst_region": 0.22012600302696228
+  }
+ ],
+ "top_alto": [
+  {
+   "CUT": 9207,
+   "COMUNA": "LUMACO",
+   "REGION": "LA ARAUCANÍA",
+   "peak_gfs": 0.9823155403137207,
+   "peak_ecmwf": 0.2054184526205063,
+   "peak_icon": 0.07288262993097305,
+   "peak_worst": 0.9823155403137207,
+   "peak_terreno": 0.9440768957138062,
+   "poblacion": 9253
+  },
+  {
+   "CUT": 9104,
+   "COMUNA": "CURARREHUE",
+   "REGION": "LA ARAUCANÍA",
+   "peak_gfs": 0.26361319422721863,
+   "peak_ecmwf": 0.9484446048736572,
+   "peak_icon": 0.036718107759952545,
+   "peak_worst": 0.9484446048736572,
+   "peak_terreno": 0.8683355450630188,
+   "poblacion": 7733
+  },
+  {
+   "CUT": 9115,
+   "COMUNA": "PUCÓN",
+   "REGION": "LA ARAUCANÍA",
+   "peak_gfs": 0.42111891508102417,
+   "peak_ecmwf": 0.9484446048736572,
+   "peak_icon": 0.04496524855494499,
+   "peak_worst": 0.9484446048736572,
+   "peak_terreno": 0.8683355450630188,
+   "poblacion": 32321
+  },
+  {
+   "CUT": 14108,
+   "COMUNA": "PANGUIPULLI",
+   "REGION": "LOS RÍOS",
+   "peak_gfs": 0.6062346696853638,
+   "peak_ecmwf": 0.9484446048736572,
+   "peak_icon": 0.07453065365552902,
+   "peak_worst": 0.9484446048736572,
+   "peak_terreno": 0.8683355450630188,
+   "poblacion": 35098
+  },
+  {
+   "CUT": 14104,
+   "COMUNA": "LOS LAGOS",
+   "REGION": "LOS RÍOS",
+   "peak_gfs": 0.9398300647735596,
+   "peak_ecmwf": 0.20417749881744385,
+   "peak_icon": 0.05713217705488205,
+   "peak_worst": 0.9398300647735596,
+   "peak_terreno": 0.8874574899673462,
+   "poblacion": 21431
+  },
+  {
+   "CUT": 14202,
+   "COMUNA": "FUTRONO",
+   "REGION": "LOS RÍOS",
+   "peak_gfs": 0.9398300647735596,
+   "peak_ecmwf": 0.5607094764709473,
+   "peak_icon": 0.04397417977452278,
+   "peak_worst": 0.9398300647735596,
+   "peak_terreno": 0.8874574899673462,
+   "poblacion": 15635
+  },
+  {
+   "CUT": 9106,
+   "COMUNA": "GALVARINO",
+   "REGION": "LA ARAUCANÍA",
+   "peak_gfs": 0.921220600605011,
+   "peak_ecmwf": 0.20690518617630005,
+   "peak_icon": 0.05475708097219467,
+   "peak_worst": 0.921220600605011,
+   "peak_terreno": 0.8907126784324646,
+   "poblacion": 12710
+  },
+  {
+   "CUT": 9210,
+   "COMUNA": "TRAIGUÉN",
+   "REGION": "LA ARAUCANÍA",
+   "peak_gfs": 0.921220600605011,
+   "peak_ecmwf": 0.14172671735286713,
+   "peak_icon": 0.051969848573207855,
+   "peak_worst": 0.921220600605011,
+   "peak_terreno": 0.8907126784324646,
+   "poblacion": 18873
+  },
+  {
+   "CUT": 9205,
+   "COMUNA": "LONQUIMAY",
+   "REGION": "LA ARAUCANÍA",
+   "peak_gfs": 0.8659442663192749,
+   "peak_ecmwf": 0.725078821182251,
+   "peak_icon": 0.1042596772313118,
+   "peak_worst": 0.8659442663192749,
+   "peak_terreno": 0.7995897531509399,
+   "poblacion": 10247
+  },
+  {
+   "CUT": 8204,
+   "COMUNA": "CONTULMO",
+   "REGION": "BIOBÍO",
+   "peak_gfs": 0.8384315967559814,
+   "peak_ecmwf": 0.4795587658882141,
+   "peak_icon": 0.0943208858370781,
+   "peak_worst": 0.8384315967559814,
+   "peak_terreno": 0.799122154712677,
+   "poblacion": 5905
+  },
+  {
+   "CUT": 9208,
+   "COMUNA": "PURÉN",
+   "REGION": "LA ARAUCANÍA",
+   "peak_gfs": 0.8309789896011353,
+   "peak_ecmwf": 0.3318500220775604,
+   "peak_icon": 0.0943208858370781,
+   "peak_worst": 0.8309789896011353,
+   "peak_terreno": 0.798086941242218,
+   "poblacion": 12184
+  }
+ ],
+ "top_alto_es_muestra": false,
+ "top_alto_nota": "primeras 11 de 11 comunas en ALTO, ordenadas por peak_worst — la lista completa está en comuna_impact.geojson (campo nivel)",
+ "label": "cruce administrativo grueso (max 0.1° dentro del polígono comunal) — NO es un mapa de exposición fina ni un aviso oficial. Población = total censal 2024 de la comuna, cota superior, no expuestos reales."
+}

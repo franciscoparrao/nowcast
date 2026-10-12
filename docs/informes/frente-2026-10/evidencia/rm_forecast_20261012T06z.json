@@ -1,0 +1,38 @@
+{
+ "cycle": "20261012T06z",
+ "generated_utc": "2026-10-12T13:46Z",
+ "n_steps": 120,
+ "failed_hours": 0,
+ "ventana": {
+  "n_pasos": 120,
+  "desde": "20261012T0700",
+  "hasta": "20261017T0600",
+  "horas": 120.0,
+  "nota": "periodo que realmente cubre el acumulado de esta fuente; NO comparar totales entre fuentes con ventanas distintas"
+ },
+ "iso0_mean_m": 2719.0,
+ "snow_fraction_mean": 0.328,
+ "params": {
+  "id_b": 0.39,
+  "k": 4.0,
+  "alert_level": 0.5,
+  "susc": "uniform 1.0",
+  "antecedent": "NONE (arranque seco, v0)"
+ },
+ "variants": {
+  "caine-global": {
+   "id_a": 14.82,
+   "n_alert_steps": 0,
+   "n_crossings": 0,
+   "peak_prob": 0.046,
+   "first_crossing": null
+  },
+  "regional-a5.5": {
+   "id_a": 5.5,
+   "n_alert_steps": 0,
+   "n_crossings": 0,
+   "peak_prob": 0.203,
+   "first_crossing": null
+  }
+ }
+}

@@ -1,0 +1,33 @@
+{
+ "nombre": "rucahue_sur_laja_2026-01-14",
+ "fecha_incendio": "2026-01-14",
+ "pre": "LC08_L2SP_233086_20260110_02_T1",
+ "post": "LC09_L2SP_233086_20260219_02_T1",
+ "collection": "landsat-c2-l2",
+ "bbox_wgs84": [
+  -72.95,
+  -37.5,
+  -72.45,
+  -37.05
+ ],
+ "crs": "EPSG:32619",
+ "res_m": 30.0,
+ "umbral_dnbr": 0.27,
+ "filtro": "mayoría 3×3",
+ "fraccion_enmascarada_qa": {
+  "pre": 0.0442,
+  "post": 0.0467
+ },
+ "fraccion_sin_dato": 0.0501,
+ "ha_por_clase_dnbr": {
+  "no quemado": 200014.3,
+  "baja": 23010.6,
+  "moderada-baja": 2626.4,
+  "moderada-alta": 1227.8,
+  "alta": 561.9
+ },
+ "ha_quemadas_mascara": 4039.7,
+ "celdas_quemadas": 44886,
+ "dnbr_p50_en_mascara": 0.412,
+ "dnbr_p90_en_mascara": 0.715
+}
