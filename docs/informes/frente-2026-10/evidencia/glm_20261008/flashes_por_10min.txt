@@ -1,0 +1,28 @@
+hora 18Z lista: 180 archivos, 66 MB, 281 s, RM acumulado 78 flashes
+hora 19Z lista: 360 archivos, 142 MB, 559 s, RM acumulado 438 flashes
+hora 20Z lista: 540 archivos, 230 MB, 854 s, RM acumulado 527 flashes
+hora 21Z lista: 720 archivos, 333 MB, 1167 s, RM acumulado 530 flashes
+hora 22Z lista: 900 archivos, 442 MB, 1484 s, RM acumulado 532 flashes
+hora 23Z lista: 1080 archivos, 547 MB, 1783 s, RM acumulado 532 flashes
+
+flashes por 10 min (UTC)  RM | piedemonte Las Condes
+  18:00     7 |    2
+  18:10     7 |    2
+  18:20     8 |    1
+  18:30    26 |    0
+  18:40    11 |    0
+  18:50    19 |    3
+  19:00    33 |    4
+  19:10    25 |    7
+  19:20    19 |   13
+  19:30   119 |   82
+  19:40   102 |   70
+  19:50    62 |   29
+  20:00    47 |   11
+  20:10    27 |    7
+  20:20    14 |    1
+  20:30     1 |    1
+  21:30     2 |    0
+  21:40     1 |    0
+  22:30     2 |    0
+total RM 532 piedemonte 233

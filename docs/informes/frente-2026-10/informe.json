@@ -6,7 +6,8 @@
     "tarea": "Evaluar el frente anunciado para la semana del 12-oct-2026 con el pronóstico comunal, identificar lugares con condiciones de aluvión fuera de Las Condes, dejar constancia del estado operacional del monitor (primera alerta de monitor@rm, archivo de EMAs) y registrar las cicatrices del megaincendio de enero de 2026 en la cascada post-incendio",
     "autor": "Francisco Parra O. (con Claude Fable 5.1)",
     "fecha": "2026-10-12T13:24:33-03:00",
-    "root": "../../.."
+    "root": "../../..",
+    "commit": "8e28bad"
   },
   "bluf": "El frente entra el lunes 12 en la tarde (ECMWF e ICON) o el martes 13 en la tarde (GFS). En el piedemonte de Las Condes los acumulados pronosticados igualan o superan los del 8 de octubre (12.7–30.7 mm en 120 h, picos de 1.4–3.2 mm/h), pero ningún modelo resuelve la ráfaga sub-horaria que gatilló ese aluvión, así que el pronóstico no confirma ni descarta una repetición. Fuera de Las Condes el único lugar con dos modelos sobre el umbral es Lonquimay; las señales de un solo modelo están en la precordillera de la RM (ICON, ocho ciclos seguidos), Machalí (ECMWF) y el secano de Coquimbo (ECMWF e ICON, lunes en la tarde). El monitor de la RM corre con los cuatro feeds al día, pero sigue en estado de alerta por una falsa alarma de GOES del sábado, de modo que un cruce real el lunes en la noche no saldría como aviso nuevo. Las tres cicatrices del megaincendio de enero (Concepción–Penco 18.533 ha, Florida–Ránquil 8.065 ha, Laja 4.040 ha) quedaron en la cascada post-incendio; esta semana no cambian ningún nivel comunal porque la lluvia pronosticada ahí es baja.",
   "afirmaciones": [
@@ -118,7 +119,7 @@
     },
     {
       "id": "A5",
-      "texto": "La notificación de alerta del monitor se repite cada REALERT_HOURS=6 mientras el dominio siga en alerta y solo se reinicia al volver a quiet: la marca state/alert se re-estampa con cada entrega confirmada (monitor@rm: 13:45Z del 12-oct). El comentario del código dice que se notifican cruces y no estados, pero la implementación notifica el estado del dominio.",
+      "texto": "Hasta el 12-oct la notificación de alerta del monitor se repetía cada REALERT_HOURS=6 mientras el dominio siguiera en alerta y solo se reiniciaba al volver a quiet: notificaba el ESTADO, aunque el comentario del código decía 'cruces, no estados' (monitor@rm re-estampó la marca a las 13:45Z del 12-oct por la racha del 10-oct). Corregido ese mismo día (commit 8e28bad): el ciclo calcula la racha más reciente de pasos en alerta; una racha que empieza más de ALERT_EPISODE_GAP_H=2 h después del fin de la última avisada se notifica de inmediato como 'CRUCE NUEVO', la misma racha repite 'persiste' cada REALERT_HOURS, y la racha avisada se guarda en state/alert_episode solo tras entrega confirmada. Autotests --alert-episode (7 casos) y --notify-contract (4) en verde.",
       "estado": "verificado",
       "tema": "Monitor RM: histéresis",
       "evidencia": [
@@ -126,41 +127,41 @@
           "tipo": "codigo",
           "ruta": "monitor/monitor.sh",
           "lineas": [
-            393,
-            396
+            468,
+            480
           ],
-          "sha256": "c405179b4c4e017940179121fac4a45ae5683a4c4fe69379317dc33b569fe0ec",
-          "extracto": "    # Al volver a quiet, resetear la histéresis para que la PRÓXIMA alerta\n    # notifique de inmediato (notificamos cruces, no estados).\n    rm -f \"$WORK_DIR/state/alert\"\n    mark_ok \"$WORK_DIR/state\""
+          "sha256": "5821a07e49b97aeddbb3f1eae13e303b17b28d2b80b91685192148cd0b253474",
+          "extracto": "    # Histéresis por CRUCE (2026-10-12). Antes la marca `alert` se re-estampaba\n    # cada REALERT_HOURS mientras el dominio siguiera en alerta: notificaba el\n    # ESTADO. Costó verlo con monitor@rm: una falsa alarma de GOES del 10-oct\n    # (pasos de 22:30-23:30Z) quedó 54 h en la ventana y, con el frente del\n    # 12-oct entrando esa noche, un cruce REAL habría salido fundido con el\n    # aviso repetido, hasta 6 h tarde. Ahora: si la racha de alerta más\n    # reciente empieza más de ALERT_EPISODE_GAP_H horas después del fin de la\n    # última racha avisada (o no hay racha avisada), es un cruce nuevo y se\n    # avisa DE INMEDIATO (histéresis 0, que igual re-estampa `alert`); si es\n    # la misma racha, se repite cada REALERT_HOURS como antes. La racha\n    # avisada se guarda en state/alert_episode solo tras entrega confirmada\n    # (NOTIFY_DELIVERED), y se borra al volver a quiet.\n    NUEVO=1"
         },
         {
           "tipo": "codigo",
           "ruta": "monitor/monitor.sh",
           "lineas": [
-            433,
-            433
+            496,
+            506
           ],
-          "sha256": "a61710a74d82256f58119e7d6e5f3b81681a240b78b4dbbc04fe1d10d231adfb",
-          "extracto": "        urgent alert \"${REALERT_HOURS:-6}\""
+          "sha256": "174366fcf18ed770ac45b5d54e13f3a07a20a8a938fa4a19b39bb2161a5b657c",
+          "extracto": "        TITULO=\"nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio\"; HORAS=0\n    else\n        TITULO=\"nowcast-monitor: ALERTA I-D persiste en el dominio\"; HORAS=\"${REALERT_HOURS:-6}\"\n    fi\n    notify \"$TITULO\" \\\n        \"$DETAIL. Último dato IMERG: $NEWEST (~4 h de latencia)$DEGRADED$FUSION_NOTE$FLOOD_NOTE$H0_NOTE. Feeds: $FUSE_SUMMARY. Detalle: $RUN_JSON\" \\\n        urgent alert \"$HORAS\"\n    if [[ \"$NOTIFY_DELIVERED\" == 1 && -n \"$EP_FIRST\" ]]; then\n        echo \"$EP_FIRST $EP_LAST\" > \"$WORK_DIR/state/alert_episode\"\n    fi\n    ;;"
         },
         {
           "tipo": "codigo",
           "ruta": "monitor/lib_notify.sh",
           "lineas": [
-            14,
-            24
+            17,
+            22
           ],
-          "sha256": "737202cca2f5f33d41e10aaf1c11db2d0bffb6d6b116a6770e8d19427fe7ed0e",
-          "extracto": "notify() {\n    local title=\"$1\" body=\"$2\" prio=\"$3\" hfile=\"${4:-}\" hours=\"${5:-0}\"\n    local now last window entregado=0\n    now=$(date -u +%s)\n    if [[ -n \"$hfile\" ]]; then\n        last=$(cat \"$NOTIFY_STATE_DIR/$hfile\" 2>/dev/null || echo 0)\n        window=$(python3 -c \"print(int(float('$hours') * 3600))\")\n        if (( now - last < window )); then\n            log \"notify suprimida por histéresis ($hfile): $title\"\n            return 0\n        fi"
+          "sha256": "8386710705cda6bfb16335f0ffeae5e4cd6381c25d35a7f01ab35e7624072b27",
+          "extracto": "NOTIFY_DELIVERED=0\nnotify() {\n    local title=\"$1\" body=\"$2\" prio=\"$3\" hfile=\"${4:-}\" hours=\"${5:-0}\"\n    local now last window entregado=0\n    NOTIFY_DELIVERED=0\n    now=$(date -u +%s)"
         },
         {
           "tipo": "comando",
-          "cmd": "date -u +%Y-%m-%dT%H:%MZ; echo -n 'state/alert = '; date -u -d @$(cat /home/franciscoparrao/nowcast-monitor-rm/state/alert) +%Y-%m-%dT%H:%MZ; grep -n REALERT_HOURS monitor/config.env",
+          "cmd": "PATH=/home/franciscoparrao/nowcast-monitor/venv/bin:$PATH python3 monitor/selftest.py --alert-episode 2>&1 | grep -E '^\\s+(ok|FALLA)|TODO OK|FALLAS'",
           "cwd": ".",
           "exit": 0,
-          "sha256": "c513aa7fc13e402612a99a42bf43c79cd01190ae6cc6a90083d1d751bbe8f947",
-          "salida": "2026-10-12T16:27Z\nstate/alert = 2026-10-12T13:45Z\n112:REALERT_HOURS=6",
-          "fecha": "2026-10-12T13:27:10-03:00",
-          "segundos": 0.02
+          "sha256": "c257c27769b516858c7d96f135fc4dba3b274a0d2aa8d653e460c3d7cbab7455",
+          "salida": "  ok   racha A (hace 15 h) → cruce nuevo, avisa         entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n  ok   state/alert_episode escrito tras entrega         20261012T0200 20261012T0400\n  ok   misma racha A → suprimida por histéresis         entregados=—\n  ok   racha C (nueva, 15 h después) → cruce nuevo, avisa entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n  ok   misma racha C → suprimida                        entregados=—\n  ok   quiet → nada y se borra alert_episode            entregados=—\n  ok   racha A tras quiet → cruce nuevo, avisa          entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n[selftest alert-episode] TODO OK",
+          "fecha": "2026-10-12T15:10:00-03:00",
+          "segundos": 16.39
         }
       ]
     },
@@ -178,7 +179,7 @@
     },
     {
       "id": "A7",
-      "texto": "Un cruce real en la RM entre las 18:00 y las 21:00 de Chile del lunes 12 no saldría como aviso nuevo: el dominio ya está en alerta por los pasos del 10-oct (que salen de la ventana de 54 h recién a las 02:30 de Chile del martes) y la histéresis re-estampada a las 13:45Z silencia hasta las 19:45Z; después el aviso repetido mezclaría ambas señales. Para esta noche hay que mirar out/last_run.json a mano o cambiar la histéresis para que avise cuando el paso en alerta más reciente sea más nuevo que el último avisado.",
+      "texto": "Con la histéresis de estado vigente hasta el mediodía del 12-oct, un cruce real en la RM entre las 18:00 y las 21:00 de Chile de ese lunes no habría salido como aviso nuevo: el dominio ya estaba en alerta por los pasos del 10-oct (en la ventana de 54 h hasta las 02:30 del martes) y la marca re-estampada a las 13:45Z silenciaba hasta las 19:45Z. La histéresis por cruce (A5) elimina ese modo de falla: el primer ciclo tras el cambio avisa una vez la racha vieja y cualquier racha nueva sale de inmediato.",
       "estado": "inferido",
       "confianza": "muy probable",
       "tema": "Monitor RM: histéresis",
@@ -190,7 +191,7 @@
     },
     {
       "id": "A8",
-      "texto": "Las condiciones de fondo del frente igualan o superan las del 8-oct en el piedemonte de Las Condes: ese día GFS daba 2.4 mm/h y Tobalaba midió 8.2 mm/h en una hora y 12.6 mm en cuatro; hoy los modelos dan picos de 2.5–3.2 mm/h y 8–16 mm en 24 h, con la cicatriz activa y suelos más húmedos. Lo que decide es si vuelve a formarse una celda convectiva de una hora sobre el piedemonte, y eso no lo resuelve ningún producto que lea el sistema; el pronóstico no confirma ni descarta una repetición.",
+      "texto": "Las condiciones de fondo del frente igualan o superan las del 8-oct en el piedemonte de Las Condes: ese día GFS daba 2.4 mm/h y Tobalaba midió 8.2 mm/h en una hora y 12.6 mm en cuatro; hoy los modelos dan picos de 2.5–3.2 mm/h y 8–16 mm en 24 h, con la cicatriz activa y suelos más húmedos. Lo que decide es si vuelve a formarse una celda convectiva de una hora sobre el piedemonte, y eso no lo resuelve ningún producto de lluvia que lea el sistema; el pronóstico no confirma ni descarta una repetición.",
       "estado": "inferido",
       "confianza": "probable",
       "tema": "Pronóstico RM",
@@ -202,8 +203,8 @@
           "tipo": "codigo",
           "ruta": "CLAUDE.md",
           "lineas": [
-            626,
-            640
+            646,
+            660
           ],
           "sha256": "76bfbaca07e505e1d0ab52973eaa61656085d77430befbb568871332a90b57b2",
           "extracto": "**Retrospectiva del 8-oct (IMERG+GOES, 84 h, susc con cascada) — RESULTADO\nNEGATIVO decisivo**: los DOS productos satelitales se perdieron la ráfaga del\npiedemonte. En la celda de Tobalaba, 17-21Z: IMERG 0.37 mm y GOES 1.66 mm contra\n12.6 mm observados (8.2 en la hora previa al aluvión) → ×34 y ×8 por debajo; en\nla cicatriz IMERG 1.0 / GOES 2.6 mm. Peligro en la cicatriz ≤0.04 con Caine y\n≤0.05 con a*=5.5: **el monitor con forzante satelital NO habría alertado**. Lo\núnico que vio la ráfaga fue el pluviómetro a 7 km; simulado el feed DGA (IDW de\nlas 4 EMAs) sobre la cicatriz: 5.5 mm/h → Caine 0.04 (nada), a*=5.5 0.29\n(ALERTA a la hora del evento, sin lead). Por eso `monitor@rm` corre con\n**ID_A=5.5 en SOMBRA** (atacama sigue en Caine): costo medido 17/168 pasos con\nalguna celda en alerta en la ventana 7-9 oct (cordillera SE, sin verificar).\nConclusión que apunta a las fuentes: para ráfagas convectivas de piedemonte no\nhay forzante satelital que sirva; hace falta red densa in situ (EMAs, estaciones\npersonales, enlaces de microondas). OJO: los fetchers miden la ventana hacia atrás desde AHORA y\nGOES escribe en `WORK_DIR/steps` → para una retrospectiva el GOES va con"
@@ -374,6 +375,72 @@
         "A11"
       ],
       "evidencia": []
+    },
+    {
+      "id": "A16",
+      "texto": "El sensor de rayos GLM de GOES-19 (archivos de 20 s en el bucket público noaa-goes19, acceso anónimo, latencia de minutos) SÍ vio la convección del 8-oct-2026 que IMERG y GOES QPE no vieron: 532 descargas en la RM entre las 18Z y las 23Z, 233 de ellas en el piedemonte de Las Condes (bbox −70.70..−70.30 / −33.55..−33.30), con el máximo de 82 descargas por 10 min a las 19:30Z (16:30 Chile), media hora antes del aluvión de las 17:00 y en la misma hora en que Tobalaba midió 8.2 mm. La actividad sube desde las 19:10Z y se apaga a las 20:30Z. Barrido de 1.080 archivos (547 MB en streaming, sin disco).",
+      "estado": "verificado",
+      "tema": "Fuentes",
+      "evidencia": [
+        {
+          "tipo": "codigo",
+          "ruta": "docs/informes/frente-2026-10/scripts/glm_rayos.py",
+          "lineas": [
+            1,
+            8
+          ],
+          "sha256": "76f5122188318ee1be49ee1cdc8dc4b9d51516f4d6de34c8363f330964c2ba86",
+          "extracto": "#!/usr/bin/env python3\n\"\"\"Rayos GLM (GOES-19, bucket público noaa-goes19) en un día y rango de horas UTC:\nflashes por 10 min en un bbox grande y en uno chico. Streaming: cada archivo de 20 s\n(~450 KB) se baja a memoria, se filtra y se descarta (~90 MB por hora, sin disco).\nUso: glm_rayos.py 2026 281 18 23 \"-70.85,-34.25,-69.75,-33.05\" \"-70.70,-33.55,-70.30,-33.30\"\n(281 = 8-oct-2026). Salida de referencia: evidencia/glm_20261008/flashes_por_10min.txt\"\"\"\nimport collections, json, sys, time, urllib.request, xml.etree.ElementTree as ET\nimport netCDF4"
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/glm_20261008/flashes_por_10min.txt",
+          "sha256": "f67c564b14cd9c86bf6815b408568b36fc4c7b576d746ee65e2ad24a07d9fae4",
+          "bytes": 903
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/glm_20261008/flashes_rm_8oct.json",
+          "sha256": "0eb29e86981bdbf1a032f39888508863a173602c2b5e5ee2634ed1ec13ba5c5a",
+          "bytes": 15305
+        }
+      ]
+    },
+    {
+      "id": "A17",
+      "texto": "Un feed de rayos GLM como indicador de convección activa sobre el dominio (y sobre las cicatrices) habría dado del orden de 30 minutos de anticipación el 8-oct, sin depender de que el QPE estime la lluvia. No mide lluvia ni todos los chubascos tienen rayos, así que entra como corroborador o como gatillo de vigilancia reforzada, no como forzante.",
+      "estado": "inferido",
+      "confianza": "muy probable",
+      "tema": "Fuentes",
+      "depende_de": [
+        "A16",
+        "A3"
+      ],
+      "evidencia": []
+    },
+    {
+      "id": "A18",
+      "texto": "Chile no tiene radar meteorológico operacional: el primero es un radar móvil universitario (Fondequip Mayor 2025, Universidad de Valparaíso con U. de Chile, CEAZA, U. de La Serena, U. de O'Higgins y U. de Concepción) todavía en proyecto; la propuesta de red de radares de la DMC seguía sin financiamiento según Meteored. Los 'radares' de los sitios de pronóstico para Santiago son productos satelitales o están fuera de servicio. Fuentes de prensa y universitarias, no confirmado con la DMC.",
+      "estado": "inferido",
+      "confianza": "casi seguro",
+      "tema": "Fuentes",
+      "evidencia": [
+        {
+          "tipo": "referencia",
+          "ref": "https://rvl.uv.cl/noticias/10480-chile-tendra-su-primer-radar-meteorologico-universidad-de-valparaiso-lidera-proyecto-hacia-mejor-gestion-climatica",
+          "nota": ""
+        },
+        {
+          "tipo": "referencia",
+          "ref": "https://www.meteored.cl/noticias/actualidad/por-que-el-proyecto-para-instalar-radares-en-chile-sigue-sin-avanzar.html",
+          "nota": ""
+        },
+        {
+          "tipo": "referencia",
+          "ref": "https://www.megatiempo.cl/noticias/9014-primer-radar-meteorologico-de-chile-1ab.html",
+          "nota": ""
+        }
+      ]
     }
   ],
   "pendientes": [
@@ -381,7 +448,9 @@
     "Verificar la alerta del 10-oct cuando haya otra fuente para Tobalaba/La Florida/San José de Guayacán; desde el 11-oct las cuatro EMAs se archivan cada hora.",
     "Revisar el lunes en la noche out/last_run.json de monitor@rm y cruzar cualquier alerta con monitor/data/ema/*-2026-10.jsonl.",
     "Validar las máscaras de Ñuble–Biobío contra un perímetro oficial (CONAF/SENAPRED) cuando exista; descartar cortes de plantación.",
-    "Fuente in situ densa para el piedemonte (Netatmo, enlaces de microondas): ningún producto satelital vio la ráfaga del 8-oct."
+    "Fuente in situ densa para el piedemonte (Netatmo, enlaces de microondas): ningún producto satelital vio la ráfaga del 8-oct.",
+    "Feed GLM (rayos) en el monitor: flashes por 10 min sobre el dominio y las cicatrices como corroborador y gatillo de vigilancia reforzada; validar sobre más eventos (¿todas las ráfagas de piedemonte tienen rayos?).",
+    "Feed GLM (rayos) en el monitor: flashes por 10 min sobre el dominio y las cicatrices como corroborador y gatillo de vigilancia reforzada; validar sobre más eventos (¿todas las ráfagas de piedemonte tienen rayos?)."
   ],
   "reproducir": [
     "Reproduce el pronóstico: python3 docs/informes/frente-2026-10/scripts/pronostico_rm.py ~/nowcast-forecast/20261012T06z",
