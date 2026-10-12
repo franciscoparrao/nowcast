@@ -392,20 +392,57 @@ case $RC in
 0)
     # Al volver a quiet, resetear la histéresis para que la PRÓXIMA alerta
     # notifique de inmediato (notificamos cruces, no estados).
-    rm -f "$WORK_DIR/state/alert"
+    rm -f "$WORK_DIR/state/alert" "$WORK_DIR/state/alert_episode"
     mark_ok "$WORK_DIR/state"
     log "quiet — $UNION_N pasos reales en la unión (primario $N_STEPS, último $NEWEST; unión hasta $UNION_NEWEST)$DEGRADED$FLOOD_NOTE"
     ;;
 2)
-    DETAIL=$(python3 - "$RUN_JSON" 2>>"$LOG" <<'EOF'
+    # El EPISODIO es la racha más reciente de pasos consecutivos en alerta,
+    # expresada en claves de tiempo (step_YYYYMMDDTHHMM) vía fusion.json; con
+    # ella se decide abajo si esto es un CRUCE NUEVO o el mismo estado de antes.
+    EPISODE=$(python3 - "$RUN_JSON" "$FUSION_JSON" 2>>"$LOG" <<'EOF'
+import json, os, sys
+r = json.load(open(sys.argv[1]))
+idx = [s["step"] for s in r["steps"] if s.get("alert")]
+if not idx:
+    sys.exit(0)
+keys = None
+try:
+    fz = json.load(open(sys.argv[2]))
+    keys = [os.path.basename(p)[5:-4] for p in fz["feeds"]["primary"]["list"].split(",")]
+except Exception:
+    pass
+def key(i):
+    if keys and 0 <= i < len(keys):
+        return keys[i]
+    return f"step{i:04d}"
+last = idx[-1]; first = last
+for i in reversed(idx[:-1]):
+    if i == first - 1:
+        first = i
+    else:
+        break
+print(key(first), key(last), len(idx))
+EOF
+)
+    read -r EP_FIRST EP_LAST EP_N <<<"$EPISODE"
+    DETAIL=$(python3 - "$RUN_JSON" "${EP_FIRST:-}" 2>>"$LOG" <<'EOF'
 import json, sys
+from datetime import datetime, timezone
 r = json.load(open(sys.argv[1]))
 steps = [s for s in r["steps"] if s.get("alert")]
 last = steps[-1]
 peak = max(s["max_probability"] for s in r["steps"])
+desde = ""
+try:
+    from zoneinfo import ZoneInfo
+    t = datetime.strptime(sys.argv[2], "%Y%m%dT%H%M").replace(tzinfo=timezone.utc)
+    desde = f"; cruce desde {t.astimezone(ZoneInfo('America/Santiago')).strftime('%a %d %H:%M')} Chile ({sys.argv[2]}Z)"
+except Exception:
+    pass
 msg = (f"{r['n_alerts']} paso(s) en alerta (nivel {r['alert_level']}); "
        f"último: paso {last['step']} con {last['alert']['n_cells']} celda(s) "
-       f"({100*last['alert']['fraction']:.0f}% del dominio), pico de la ventana {peak:.2f}")
+       f"({100*last['alert']['fraction']:.0f}% del dominio), pico de la ventana {peak:.2f}{desde}")
 h = last.get("h0")
 if h:  # sombra: informa el MECANISMO, no cambió el peligro
     via = {"absolute": "vía absoluta (patrón de verano)",
@@ -428,9 +465,44 @@ EOF
         exit 1
     fi
     mark_ok "$WORK_DIR/state"
-    notify "nowcast-monitor: ALERTA I-D en el dominio" \
+    # Histéresis por CRUCE (2026-10-12). Antes la marca `alert` se re-estampaba
+    # cada REALERT_HOURS mientras el dominio siguiera en alerta: notificaba el
+    # ESTADO. Costó verlo con monitor@rm: una falsa alarma de GOES del 10-oct
+    # (pasos de 22:30-23:30Z) quedó 54 h en la ventana y, con el frente del
+    # 12-oct entrando esa noche, un cruce REAL habría salido fundido con el
+    # aviso repetido, hasta 6 h tarde. Ahora: si la racha de alerta más
+    # reciente empieza más de ALERT_EPISODE_GAP_H horas después del fin de la
+    # última racha avisada (o no hay racha avisada), es un cruce nuevo y se
+    # avisa DE INMEDIATO (histéresis 0, que igual re-estampa `alert`); si es
+    # la misma racha, se repite cada REALERT_HOURS como antes. La racha
+    # avisada se guarda en state/alert_episode solo tras entrega confirmada
+    # (NOTIFY_DELIVERED), y se borra al volver a quiet.
+    NUEVO=1
+    if [[ -n "$EP_FIRST" && -s "$WORK_DIR/state/alert_episode" ]]; then
+        read -r AV_FIRST AV_LAST <"$WORK_DIR/state/alert_episode"
+        NUEVO=$(python3 - "$EP_FIRST" "$AV_LAST" "${ALERT_EPISODE_GAP_H:-2}" <<'EOF'
+import sys
+from datetime import datetime, timedelta
+try:
+    nuevo = datetime.strptime(sys.argv[1], "%Y%m%dT%H%M")
+    avisado = datetime.strptime(sys.argv[2], "%Y%m%dT%H%M")
+    print(1 if nuevo > avisado + timedelta(hours=float(sys.argv[3])) else 0)
+except Exception:
+    print(1)   # claves ilegibles: avisar es la dirección conservadora
+EOF
+)
+    fi
+    if [[ "$NUEVO" == 1 ]]; then
+        TITULO="nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio"; HORAS=0
+    else
+        TITULO="nowcast-monitor: ALERTA I-D persiste en el dominio"; HORAS="${REALERT_HOURS:-6}"
+    fi
+    notify "$TITULO" \
         "$DETAIL. Último dato IMERG: $NEWEST (~4 h de latencia)$DEGRADED$FUSION_NOTE$FLOOD_NOTE$H0_NOTE. Feeds: $FUSE_SUMMARY. Detalle: $RUN_JSON" \
-        urgent alert "${REALERT_HOURS:-6}"
+        urgent alert "$HORAS"
+    if [[ "$NOTIFY_DELIVERED" == 1 && -n "$EP_FIRST" ]]; then
+        echo "$EP_FIRST $EP_LAST" > "$WORK_DIR/state/alert_episode"
+    fi
     ;;
 *)
     notify "nowcast-monitor: ERROR del motor (rc=$RC)" \

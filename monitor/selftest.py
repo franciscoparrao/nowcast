@@ -78,7 +78,9 @@ def write_status(path, newest, n_steps, extra=None):
 def write_config(fusion):
     bin_release = os.path.join(REPO, "target", "release", "nowcast")
     bin_debug = os.path.join(REPO, "target", "debug", "nowcast")
-    nowcast_bin = bin_release if os.path.exists(bin_release) else bin_debug
+    bin_oper = os.path.expanduser("~/nowcast-monitor/bin/nowcast")   # el operacional sobrevive a cargo clean
+    nowcast_bin = os.environ.get("NOWCAST_BIN") or next(
+        (b for b in (bin_release, bin_debug, bin_oper) if os.path.exists(b)), bin_release)
     with open(os.path.join(BASE, "config.env"), "w") as f:
         f.write(f"""BBOX="-70.75,-34.25,-69.75,-33.25"
 WORK_DIR="{BASE}"
@@ -522,6 +524,116 @@ def notify_contract_selftest():
     return 0 if not fallos else 1
 
 
+def alert_episode_selftest():
+    """Histéresis por CRUCE (2026-10-12): una racha de alerta NUEVA avisa de
+    inmediato aunque la marca `alert` esté fresca; la MISMA racha se suprime
+    hasta REALERT_HOURS; al volver a quiet se olvida la racha. Motivación: la
+    falsa alarma de GOES del 10-oct en monitor@rm habría tapado hasta 6 h un
+    cruce real del frente del 12-oct."""
+    import http.server
+    import subprocess
+    import threading
+
+    recibidos = []
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            recibidos.append(self.headers.get("Title", ""))
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'{"id":"selftest"}')
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    puerto = srv.server_address[1]
+
+    def steps_con_rafaga(t_end, n, desde, hasta, mm=25.0):
+        """n pasos semihorarios hasta t_end; ráfaga en los índices [desde, hasta)."""
+        d = os.path.join(BASE, "steps")
+        os.makedirs(d, exist_ok=True)
+        for old in os.listdir(d):
+            os.remove(os.path.join(d, old))
+        for i in range(n):
+            t = t_end - timedelta(minutes=30 * (n - 1 - i))
+            grid = np.full((11, 11), 0.2, dtype="float32")
+            if desde <= i < hasta:
+                grid[2:5, 6:9] = mm
+            with rasterio.open(os.path.join(d, f"step_{t:%Y%m%dT%H%M}.tif"), "w", **PROFILE) as dst:
+                dst.write(grid, 1)
+
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    now -= timedelta(minutes=now.minute % 30)
+    write_status(os.path.join(BASE, "status.json"), now, 96)
+    write_config(fusion=False)
+    cfg = os.path.join(BASE, "config_episode.env")
+    with open(cfg, "w") as f:
+        f.write(open(os.path.join(BASE, "config.env")).read()
+                + f'\nNTFY_TOPIC="selftest"\nNTFY_URL="http://127.0.0.1:{puerto}"\n')
+    shutil.rmtree(os.path.join(BASE, "state"), ignore_errors=True)
+    episodio = os.path.join(BASE, "state", "alert_episode")
+
+    def ciclo():
+        antes = len(recibidos)
+        r = subprocess.run([os.path.join(REPO, "monitor", "monitor.sh")],
+                           env={**os.environ, "SKIP_FETCH": "1", "CONFIG": cfg},
+                           capture_output=True, text=True, timeout=1800)
+        return r.stdout + r.stderr, recibidos[antes:]
+
+    fallos = []
+
+    def caso(nombre, salida, llegados, titulo_esperado):
+        ok = ([t for t in llegados if titulo_esperado in t] != []) if titulo_esperado else (llegados == [])
+        print(f"  {'ok  ' if ok else 'FALLA'} {nombre:48s} entregados={llegados or '—'}")
+        if not ok:
+            fallos.append(nombre)
+            print("      " + "\n      ".join(l for l in salida.splitlines() if "NOTIFY" in l or "ERROR" in l or "FATAL" in l)[:600])
+
+    # Ráfagas de 6 mm/paso (36 mm en 3 h, E≈1.2 con Caine): la alerta se apaga
+    # ~4 h después. Con 25 mm/paso (150 mm) la I-D sigue excedida 40 h y la
+    # "racha nueva" sería continuación de la primera (lo midió la 1ª corrida).
+    MM = 6.0
+    # A. ráfaga vieja (hace ~15 h, pasos 60-66): primera alerta → CRUCE NUEVO de inmediato.
+    steps_con_rafaga(now, 96, 60, 66, MM)
+    out, got = ciclo()
+    caso("racha A (hace 15 h) → cruce nuevo, avisa", out, got, "CRUCE NUEVO")
+    ok = os.path.exists(episodio)
+    print(f"  {'ok  ' if ok else 'FALLA'} {'state/alert_episode escrito tras entrega':48s} {open(episodio).read().strip() if ok else 'no existe'}")
+    if not ok:
+        fallos.append("sin alert_episode")
+    # B. mismo estado → misma racha, suprimida por REALERT_HOURS.
+    out, got = ciclo()
+    caso("misma racha A → suprimida por histéresis", out, got, "")
+    # C. ráfaga NUEVA al final de la ventana (15 h después de A), marca `alert` fresca → avisa igual.
+    steps_con_rafaga(now, 96, 60, 66, MM)
+    steps_dir = os.path.join(BASE, "steps")
+    for i in range(90, 96):
+        t = now - timedelta(minutes=30 * (95 - i))
+        grid = np.full((11, 11), 0.2, dtype="float32"); grid[2:5, 6:9] = MM
+        with rasterio.open(os.path.join(steps_dir, f"step_{t:%Y%m%dT%H%M}.tif"), "w", **PROFILE) as dst:
+            dst.write(grid, 1)
+    out, got = ciclo()
+    caso("racha C (nueva, 15 h después) → cruce nuevo, avisa", out, got, "CRUCE NUEVO")
+    # D. misma racha C → suprimida.
+    out, got = ciclo()
+    caso("misma racha C → suprimida", out, got, "")
+    # E. quiet → se olvida la racha; F. vuelve la ráfaga A → cruce nuevo otra vez.
+    steps_con_rafaga(now, 96, 0, 0)
+    out, got = ciclo()
+    caso("quiet → nada y se borra alert_episode", out, got, "")
+    if os.path.exists(episodio):
+        fallos.append("alert_episode no se borró en quiet"); print("  FALLA alert_episode sigue tras quiet")
+    steps_con_rafaga(now, 96, 60, 66, MM)
+    out, got = ciclo()
+    caso("racha A tras quiet → cruce nuevo, avisa", out, got, "CRUCE NUEVO")
+
+    srv.shutdown()
+    print(f"\n[selftest alert-episode] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 HDF5_FAMILIA = ("xarray", "h5py", "h5netcdf", "netCDF4", "cfgrib")
 
 
@@ -780,6 +892,8 @@ if __name__ == "__main__":
         sys.exit(exit_contract_selftest())
     if "--notify-contract" in sys.argv:
         sys.exit(notify_contract_selftest())
+    if "--alert-episode" in sys.argv:
+        sys.exit(alert_episode_selftest())
     if "--flood" in sys.argv:
         sys.exit(flood_selftest())
     if "--h0" in sys.argv:

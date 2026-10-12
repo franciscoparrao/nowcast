@@ -54,7 +54,8 @@ systemd timer (30 min)
        ├─ dead-man switch        # por feed: primario aborta, secundarios avisan
        ├─ prepare_fusion.py      # unión de ventanas + cero-relleno CONTADO
        ├─ nowcast run --rain-rasters ... --fuse-rasters ... --combine noisy-or
-       └─ notificación con histéresis (cruces, no estados; re-aviso c/6 h)
+       └─ notificación con histéresis por CRUCE: racha nueva (>ALERT_EPISODE_GAP_H h
+          tras la última avisada) avisa de inmediato; la misma racha re-avisa c/6 h
 ```
 
 Cada ciclo **re-corre la ventana rodante completa** con el motor batch. Esto

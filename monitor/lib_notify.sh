@@ -11,9 +11,14 @@
 
 # notify TITLE BODY PRIORITY(default|high|urgent) HYSTERESIS_FILE HOURS
 # Con histéresis: no repite la misma clase de aviso antes de HOURS horas.
+# Deja en NOTIFY_DELIVERED (0/1) si ESTE aviso salió de la máquina, para que el
+# que llama pueda estampar su propio estado solo tras entrega confirmada (mismo
+# contrato que la marca de histéresis; lo usa la histéresis por cruce de monitor.sh).
+NOTIFY_DELIVERED=0
 notify() {
     local title="$1" body="$2" prio="$3" hfile="${4:-}" hours="${5:-0}"
     local now last window entregado=0
+    NOTIFY_DELIVERED=0
     now=$(date -u +%s)
     if [[ -n "$hfile" ]]; then
         last=$(cat "$NOTIFY_STATE_DIR/$hfile" 2>/dev/null || echo 0)
@@ -48,6 +53,7 @@ notify() {
         mkdir -p "$NOTIFY_STATE_DIR"
         echo "$now" > "$NOTIFY_STATE_DIR/$hfile"
     fi
+    NOTIFY_DELIVERED=$entregado
 }
 
 # mark_ok STATE_DIR — estampa "este ciclo se completó". Lo lee watchdog.sh: el

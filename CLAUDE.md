@@ -580,6 +580,26 @@ OBSERVADA en Tobalaba (8.2 mm/h, a*=5.5 → gatillo 0.88) la cicatriz pasa de
 0.30 a 0.60 (mediana), y con Caine global (0.14) no cruza nada. La cascada
 corrige el terreno; el cuello sigue siendo la forzante sub-horaria.
 
+**Histéresis por CRUCE en el monitor (2026-10-12)**: `monitor.sh` avisaba el
+ESTADO del dominio (marca `state/alert` re-estampada cada `REALERT_HOURS`=6
+mientras hubiera algún paso en alerta en la ventana), aunque el comentario
+decía "cruces, no estados". Lo destapó monitor@rm: la falsa alarma solo-GOES
+del 10-oct (22:30-23:30Z) quedó 54 h en la ventana y, con el frente del 12-oct
+entrando esa noche, un cruce REAL habría salido fundido con el aviso repetido y
+hasta 6 h tarde. Ahora el ciclo calcula la RACHA más reciente de pasos
+consecutivos en alerta (claves de tiempo vía `fusion.json`); si empieza más de
+`ALERT_EPISODE_GAP_H`=2 h después del fin de la última racha avisada (o no hay
+racha avisada) es un **cruce nuevo** y se avisa de inmediato (histéresis 0,
+título "CRUCE NUEVO", cuerpo con la hora Chile del cruce); si es la misma
+racha, "persiste" cada `REALERT_HOURS`. La racha avisada vive en
+`state/alert_episode` y se escribe SOLO tras entrega confirmada
+(`NOTIFY_DELIVERED`, nuevo en `lib_notify.sh`); se borra al volver a quiet.
+Autotest `selftest.py --alert-episode` (racha vieja avisa; misma racha se
+suprime; racha nueva 15 h después avisa con la marca fresca; quiet olvida).
+OJO al diseñar tests: una ráfaga de 150 mm deja la I-D excedida ~40 h, así que
+"otra ráfaga" es la misma racha; con 36 mm la alerta dura ~4 h. `selftest.py`
+usa `~/nowcast-monitor/bin/nowcast` si no hay `target/`.
+
 **Cicatrices del megaincendio de enero-2026 registradas (2026-10-12)**: tres
 entradas más en `scars.json`, todas con fecha 2026-01-14, factor 2.0 y vigencia
 hasta 2028-01-14: Concepción–Penco (Trinitarias + Rancho Chico, 18.533 ha, un
