@@ -879,6 +879,91 @@ def freeze_selftest():
 HDF5_FAMILIA = ("xarray", "h5py", "h5netcdf", "netCDF4", "cfgrib")
 
 
+def corrupt_selftest():
+    """Archivos corruptos en la ventana NO tumban el ciclo (2026-10-13).
+
+    El 9-oct-2026, con el disco al 99 %, quedaron GeoTIFF de 0 bytes en la
+    ventana de atacama y el dominio estuvo 73 h en FATAL ("TIFF signature not
+    found" en la ingesta GOES y en el motor, cada ciclo). Ahora los fetchers
+    escriben en temporal + rename (lib_raster) y purgan lo inválido antes de
+    decidir qué falta; prepare_fusion trata un paso corrupto como hueco. Sin
+    red: SKIP_FETCH=1 no baja nada, pero los fetchers SÍ validan la ventana."""
+    import subprocess
+
+    main(fusion=True)  # IMERG llovizna + GOES con ráfaga al final → debe ALERTAR
+    steps_im = sorted(glob.glob(os.path.join(BASE, "steps", "step_*.tif")))
+    steps_go = sorted(glob.glob(os.path.join(BASE, "feeds", "goes", "steps", "step_*.tif")))
+    gran_dir = os.path.join(BASE, "feeds", "goes", "granules")
+    os.makedirs(gran_dir, exist_ok=True)
+    corruptos = {
+        "paso IMERG de 0 bytes": steps_im[-3],
+        "paso GOES con basura": steps_go[-6],
+        "gránulo GOES de 0 bytes": os.path.join(gran_dir, "gran_20260101T0000.tif"),
+        "temporal huérfano": os.path.join(BASE, "steps", "step_x.tif.part-1"),
+    }
+    open(corruptos["paso IMERG de 0 bytes"], "w").close()
+    open(corruptos["paso GOES con basura"], "wb").write(b"no soy un tiff" * 20)
+    open(corruptos["gránulo GOES de 0 bytes"], "w").close()
+    open(corruptos["temporal huérfano"], "w").write("x")
+    cfg = os.path.join(BASE, "config.env")
+    shutil.rmtree(os.path.join(BASE, "state"), ignore_errors=True)
+    log = os.path.join(BASE, "monitor.log")
+    if os.path.exists(log):
+        os.remove(log)
+    # monitor.sh con SKIP_FETCH=1 no llama a los fetchers: se corren aquí a
+    # mano (sin red, SKIP_FETCH=1 dentro de cada uno) para ejercitar la purga,
+    # el relleno del hueco y el status atómico; luego el ciclo completo.
+    base_env = {**os.environ, "SKIP_FETCH": "1", "BBOX": "-70.75,-34.25,-69.75,-33.25", "WINDOW_HOURS": "54"}  # mismo BBOX que write_config
+    with open(log, "a") as lf:
+        for script, work in (("fetch_imerg_early.py", BASE),
+                             ("fetch_goes_qpe.py", os.path.join(BASE, "feeds", "goes"))):
+            subprocess.run([MONITOR_PY, os.path.join(REPO, "monitor", script)],
+                           env={**base_env, "WORK_DIR": work}, stdout=lf, stderr=lf, timeout=600)
+    r = subprocess.run([os.path.join(REPO, "monitor", "monitor.sh")],
+                       env={**os.environ, "SKIP_FETCH": "1", "CONFIG": cfg},
+                       capture_output=True, text=True, timeout=1800)
+    texto = (open(log).read() if os.path.exists(log) else "") + r.stdout + r.stderr
+    fallos = []
+    ok = r.returncode in (0, 2)
+    print(f"  {'ok  ' if ok else 'FALLA'} el ciclo termina (rc={r.returncode}; 2 = alerta, contrato de salida)")
+    fallos += [] if ok else ["rc"]
+    try:
+        d = json.load(open(os.path.join(BASE, "out", "last_run.json")))
+        ok = d["n_alerts"] > 0
+    except Exception as exc:  # noqa: BLE001
+        d, ok = None, False
+        print(f"    last_run.json ilegible: {exc}")
+    print(f"  {'ok  ' if ok else 'FALLA'} el motor corrió y la ráfaga solo-GOES sigue alertando "
+          f"({d['n_alerts'] if d else '-'} pasos)")
+    fallos += [] if ok else ["motor"]
+    sys.path.insert(0, os.path.join(REPO, "monitor"))
+    from lib_raster import valid_tif
+    for nombre, ruta in corruptos.items():
+        if nombre.startswith("paso"):
+            # el paso corrupto se purga y, como es viejo, vuelve como hueco
+            # MARCADO (cero) válido: el motor no debe ver nunca el archivo roto
+            mark = os.path.join(os.path.dirname(ruta), "gapmark_" + os.path.basename(ruta)[5:-4])
+            ok = valid_tif(ruta) and os.path.exists(mark)
+            print(f"  {'ok  ' if ok else 'FALLA'} {nombre}: purgado y rellenado como hueco MARCADO")
+        else:
+            ok = not os.path.exists(ruta)
+            print(f"  {'ok  ' if ok else 'FALLA'} {nombre}: purgado")
+        fallos += [] if ok else [nombre]
+    ok = "corrupto" in texto and "TIFF signature" not in texto
+    print(f"  {'ok  ' if ok else 'FALLA'} la bitácora avisa 'corrupto' y no hay 'TIFF signature not found'")
+    fallos += [] if ok else ["log"]
+    for st in ("status.json", os.path.join("feeds", "goes", "status.json")):
+        try:
+            json.load(open(os.path.join(BASE, st)))
+            ok = True
+        except Exception:  # noqa: BLE001
+            ok = False
+        print(f"  {'ok  ' if ok else 'FALLA'} {st} es JSON válido (escritura atómica)")
+        fallos += [] if ok else [st]
+    print(f"\n[selftest corrupt] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
+    return 0 if not fallos else 1
+
+
 def exit_contract_selftest():
     """R5-H1: el segfault de teardown que descartaba ciclos EXITOSOS (12-ago-2026).
 
@@ -1140,6 +1225,8 @@ if __name__ == "__main__":
         sys.exit(glm_selftest())
     if "--corrob" in sys.argv:
         sys.exit(corrob_selftest())
+    if "--corrupt" in sys.argv:
+        sys.exit(corrupt_selftest())
     if "--freeze" in sys.argv:
         sys.exit(freeze_selftest())
     if "--flood" in sys.argv:

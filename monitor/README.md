@@ -232,6 +232,7 @@ python3 monitor/selftest.py --alert-episode
 python3 monitor/selftest.py --glm;    python3 monitor/fetch_glm.py --selftest
 python3 monitor/selftest.py --corrob; python3 monitor/corroborate.py --selftest
 python3 monitor/selftest.py --freeze; python3 monitor/freeze_evidence.py --selftest
+python3 monitor/selftest.py --corrupt; python3 monitor/lib_raster.py --selftest   # archivos de 0 bytes no tumban el ciclo (2026-10-13)
 ```
 
 ## Retención de ciclos (el disco NO se poda solo)

@@ -52,6 +52,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from fetch_goes_qpe import RES, STEP, key_time, list_bucket, step_key, target_grid  # noqa: E402
+from lib_raster import purge_invalid, read_json, valid_tif, write_geotiff, write_json  # noqa: E402  (atómico, 2026-10-13)
 
 PRODUCT = "GLM-L2-LCFA"
 WORKERS = 8
@@ -148,14 +149,13 @@ def fetch_one(bucket, key):
 def write_step(path, grid, lons, lats):
     import rasterio
     from rasterio.transform import from_origin
-    if os.path.exists(path):
+    if valid_tif(path):  # un paso corrupto no se acumula: se reemplaza
         with rasterio.open(path) as d:
             grid = grid + d.read(1)
     tr = from_origin(lons[0] - RES / 2, lats[-1] + RES / 2, RES, RES)
-    with rasterio.open(path, "w", driver="GTiff", height=grid.shape[0], width=grid.shape[1],
-                       count=1, dtype="float32", crs="EPSG:4326", transform=tr,
-                       compress="deflate") as d:
-        d.write(grid.astype("float32"), 1)
+    write_geotiff(path, grid.astype("float32"), driver="GTiff", height=grid.shape[0],
+                  width=grid.shape[1], count=1, dtype="float32", crs="EPSG:4326", transform=tr,
+                  compress="deflate")
 
 
 def resumen(counts, keys_recent, allowed=None):
@@ -225,10 +225,12 @@ def main():
 
     steps_dir = os.path.join(work, "steps")
     os.makedirs(steps_dir, exist_ok=True)
+    purge_invalid(steps_dir, "step_*.tif", tag="[glm]")
     state_p = os.path.join(work, "state.json")
     counts_p = os.path.join(work, "counts.json")
-    state = json.load(open(state_p)) if os.path.exists(state_p) else {}
-    counts = json.load(open(counts_p)) if os.path.exists(counts_p) else {}
+    # state/counts de 0 bytes (disco lleno) no deben tumbar el feed: se parte de cero con aviso
+    state = read_json(state_p, {}, tag="[glm]")
+    counts = read_json(counts_p, {}, tag="[glm]")
     lons, lats = target_grid(bbox)
     boxes = scar_boxes(buffer_km, bbox)
     now = datetime.now(timezone.utc)
@@ -319,9 +321,9 @@ def main():
         "scars": sorted(boxes),
         "recent": rec,
     }
-    json.dump(status, open(os.path.join(work, "status.json"), "w"), indent=1)
-    json.dump(counts, open(counts_p, "w"), indent=1)
-    json.dump({"newest_file": status["newest_file"]}, open(state_p, "w"))
+    write_json(os.path.join(work, "status.json"), status, indent=1)
+    write_json(counts_p, counts, indent=1)
+    write_json(state_p, {"newest_file": status["newest_file"]})
     print(f"[glm] status: {json.dumps(status)}")
     return 0 if errors == 0 or fetched > 0 else 1
 
@@ -329,4 +331,11 @@ def main():
 if __name__ == "__main__":
     if "--selftest" in sys.argv:
         sys.exit(selftest())
-    sys.exit(main())
+    rc = main()
+    # Salida DURA, como fetch_goes_qpe: este proceso mezcla netCDF4 (HDF5) y
+    # rasterio (GDAL) y el teardown normal del intérprete puede terminar en
+    # segfault con todo ya escrito (contrato de salida, selftest --exit-contract;
+    # faltaba aquí desde que nació el feed, 2026-10-12).
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(rc)

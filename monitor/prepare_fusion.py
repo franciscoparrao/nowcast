@@ -40,6 +40,8 @@ import os
 import sys
 from datetime import datetime, timedelta, timezone
 
+from lib_raster import valid_tif, write_geotiff  # escritura atómica y validación (2026-10-13)
+
 STEP = timedelta(minutes=30)
 
 
@@ -50,6 +52,12 @@ def key_time(key):
 def feed_steps(d):
     steps = {}
     for p in glob.glob(os.path.join(d, "step_*.tif")):
+        if not valid_tif(p):
+            # Última defensa antes del motor: un paso corrupto que un fetcher no
+            # purgó (feed caído este ciclo) entra como hueco relleno, no como
+            # "TIFF signature not found" que tumba la corrida (atacama, 9→13-oct-2026).
+            print(f"[fusion] AVISO: {p} corrupto, se trata como hueco", file=sys.stderr)
+            continue
         steps[os.path.basename(p)[len("step_"):-len(".tif")]] = p
     marks = {
         os.path.basename(p)[len("gapmark_"):]
@@ -65,8 +73,7 @@ def make_zero(ref_tif, out_tif):
     with rasterio.open(ref_tif) as src:
         profile = src.profile
         shape = (src.height, src.width)
-    with rasterio.open(out_tif, "w", **profile) as dst:
-        dst.write(np.zeros(shape, dtype="float32"), 1)
+    write_geotiff(out_tif, np.zeros(shape, dtype="float32"), **profile)
 
 
 def main():

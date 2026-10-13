@@ -698,6 +698,34 @@ nube; probar el path vecino (001/085 vs 001/086 para Concepción–Tomé). (ix) 
 corte de plantación entre las dos fechas también da dNBR alto: las hectáreas por
 comuna son estimaciones, no cifra oficial.
 
+**Escritura ATÓMICA y purga de archivos corruptos en los fetchers (2026-10-13,
+`monitor/lib_raster.py`)**: el 9-oct a las 22:15 Chile, con el disco al 99 %,
+los fetchers de `monitor@atacama` dejaron cinco GeoTIFF de 0 bytes (un gránulo
+y un paso GOES en la ventana, tres copias en `archive/`). `rasterio.open(path,
+"w")` crea el archivo antes de escribir, así que un disco lleno deja un nombre
+válido sin firma TIFF; desde entonces `fetch_goes_qpe` moría al abrir el
+gránulo y el motor al leer el paso ("TIFF signature not found") en CADA ciclo,
+**73 horas en FATAL** que el vigía avisó cada 6 h y nadie leyó como «dominio
+caído» (se destapó al correr el vigía a mano al instanciar araucania). Ahora:
+`write_geotiff`/`write_json` escriben en `<path>.part-<pid>` y `os.replace`
+(nada queda con el nombre final si falla); `purge_invalid` corre al inicio de
+cada fetcher (IMERG `steps/`, GOES `granules/` y `steps/`, DGA, GLM) y borra
+con aviso lo que no abre, antes de decidir qué falta → el gránulo se vuelve a
+bajar si la fuente aún lo sirve, o el paso vuelve como hueco MARCADO (cero);
+`read_json` tolera `state.json`/`counts.json` vacíos (GLM); `prepare_fusion`
+es la última defensa: un paso corrupto entra como hueco, nunca al motor; el
+archivo de `monitor.sh` copia por `.part` + `mv`. `fetch_glm` además sale con
+`os._exit` como las otras hermanas HDF5+GDAL (le faltaba desde que nació; lo
+acusaba `--exit-contract`). Autotests: `lib_raster.py --selftest` (5 casos) y
+`selftest.py --corrupt` (paso IMERG de 0 bytes, paso GOES con basura, gránulo
+vacío y temporal huérfano: el ciclo termina, la ráfaga sigue alertando, lo
+corrupto se purga o vuelve como hueco marcado, la bitácora dice "corrupto" y
+no "TIFF signature", los status son JSON válidos). Verificado en vivo con un
+ciclo de atacama (exit 0). Los dos pasos IMERG archivados del 9-oct se
+perdieron sin remedio. Sigue sin haber guardia de espacio libre en los
+fetchers (solo en freeze_evidence): con el disco lleno la escritura falla y el
+paso queda como hueco, que es lo correcto, pero conviene vigilar el 96 %.
+
 **`monitor@araucania` EN OPERACIÓN (2026-10-12, modo sombra, con GLM)**: tercer
 dominio, decidido tras dos eventos convectivos en cuatro días sin monitor NRT
 en la región (Las Condes 8-oct, Curacautín 12-oct: granizada de 20 min, 21

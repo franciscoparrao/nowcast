@@ -34,6 +34,8 @@ from datetime import datetime, timedelta, timezone
 
 import numpy as np
 
+from lib_raster import purge_invalid, write_geotiff, write_json  # escritura atómica (2026-10-13)
+
 STEP = timedelta(minutes=30)
 SHORT_NAME = "GPM_3IMERGHHE"  # IMERG Early half-hourly (NRT)
 VERSION = "07"
@@ -97,11 +99,8 @@ def convert(hdf5_path, bbox, out_tif):
     grid = a.T[::-1, :].astype("float32")
     res = 0.1
     transform = from_origin(lons_t[0] - res / 2, lats_t[-1] + res / 2, res, res)
-    with rasterio.open(
-        out_tif, "w", driver="GTiff", height=grid.shape[0], width=grid.shape[1],
-        count=1, dtype="float32", crs="EPSG:4326", transform=transform,
-    ) as dst:
-        dst.write(grid, 1)
+    write_geotiff(out_tif, grid, driver="GTiff", height=grid.shape[0], width=grid.shape[1],
+                  count=1, dtype="float32", crs="EPSG:4326", transform=transform)
     return grid.shape
 
 
@@ -111,8 +110,7 @@ def zero_raster_like(ref_tif, out_tif):
     with rasterio.open(ref_tif) as src:
         profile = src.profile
         shape = (src.height, src.width)
-    with rasterio.open(out_tif, "w", **profile) as dst:
-        dst.write(np.zeros(shape, dtype="float32"), 1)
+    write_geotiff(out_tif, np.zeros(shape, dtype="float32"), **profile)
 
 
 def main():
@@ -125,6 +123,10 @@ def main():
     raw_dir = os.path.join(work, "raw")
     os.makedirs(steps_dir, exist_ok=True)
     os.makedirs(raw_dir, exist_ok=True)
+    # Un paso corrupto en la ventana (0 bytes con el disco lleno, atacama
+    # 9-oct-2026) tumbaba el motor en cada ciclo: se valida y se borra ANTES de
+    # decidir qué falta, así el gránulo se vuelve a bajar o queda hueco marcado.
+    purge_invalid(steps_dir, "step_*.tif", tag="[fetch]")
 
     now = datetime.now(timezone.utc)
     t0 = now - timedelta(hours=window_h)
@@ -237,8 +239,7 @@ def main():
         "fetched_this_cycle": fetched,
         "convert_failures": failed,
     }
-    with open(os.path.join(work, "status.json"), "w") as f:
-        json.dump(status, f, indent=1)
+    write_json(os.path.join(work, "status.json"), status, indent=1)
     print(f"[fetch] status: {json.dumps(status)}")
     # SIGSEGV al destruir el intérprete (medido 2026-08-12, reproducible al
     # 100% con fetched>=1): xarray/h5 y rasterio/GDAL desarman cada uno su

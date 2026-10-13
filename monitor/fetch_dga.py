@@ -58,6 +58,7 @@ from datetime import datetime, timedelta, timezone
 import numpy as np
 
 from fetch_goes_qpe import target_grid, zero_raster_like
+from lib_raster import purge_invalid, write_geotiff, write_json  # escritura atómica (2026-10-13)
 
 STEP = timedelta(minutes=30)
 API = "https://climatologia.meteochile.gob.cl/application/servicios/getDatosRecientesEma"
@@ -267,11 +268,8 @@ def write_step(out_tif, grid, lons, lats):
     from rasterio.transform import from_origin
 
     transform = from_origin(lons[0] - 0.05, lats[-1] + 0.05, 0.1, 0.1)
-    with rasterio.open(
-        out_tif, "w", driver="GTiff", height=lats.size, width=lons.size, count=1,
-        dtype="float32", crs="EPSG:4326", transform=transform,
-    ) as dst:
-        dst.write(grid.astype("float32"), 1)
+    write_geotiff(out_tif, grid.astype("float32"), driver="GTiff", height=lats.size,
+                  width=lons.size, count=1, dtype="float32", crs="EPSG:4326", transform=transform)
 
 
 def selftest():
@@ -345,6 +343,7 @@ def main():
 
     steps_dir = os.path.join(work, "steps")
     os.makedirs(steps_dir, exist_ok=True)
+    purge_invalid(steps_dir, "step_*.tif", tag="[dga]")  # paso corrupto → se regenera o queda hueco
     now = datetime.now(timezone.utc)
     t0 = now - timedelta(hours=window_h)
     first = (t0 + (STEP - timedelta(minutes=t0.minute % 30, seconds=t0.second,
@@ -358,8 +357,7 @@ def main():
             "reason": "sin DMC_USUARIO/DMC_TOKEN (registro gratuito en "
                       "climatologia.meteochile.gob.cl, sección Servicios Climáticos)",
         }
-        with open(os.path.join(work, "status.json"), "w") as f:
-            json.dump(status, f, indent=1)
+        write_json(os.path.join(work, "status.json"), status, indent=1)
         print("[dga] feed deshabilitado: falta DMC_USUARIO/DMC_TOKEN")
         return
 
@@ -462,8 +460,7 @@ def main():
         "gap_fraction": (n_gap_marks / n_steps) if n_steps else 1.0,
         "steps_written_this_cycle": written,
     }
-    with open(os.path.join(work, "status.json"), "w") as f:
-        json.dump(status, f, indent=1)
+    write_json(os.path.join(work, "status.json"), status, indent=1)
     print(f"[dga] status: {json.dumps(status)}")
 
 

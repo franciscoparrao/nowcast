@@ -41,6 +41,8 @@ from xml.etree import ElementTree
 
 import numpy as np
 
+from lib_raster import purge_invalid, write_geotiff, write_json  # escritura atómica (2026-10-13)
+
 STEP = timedelta(minutes=30)
 GRANULE = timedelta(minutes=10)
 PRODUCT = "ABI-L2-RRQPEF"
@@ -256,11 +258,8 @@ def convert(nc_path, bbox, out_tif):
     depth = (mean_rate * (GRANULE.total_seconds() / 3600.0)).reshape(nrows, ncols)
     grid = depth[::-1, :].astype("float32")  # S→N a north-up
     transform = from_origin(w_edge, lats[-1] + RES / 2, RES, RES)
-    with rasterio.open(
-        out_tif, "w", driver="GTiff", height=nrows, width=ncols, count=1,
-        dtype="float32", crs="EPSG:4326", transform=transform,
-    ) as dst:
-        dst.write(grid, 1)
+    write_geotiff(out_tif, grid, driver="GTiff", height=nrows, width=ncols, count=1,
+                  dtype="float32", crs="EPSG:4326", transform=transform)
     return (nrows, ncols), coverage
 
 
@@ -270,8 +269,7 @@ def zero_raster_like(ref_tif, out_tif):
     with rasterio.open(ref_tif) as src:
         profile = src.profile
         shape = (src.height, src.width)
-    with rasterio.open(out_tif, "w", **profile) as dst:
-        dst.write(np.zeros(shape, dtype="float32"), 1)
+    write_geotiff(out_tif, np.zeros(shape, dtype="float32"), **profile)
 
 
 def main():
@@ -286,6 +284,11 @@ def main():
     raw_dir = os.path.join(work, "raw")
     for d in (steps_dir, gran_dir, raw_dir):
         os.makedirs(d, exist_ok=True)
+    # Un gránulo o paso corrupto (0 bytes con el disco lleno, atacama 9-oct-2026)
+    # hacía morir la ingesta en cada ciclo durante 73 h: se valida y se borra
+    # ANTES de listar lo que falta, así se vuelve a bajar si el bucket lo tiene.
+    purge_invalid(gran_dir, "gran_*.tif", tag="[goes]")
+    purge_invalid(steps_dir, "step_*.tif", tag="[goes]")
 
     now = datetime.now(timezone.utc)
     t0 = now - timedelta(hours=window_h)
@@ -379,8 +382,7 @@ def main():
                 # Se elige subestimar (conservador para I-D) y CONTAR.
                 partial_steps += 1
                 print(f"[goes] paso {skey} finalizado PARCIAL ({len(files)}/3 gránulos)")
-            with rasterio.open(out, "w", **profile) as dst:
-                dst.write(total.astype("float32"), 1)
+            write_geotiff(out, total.astype("float32"), **profile)
             done_steps.add(skey)
         for f in files:
             os.remove(f)
@@ -435,8 +437,7 @@ def main():
         "low_coverage_granules": low_coverage,
         "stale_hours_threshold": stale_h,
     }
-    with open(os.path.join(work, "status.json"), "w") as f:
-        json.dump(status, f, indent=1)
+    write_json(os.path.join(work, "status.json"), status, indent=1)
     print(f"[goes] status: {json.dumps(status)}")
     # Hermana de fetch_imerg_early: mismo par xarray/h5 + rasterio/GDAL y mismo
     # exit code consumido como señal de salud (monitor.sh:108). Acá el segfault

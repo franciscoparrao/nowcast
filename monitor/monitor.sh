@@ -184,8 +184,14 @@ if [[ "${ARCHIVE_STEPS:-0}" == "1" ]]; then
         [[ -d "$D/steps" ]] || continue
         FEEDNAME=$(basename "$D"); [[ "$D" == "$WORK_DIR" ]] && FEEDNAME=primary
         mkdir -p "$WORK_DIR/archive/$FEEDNAME"
-        cp -n "$D"/steps/step_*.tif "$D"/steps/gapmark_* \
-            "$WORK_DIR/archive/$FEEDNAME/" 2>/dev/null
+        # Copia atómica: con el disco lleno `cp` deja un archivo truncado con el
+        # nombre final (atacama, 9-oct-2026: tres copias de 0 bytes en archive/).
+        for F in "$D"/steps/step_*.tif "$D"/steps/gapmark_*; do
+            [[ -e "$F" ]] || continue
+            T="$WORK_DIR/archive/$FEEDNAME/$(basename "$F")"
+            [[ -e "$T" ]] && continue
+            { cp "$F" "$T.part" && mv -f "$T.part" "$T"; } 2>/dev/null || rm -f "$T.part"
+        done
     done
 fi
 
