@@ -698,6 +698,30 @@ nube; probar el path vecino (001/085 vs 001/086 para Concepción–Tomé). (ix) 
 corte de plantación entre las dos fechas también da dNBR alto: las hectáreas por
 comuna son estimaciones, no cifra oficial.
 
+**`monitor@araucania` EN OPERACIÓN (2026-10-12, modo sombra, con GLM)**: tercer
+dominio, decidido tras dos eventos convectivos en cuatro días sin monitor NRT
+en la región (Las Condes 8-oct, Curacautín 12-oct: granizada de 20 min, 21
+viviendas inundadas; informe `docs/informes/frente-2026-10` A24–A29) en los
+que el único sensor con hora y lugar correctos fue el GLM, una hora antes.
+Config `~/nowcast-monitor/domains/araucania/config.env`, `WORK_DIR`
+`~/nowcast-monitor-araucania`, bbox −73.25..−71.05 / −39.55..−37.65 (23×20
+celdas, Malleco y Cautín de costa a cordillera). Susceptibilidad: p90 del
+mosaico `16_araucania_transfer` + `12_rio_biobio` + `17_costa_transfer`
+(submuestreo bajado solo a 56 m por el tamaño de la grilla fina; mediana 0.782
+→ `ALERT_LEVEL=0.391`); las capas de transferencia NO están validadas en
+destino. GOTCHAS: (i) con el borde oeste en la costa (−73.45) tres celdas
+tenían <5 % de terreno y `make_susc_grid` abortaba → bbox recortado a −73.25;
+(ii) tres celdas del borde NE (lon −71.05, lat −37.65..−37.85, borde del
+ráster del Biobío, susc 0.36) quedan MUDAS a propósito (`--allow-mute`).
+`ID_A=5.5` en sombra como rm y como el pronóstico comunal del dominio, pero
+NO está calibrado acá y la región recibe lluvia frontal de 5+ mm/h por horas:
+medir la tasa de cruces antes de confiar. `GLM_ENABLED=1` sin cicatrices en el
+bbox → solo el aviso de dominio (≥50/60 min; el 12-oct hubo 160/10 min).
+Feed DGA con las 8 EMAs DMC de la región que entregan minutario (Victoria,
+Lonquimay, Rucamanque, Maquehue ×2, La Araucanía Ad., Villarrica, Pucón;
+Angol 370067 no entrega datos desde julio), todas de valle salvo Lonquimay;
+no hay EMA en Curacautín. `archive_ema` (unit) archiva también esas ocho.
+
 **`monitor@rm` EN OPERACIÓN (2026-10-11, modo sombra)**: el piloto RM de
 `config.env` NUNCA tuvo timer propio (solo corría `monitor@atacama`), y por eso
 el 8-oct nadie vio en vivo la ráfaga de Las Condes. Instancia:

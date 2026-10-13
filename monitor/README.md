@@ -142,8 +142,8 @@ scp monitor/{config.env,fetch_imerg_early.py,fetch_goes_qpe.py,fetch_dga.py,prep
     sentinel:~/nowcast-monitor/monitor/
 ssh sentinel "chmod +x ~/nowcast-monitor/monitor/monitor.sh && ls -la ~/nowcast-monitor/bin"  # verificar bytes
 
-# 2b. INSTANCIAR UN DOMINIO en el orquestador (así corren atacama y rm; el
-#     config.env del repo es solo la plantilla y NO tiene timer propio — el
+# 2b. INSTANCIAR UN DOMINIO en el orquestador (así corren atacama, rm y
+#     araucania; el config.env del repo es solo la plantilla y NO tiene timer propio — el
 #     piloto RM estuvo meses sin correr por eso, hasta el aluvión de Las Condes
 #     del 2026-10-08):
 #       mkdir -p ~/nowcast-monitor/domains/<dom> ~/nowcast-monitor-<dom>

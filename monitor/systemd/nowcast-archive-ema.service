@@ -10,8 +10,9 @@ Type=oneshot
 # dato ya no existe en ningún lado. Corre seguido y barato (~700 registros por
 # estación). Las cuatro EMAs del dominio RM (DGA_STATIONS de monitor@rm): la
 # primera alerta de rm (10-oct-2026) quedó sin verificar porque solo se
-# archivaba El Colorado.
-ExecStart=%h/proyectos/nowcast/monitor/archive_ema.py --code 330077,330112,330122,330019
+# archivaba El Colorado. Desde el 2026-10-12 también las ocho EMAs de
+# monitor@araucania (380xxx/390xxx; Angol 370067 no entrega datos).
+ExecStart=%h/proyectos/nowcast/monitor/archive_ema.py --code 330077,330112,330122,330019,380063,380018,380032,380013,380033,380029,390028,390056
 Environment=DMC_USUARIO=
 Environment=DMC_TOKEN=
 # Las credenciales reales salen de monitor/config.local.env, que el script lee
