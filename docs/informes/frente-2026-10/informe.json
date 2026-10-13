@@ -7,9 +7,9 @@
     "autor": "Francisco Parra O. (con Claude Fable 5.1)",
     "fecha": "2026-10-12T13:24:33-03:00",
     "root": "../../..",
-    "commit": "beb510f"
+    "commit": "d370cc3"
   },
-  "bluf": "El frente entra el lunes 12 en la tarde (ECMWF e ICON) o el martes 13 en la tarde (GFS). En el piedemonte de Las Condes los acumulados pronosticados igualan o superan los del 8 de octubre (12.7–30.7 mm en 120 h, picos de 1.4–3.2 mm/h), pero ningún modelo resuelve la ráfaga sub-horaria que gatilló ese aluvión, así que el pronóstico no confirma ni descarta una repetición. Fuera de Las Condes el único lugar con dos modelos sobre el umbral es Lonquimay; las señales de un solo modelo están en la precordillera de la RM (ICON, ocho ciclos seguidos), Machalí (ECMWF) y el secano de Coquimbo (ECMWF e ICON, lunes en la tarde). El monitor de la RM tuvo su primer cruce real el lunes 12 entre las 13:30 y las 16:30 de Chile, en la celda de Tobalaba (6.4 mm/h en la hora pico, 13 mm en 3 h), sostenido solo por el pluviómetro: IMERG y GOES no vieron nada y el GLM contó una descarga. El ciclo de las 17:15Z lo suprimió la histéresis de estado, tal como se había previsto; el aviso salió a las 14:46 de Chile con la histéresis por cruce recién instalada, y desde las 20:48Z la evidencia de la racha se congela sola. Con Caine global no habría cruzado. No hay reporte de daño al cierre: no se clasifica aún como acierto ni como falsa alarma. Esa misma tarde una granizada convectiva de 20 minutos inundó 21 viviendas en Curacautín (Araucanía), donde no corre ningún monitor: el pronóstico comunal la tenía en MEDIO por ECMWF, pero en una celda cordillerana a 41 km y por coincidencia de día; en la celda de la ciudad ningún modelo pasó de 0.10, GOES QPE midió 3.5 mm y no hay EMA en la comuna. El GLM sí vio la celda, desde una hora antes de que llegara a la ciudad, como en Las Condes: dos eventos convectivos en cuatro días en los que la única señal útil fue la eléctrica. Las tres cicatrices del megaincendio de enero (Concepción–Penco 18.533 ha, Florida–Ránquil 8.065 ha, Laja 4.040 ha) quedaron en la cascada post-incendio; esta semana no cambian ningún nivel comunal porque la lluvia pronosticada ahí es baja.",
+  "bluf": "El frente entra el lunes 12 en la tarde (ECMWF e ICON) o el martes 13 en la tarde (GFS). En el piedemonte de Las Condes los acumulados pronosticados igualan o superan los del 8 de octubre (12.7–30.7 mm en 120 h, picos de 1.4–3.2 mm/h), pero ningún modelo resuelve la ráfaga sub-horaria que gatilló ese aluvión, así que el pronóstico no confirma ni descarta una repetición. Fuera de Las Condes el único lugar con dos modelos sobre el umbral es Lonquimay; las señales de un solo modelo están en la precordillera de la RM (ICON, ocho ciclos seguidos), Machalí (ECMWF) y el secano de Coquimbo (ECMWF e ICON, lunes en la tarde). El monitor de la RM tuvo su primer cruce real el lunes 12 entre las 13:30 y las 16:30 de Chile, en la celda de Tobalaba (6.4 mm/h en la hora pico, 13 mm en 3 h), sostenido solo por el pluviómetro: IMERG y GOES no vieron nada y el GLM contó una descarga. El ciclo de las 17:15Z lo suprimió la histéresis de estado, tal como se había previsto; el aviso salió a las 14:46 de Chile con la histéresis por cruce recién instalada, y desde las 20:48Z la evidencia de la racha se congela sola. Con Caine global no habría cruzado. No hay reporte de daño al cierre: no se clasifica aún como acierto ni como falsa alarma. Esa misma tarde una granizada convectiva de 20 minutos inundó 21 viviendas en Curacautín (Araucanía), donde no corre ningún monitor: el pronóstico comunal la tenía en MEDIO por ECMWF, pero en una celda cordillerana a 41 km y por coincidencia de día; en la celda de la ciudad ningún modelo pasó de 0.10, GOES QPE midió 3.5 mm y no hay EMA en la comuna. El GLM sí vio la celda, desde una hora antes de que llegara a la ciudad, como en Las Condes. IMERG Early también la vio (el monitor de la Araucanía, instanciado el 13-oct, cruza en la celda de la ciudad a las 16:30 de Chile, una hora después del evento), pero con 4 h de latencia no sirve en vivo: dos eventos convectivos en cuatro días en los que la única señal útil a tiempo fue la eléctrica. Las tres cicatrices del megaincendio de enero (Concepción–Penco 18.533 ha, Florida–Ránquil 8.065 ha, Laja 4.040 ha) quedaron en la cascada post-incendio; esta semana no cambian ningún nivel comunal porque la lluvia pronosticada ahí es baja.",
   "afirmaciones": [
     {
       "id": "A1",
@@ -127,8 +127,8 @@
           "tipo": "codigo",
           "ruta": "monitor/monitor.sh",
           "lineas": [
-            542,
-            577
+            548,
+            583
           ],
           "sha256": "fb23e5544568ec8da8724c550b880ba21b870c16c866f0f2c91a8de7903fa6b2",
           "extracto": "    # Histéresis por CRUCE (2026-10-12). Antes la marca `alert` se re-estampaba\n    # cada REALERT_HOURS mientras el dominio siguiera en alerta: notificaba el\n    # ESTADO. Costó verlo con monitor@rm: una falsa alarma de GOES del 10-oct\n    # (pasos de 22:30-23:30Z) quedó 54 h en la ventana y, con el frente del\n    # 12-oct entrando esa noche, un cruce REAL habría salido fundido con el\n    # aviso repetido, hasta 6 h tarde. Ahora: si la racha de alerta más\n    # reciente empieza más de ALERT_EPISODE_GAP_H horas después del fin de la\n    # última racha avisada (o no hay racha avisada), es un cruce nuevo y se\n    # avisa DE INMEDIATO (histéresis 0, que igual re-estampa `alert`); si es\n    # la misma racha, se repite cada REALERT_HOURS como antes. La racha\n    # avisada se guarda en state/alert_episode solo tras entrega confirmada\n    # (NOTIFY_DELIVERED), y se borra al volver a quiet.\n    # Corroboración entre feeds (2026-10-12, corroborate.py): la fusión es\n    # noisy-OR y un solo feed basta para cruzar. Si la racha la sostiene SOLO\n    # GOES QPE (sin IMERG, sin estación, sin rayos GLM) el aviso sale como\n    # \"NO corroborada\" (prioridad default, histéresis propia) y NO estampa la\n    # racha: si en un ciclo posterior otra fuente la respalda, saldrá como\n    # cruce nuevo urgente. Un cruce solo-DGA es legítimo (es la única fuente\n    # que ve el piedemonte: Tobalaba 6.4 mm/h con IMERG y GOES en 0, 12-oct).\n    CORROB=1; CORROB_DET=\"\"\n    if [[ \"${CORROB_ENABLED:-1}\" == \"1\" ]]; then\n        HZ_DIR=\"-\"; [[ \"${WRITE_HAZARD_TIFS:-0}\" == \"1\" ]] && HZ_DIR=\"$WORK_DIR/out/hazard\"\n        GLM_ST=\"-\"; [[ \"${GLM_ENABLED:-0}\" == \"1\" && -s \"$WORK_DIR/feeds/glm/status.json\" ]] && GLM_ST=\"$WORK_DIR/feeds/glm/status.json\"\n        read -r CORROB CORROB_FEEDS CORROB_DET < <(python3 \"$HERE/corroborate.py\" \"$RUN_JSON\" \"$FUSION_JSON\" \\\n            \"$HZ_DIR\" \"$GLM_ST\" \"${CORROB_MIN_MM:-1.0}\" \"${CORROB_HOURS:-3}\" \"${CORROB_GLM_FLASHES:-3}\" \\\n            \"$ALERT_LEVEL\" \"${CORROB_FRACTION:-0.5}\" 2>>\"$LOG\" || echo \"1 error corroborate.py falló (ver log): se asume corroborada\")\n        log \"corroboración: ${CORROB} (${CORROB_FEEDS}) — $CORROB_DET\"\n    fi\n    if [[ \"$CORROB\" != 1 ]]; then\n        notify \"nowcast-monitor: alerta I-D NO corroborada (solo GOES QPE)\" \\\n            \"$DETAIL. Solo el QPE de GOES sostiene el cruce ($CORROB_DET). GOES sobreestima chubascos (falsa alarma del 10-oct-2026): se avisa en prioridad baja hasta que IMERG, una estación o rayos GLM lo respalden. Último dato IMERG: $NEWEST.$GLM_NOTE Detalle: $RUN_JSON\" \\\n            default alert_uncorrob \"${REALERT_HOURS:-6}\"\n        freeze_evidence 0 \"${CORROB_FEEDS:-ninguno}\" \"$CORROB_DET\" \"alerta I-D NO corroborada (solo GOES QPE)\" \"$NOTIFY_DELIVERED\"\n        exit 0\n    fi\n    NUEVO=1"
@@ -137,8 +137,8 @@
           "tipo": "codigo",
           "ruta": "monitor/monitor.sh",
           "lineas": [
-            593,
-            604
+            599,
+            610
           ],
           "sha256": "cb8ceccd65766db244083b1881420de9268e7808ec8ad93c5798e3bab3ef6214",
           "extracto": "        TITULO=\"nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio\"; HORAS=0\n    else\n        TITULO=\"nowcast-monitor: ALERTA I-D persiste en el dominio\"; HORAS=\"${REALERT_HOURS:-6}\"\n    fi\n    notify \"$TITULO\" \\\n        \"$DETAIL. Sostienen: ${CORROB_FEEDS:-?}. Último dato IMERG: $NEWEST (~4 h de latencia)$DEGRADED$FUSION_NOTE$FLOOD_NOTE$H0_NOTE.$GLM_NOTE Feeds: $FUSE_SUMMARY. Detalle: $RUN_JSON\" \\\n        urgent alert \"$HORAS\"\n    if [[ \"$NOTIFY_DELIVERED\" == 1 && -n \"$EP_FIRST\" ]]; then\n        echo \"$EP_FIRST $EP_LAST\" > \"$WORK_DIR/state/alert_episode\"\n    fi\n    freeze_evidence \"$CORROB\" \"${CORROB_FEEDS:-?}\" \"$CORROB_DET\" \"${TITULO#nowcast-monitor: }\" \"$NOTIFY_DELIVERED\"\n    ;;"
@@ -158,10 +158,10 @@
           "cmd": "PATH=/home/franciscoparrao/nowcast-monitor/venv/bin:$PATH python3 monitor/selftest.py --alert-episode 2>&1 | grep -E '^\\s+(ok|FALLA)|TODO OK|FALLAS'",
           "cwd": ".",
           "exit": 0,
-          "sha256": "c8d0257aafca573e6fef35990381adf64c7560be7c1103a41d556c843d8a849b",
-          "salida": "  ok   racha A (hace 15 h) → cruce nuevo, avisa         entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n  ok   state/alert_episode escrito tras entrega         20261012T0700 20261012T0900\n  ok   misma racha A → suprimida por histéresis         entregados=—\n  ok   racha C (nueva, 15 h después) → cruce nuevo, avisa entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n  ok   misma racha C → suprimida                        entregados=—\n  ok   quiet → nada y se borra alert_episode            entregados=—\n  ok   racha A tras quiet → cruce nuevo, avisa          entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n[selftest alert-episode] TODO OK",
-          "fecha": "2026-10-12T20:17:13-03:00",
-          "segundos": 8.96
+          "sha256": "043e695a564b3ca70d4bc8e9e3b6bdad0fb5e017a60d284708ea3dfb84422d6f",
+          "salida": "  ok   racha A (hace 15 h) → cruce nuevo, avisa         entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n  ok   state/alert_episode escrito tras entrega         20261013T0000 20261013T0200\n  ok   misma racha A → suprimida por histéresis         entregados=—\n  ok   racha C (nueva, 15 h después) → cruce nuevo, avisa entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n  ok   misma racha C → suprimida                        entregados=—\n  ok   quiet → nada y se borra alert_episode            entregados=—\n  ok   racha A tras quiet → cruce nuevo, avisa          entregados=['nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio']\n[selftest alert-episode] TODO OK",
+          "fecha": "2026-10-13T13:21:11-03:00",
+          "segundos": 25.9
         }
       ]
     },
@@ -203,8 +203,8 @@
           "tipo": "codigo",
           "ruta": "CLAUDE.md",
           "lineas": [
-            722,
-            736
+            774,
+            788
           ],
           "sha256": "76bfbaca07e505e1d0ab52973eaa61656085d77430befbb568871332a90b57b2",
           "extracto": "**Retrospectiva del 8-oct (IMERG+GOES, 84 h, susc con cascada) — RESULTADO\nNEGATIVO decisivo**: los DOS productos satelitales se perdieron la ráfaga del\npiedemonte. En la celda de Tobalaba, 17-21Z: IMERG 0.37 mm y GOES 1.66 mm contra\n12.6 mm observados (8.2 en la hora previa al aluvión) → ×34 y ×8 por debajo; en\nla cicatriz IMERG 1.0 / GOES 2.6 mm. Peligro en la cicatriz ≤0.04 con Caine y\n≤0.05 con a*=5.5: **el monitor con forzante satelital NO habría alertado**. Lo\núnico que vio la ráfaga fue el pluviómetro a 7 km; simulado el feed DGA (IDW de\nlas 4 EMAs) sobre la cicatriz: 5.5 mm/h → Caine 0.04 (nada), a*=5.5 0.29\n(ALERTA a la hora del evento, sin lead). Por eso `monitor@rm` corre con\n**ID_A=5.5 en SOMBRA** (atacama sigue en Caine): costo medido 17/168 pasos con\nalguna celda en alerta en la ventana 7-9 oct (cordillera SE, sin verificar).\nConclusión que apunta a las fuentes: para ráfagas convectivas de piedemonte no\nhay forzante satelital que sirva; hace falta red densa in situ (EMAs, estaciones\npersonales, enlaces de microondas). OJO: los fetchers miden la ventana hacia atrás desde AHORA y\nGOES escribe en `WORK_DIR/steps` → para una retrospectiva el GOES va con"
@@ -515,8 +515,8 @@
           "tipo": "codigo",
           "ruta": "monitor/monitor.sh",
           "lineas": [
-            480,
-            483
+            486,
+            489
           ],
           "sha256": "f6e72ae3746cc2c34244909080d242135fd7f9b2b94d2ef28689cdbe228938e8",
           "extracto": "# La clave de tiempo sale de span[0] + 30 min × índice: la UNIÓN puede tener\n# más pasos que la lista del primario (cola DGA/GOES más nueva que IMERG), y\n# justo ahí caen los cruces en vivo (12-oct-2026: pasos 103-106 solo-DGA).\nfrom datetime import datetime, timedelta"
@@ -581,8 +581,8 @@
           "tipo": "codigo",
           "ruta": "monitor/monitor.sh",
           "lineas": [
-            443,
-            459
+            449,
+            465
           ],
           "sha256": "6c73de3b3be9f409ac54669dd5c2b99fdf119bddc5d59c8c2ec7bcef89a1cf78",
           "extracto": "# --- 3c. Congelado de evidencia por alerta (freeze_evidence.py) -------------\n# La alerta del 10-oct-2026 quedó sin verificar porque, al ir a mirar, la API\n# DMC ya no cubría la hora del cruce, los pasos habían rotado y los rásters de\n# peligro tenían otros índices. Ahora cada ciclo en alerta deja en\n# $FREEZE_DIR/<racha>/ los pasos de los 3 feeds, el peligro por clave de\n# tiempo, los registros crudos de las EMAs archivadas, el GLM, el run.json y\n# el veredicto de corroboración (ciclos.jsonl), con sha256 por archivo. Añade\n# sin pisar; también para alertas NO corroboradas (son las que hay que revisar).\n# Nunca tumba el ciclo: cualquier error es un \"skip\" en el log.\nfreeze_evidence() {   # $1 corrob(0/1) $2 feeds $3 detalle $4 título $5 entregado(0/1)\n    [[ \"${FREEZE_EVIDENCE:-1}\" == \"1\" && -n \"${EP_FIRST:-}\" ]] || return 0\n    local hz=\"-\" glm=\"-\" out\n    [[ \"${WRITE_HAZARD_TIFS:-0}\" == \"1\" ]] && hz=\"$WORK_DIR/out/hazard\"\n    [[ \"${GLM_ENABLED:-0}\" == \"1\" && -d \"$WORK_DIR/feeds/glm\" ]] && glm=\"$WORK_DIR/feeds/glm\"\n    out=$(python3 \"$HERE/freeze_evidence.py\" \"$RUN_JSON\" \"$FUSION_JSON\" \"$WORK_DIR\" \"$EP_FIRST\" \"$EP_LAST\"         \"${FREEZE_DIR:-$WORK_DIR/evidence}\" --hazard-dir \"$hz\" --glm-dir \"$glm\"         --ema-dir \"${EMA_ARCHIVE_DIR:-$HERE/data/ema}\" --stations \"${DGA_STATIONS:-}\"         --pre-h \"${FREEZE_PRE_H:-6}\" --post-h \"${FREEZE_POST_H:-3}\"         --corrob \"$1\" --corrob-feeds \"$2\" --corrob-det \"$3\" --titulo \"$4\" --delivered \"$5\"         --config \"$CONFIG\" --repo \"$HERE\" --min-free-mb \"${FREEZE_MIN_FREE_MB:-500}\" 2>>\"$LOG\")         || out=\"skip freeze_evidence.py salió $? (ver log)\"\n    log \"evidencia congelada: $out\"\n}"
@@ -604,8 +604,8 @@
           "exit": 0,
           "sha256": "9c0aa183a7ca334b7b79188ab84e99066dad1f02f31ae7c82044cb3bf716304f",
           "salida": "[selftest freeze_evidence] TODO OK",
-          "fecha": "2026-10-12T20:16:43-03:00",
-          "segundos": 0.96
+          "fecha": "2026-10-13T13:21:17-03:00",
+          "segundos": 3.5
         }
       ]
     },
@@ -787,14 +787,15 @@
     },
     {
       "id": "A28",
-      "texto": "Curacautín repite el patrón de Las Condes (A12–A14) con un segundo evento convectivo en cuatro días: la celda de 20 minutos no la resuelve ningún QPF (los tres modelos la ponen en otra parte o en otro día, y el acuerdo entre modelos para la comuna nunca existió: GFS y ECMWF alternaron el nivel ciclo a ciclo) ni, en la práctica, el QPE satelital (3,5 mm donde hubo granizo y desbordes), y la única señal con la hora y el lugar correctos fue la eléctrica. Que la comuna estuviera en MEDIO y en la lista de vigilancia es coincidencia de día, no un acierto del mecanismo: ECMWF apuntaba a la cordillera. Con un dominio de monitor en la Araucanía y el feed GLM activo (umbral de dominio 50 descargas en 60 min) el aviso de convección habría salido hacia las 17:30Z (14:30 de Chile), antes de que la celda llegara a la ciudad; hoy ese dominio no existe (solo corren atacama y rm). La lectura se sostiene en datos de sensores y prensa, no en una medición de lluvia en superficie, que no hay.",
+      "texto": "Curacautín repite el patrón de Las Condes (A12–A14) con un segundo evento convectivo en cuatro días: la celda de 20 minutos no la resuelve ningún QPF (los tres modelos la ponen en otra parte o en otro día, y el acuerdo entre modelos para la comuna nunca existió: GFS y ECMWF alternaron el nivel ciclo a ciclo) ni el QPE geoestacionario (GOES 3,5 mm donde hubo granizo y desbordes); IMERG Early sí la resolvió (A30: 3,6 mm/30 min, cruce en la celda de la ciudad a las 19:30Z, una hora después del evento), pero con ~4 h de latencia no sirve en vivo, así que la única señal con la hora y el lugar correctos y disponible a tiempo fue la eléctrica. Que la comuna estuviera en MEDIO y en la lista de vigilancia es coincidencia de día, no un acierto del mecanismo: ECMWF apuntaba a la cordillera. Con un dominio de monitor en la Araucanía y el feed GLM activo (umbral de dominio 50 descargas en 60 min) el aviso de convección habría salido hacia las 17:30Z (14:30 de Chile), antes de que la celda llegara a la ciudad; el dominio se instanció el 13-oct a las 01:46Z (A30). La lectura se sostiene en datos de sensores y prensa, no en una medición de lluvia en superficie, que no hay.",
       "estado": "inferido",
       "confianza": "muy probable",
       "tema": "Curacautín 12-oct: evento convectivo fuera del monitor",
       "depende_de": [
         "A25",
         "A26",
-        "A27"
+        "A27",
+        "A30"
       ],
       "evidencia": []
     },
@@ -809,6 +810,64 @@
         "A27"
       ],
       "evidencia": []
+    },
+    {
+      "id": "A30",
+      "texto": "Matiz medido con monitor@araucania, instanciado el 13-oct a las 01:46Z con la misma configuración que la RM (a*=5.5 en sombra, nivel 0.391, IMERG Early + GOES QPE + 8 EMAs, GLM activo) y ventana de 54 h hacia atrás: IMERG Early SÍ resolvió la celda de Curacautín (−71.85, −38.45), con 1.13, 2.24, 3.61 y 3.49 mm por 30 min entre las 18:00Z y las 19:30Z (hasta 7 mm/h), mientras GOES QPE en la misma celda no pasó de 0.88 y el feed de estaciones dio cero (ninguna EMA a menos de 45 km). Con esa forzante el peligro en la celda de la ciudad llegó a 0.39 a las 19:00Z y a 0.53 a las 19:30Z (16:30 de Chile), una hora DESPUÉS del evento (18:10–18:50Z); la celda vecina 15 km al este cruzó a las 18:30Z (0.40, IMERG 3.45 mm), durante el evento. El cruce del dominio empezó a las 16:30Z en celdas de Malleco y de la costa, a 60–120 km. Pero IMERG Early se publica con ~4 h de latencia (en el ciclo de la alerta, 01:46Z del 13-oct, el último paso real era el de las 19:30Z): en vivo esa señal habría estado disponible cerca de las 23:30Z, cinco horas después de la granizada. La diferencia con Las Condes (A12) es que allí IMERG no vio la ráfaga en absoluto; aquí la vio, pero tarde. Evidencia congelada por freeze_evidence.py en el primer ciclo del dominio y copiada a evidencia/curacautin_20261012/monitor_araucania/ (los rásters de peligro son los del ciclo de la alerta y no se reescriben).",
+      "estado": "verificado",
+      "tema": "Curacautín 12-oct: evento convectivo fuera del monitor",
+      "evidencia": [
+        {
+          "tipo": "codigo",
+          "ruta": "docs/informes/frente-2026-10/scripts/curacautin_20261012.py",
+          "lineas": [
+            197,
+            230
+          ],
+          "sha256": "2f24e77e86f63718c33f403bc1b43f89a64c6b019960b1413ef9d73f81b23d12",
+          "extracto": "    print(\"  EMAs DMC más cercanas a Curacautín: \" + \"; \".join(f\"{n} ({c}) {d:.0f} km\" for d, n, c in cerca))\n\n    # --- retrospectiva de monitor@araucania (instanciado el 13-oct 01:46Z; ventana de 54 h\n    #     hacia atrás) sobre la evidencia que congeló freeze_evidence.py en su primer ciclo\n    M = os.path.join(E, \"monitor_araucania\")\n    man = json.load(open(os.path.join(M, \"manifest.json\")))\n    print(f\"\\nRETROSPECTIVA monitor@araucania (commit {man['monitor_commit']}, a*=5.5, nivel {man.get('alert_level', 0.391)}; \"\n          f\"racha congelada desde {man['racha']['ep_first']}; IMERG Early en relleno cero desde \"\n          f\"{man['feeds']['primary'].get('zerofill_en_ventana', ['-'])[0]} en el ciclo de la alerta)\")\n    nivel = 0.391\n    print(f\"{'paso UTC':14s} {'Chile':6s} {'celdas≥niv':>10s} {'peligro Curacautín':>18s}   IMERG  GOES   DGA  (mm/30 min en la celda de la ciudad) | vecina E (-71.75,-38.35): peligro IMERG\")\n    for p in sorted(glob.glob(os.path.join(M, \"hazard\", \"hazard_*.tif\"))):\n        k = os.path.basename(p)[7:-4]\n        with rasterio.open(p) as d:\n            h = d.read(1); r, c = d.index(*CIUDAD); r2, c2 = d.index(-71.75, -38.35)\n            n_al = int((np.isfinite(h) & (h >= nivel)).sum())\n        mm = []\n        for feed in (\"primary\", \"goes\", \"dga\"):\n            q = os.path.join(M, \"feeds\", feed, f\"step_{k}.tif\")\n            if os.path.exists(q):\n                with rasterio.open(q) as d:\n                    a = d.read(1); v = float(a[r, c]); v2 = float(a[r2, c2])\n                mm.append(0.0 if not np.isfinite(v) else v)\n                if feed == \"primary\":\n                    im2 = 0.0 if not np.isfinite(v2) else v2\n            else:\n                mm.append(float(\"nan\"))\n                if feed == \"primary\":\n                    im2 = float(\"nan\")\n        t = datetime.strptime(k, \"%Y%m%dT%H%M\").replace(tzinfo=timezone.utc)\n        print(f\"{k:14s} {t.astimezone(CHILE):%H:%M}  {n_al:10d} {h[r, c]:18.2f}   \" + \" \".join(f\"{v:5.2f}\" for v in mm)\n              + f\"              | {h[r2, c2]:.2f} {im2:5.2f}\")\n    print(\"  (nan = IMERG aún no publicado en ese ciclo: relleno cero. Evento según prensa: ~18:10–18:50Z, 15:10–15:50 Chile)\")\n"
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/curacautin_20261012/monitor_araucania/manifest.json",
+          "sha256": "cffe322d3e1df56ba051925ac355d803506774180490898796b7df8772de01f4",
+          "bytes": 56845
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/curacautin_20261012/monitor_araucania/ciclos.jsonl",
+          "sha256": "9406d36a8447ada2a40e077959fe47b131ac86cc8e009bd2d4b53184a6ac36a5",
+          "bytes": 21117
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/curacautin_20261012/monitor_araucania/hazard/hazard_20261012T1930.tif",
+          "sha256": "cd29b9e9c42b02d61b292f718c5b76012772041f5c3b756b31a3cf8e67feb6da",
+          "bytes": 2178
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/curacautin_20261012/monitor_araucania/feeds/primary/step_20261012T1900.tif",
+          "sha256": "34d930a1be4df14ac8184ad7d1782573877011a07f3e26c0992d5e6b73d1be1c",
+          "bytes": 2206
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/curacautin_20261012/monitor_araucania/feeds/goes/step_20261012T1930.tif",
+          "sha256": "5c6eeaff01b27f2694a5d14594236074dd26bd57b84115f20ac65adc6f39963f",
+          "bytes": 2206
+        },
+        {
+          "tipo": "comando",
+          "cmd": "PATH=$HOME/nowcast-monitor/venv/bin:$PATH python3 docs/informes/frente-2026-10/scripts/curacautin_20261012.py 2>/dev/null | sed -n '/^RETROSPECTIVA/,$p'",
+          "cwd": ".",
+          "exit": 0,
+          "sha256": "3e22f835941c03c3d6bf71482d8e806f7e6f3bcf172a46c9c6bc84d5098893cb",
+          "salida": "RETROSPECTIVA monitor@araucania (commit cf29695, a*=5.5, nivel 0.391; racha congelada desde 20261012T1630; IMERG Early en relleno cero desde 20261012T2000 en el ciclo de la alerta)\npaso UTC       Chile  celdas≥niv peligro Curacautín   IMERG  GOES   DGA  (mm/30 min en la celda de la ciudad) | vecina E (-71.75,-38.35): peligro IMERG\n20261012T1600  13:00           0               0.06    0.00  0.00  0.00              | 0.06  0.00\n20261012T1630  13:30           4               0.06    0.49  0.12  0.00              | 0.06  0.17\n20261012T1700  14:00           7               0.07    0.25  0.59  0.00              | 0.06  0.00\n20261012T1730  14:30           7               0.07    0.04  0.49  0.00              | 0.06  0.02\n20261012T1800  15:00           9               0.08    1.13  0.49  0.00              | 0.08  0.67\n20261012T1830  15:30           9               0.15    2.24  0.06  0.00              | 0.40  3.45\n20261012T1900  16:00          14               0.39    3.61  0.73  0.00              | 0.65  3.54\n20261012T1930  16:30          17               0.53    3.49  0.88  0.00              | 0.73  3.49\n20261012T2000  17:00          13               0.42    0.64  0.09  0.00              | 0.62  0.62\n20261012T2030  17:30           8               0.34    0.42  0.00  0.09              | 0.51  0.15\n20261012T2100  18:00          13               0.28    0.32  0.00  0.09              | 0.42  0.00\n  (nan = IMERG aún no publicado en ese ciclo: relleno cero. Evento según prensa: ~18:10–18:50Z, 15:10–15:50 Chile)",
+          "fecha": "2026-10-13T13:20:19-03:00",
+          "segundos": 0.49
+        }
+      ]
     }
   ],
   "pendientes": [
@@ -818,7 +877,7 @@
     "Fuente in situ densa para el piedemonte (Netatmo, enlaces de microondas): ningún producto satelital vio la ráfaga del 8-oct ni la lluvia frontal del 12-oct.",
     "Validar los umbrales del feed GLM (10 descargas sobre cicatriz, 50 en el dominio) y de la corroboración (1 mm, 3 h, fracción 0.5) sobre más eventos: ¿todas las ráfagas de piedemonte tienen rayos?",
     "Retención de WORK_DIR/evidence/: nadie lo poda (hoy ~3 MB por racha, casi todo registros crudos de EMAs).",
-    "Decidir si se instancia monitor@araucania con GLM_ENABLED=1: dos eventos convectivos en cuatro días (Las Condes 8-oct, Curacautín 12-oct) sin monitor NRT en la región; el feed GLM habría avisado una hora antes en los dos. Si se instancia, sumar las EMAs 380063 y 380018 a archive_ema aunque estén a 45 km."
+    "monitor@araucania corre desde el 13-oct (a*=5.5 en sombra, GLM activo): medir una temporada la tasa de cruces en lluvia frontal antes de confiar en el umbral; la racha del 12-oct siguió hasta el mediodía del 13 sin que ningún feed la sostuviera en las últimas horas (I-D con memoria de 48 h)."
   ],
   "reproducir": [
     "Reproduce el pronóstico: python3 docs/informes/frente-2026-10/scripts/pronostico_rm.py ~/nowcast-forecast/20261012T06z",

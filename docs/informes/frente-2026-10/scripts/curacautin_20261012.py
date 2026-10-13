@@ -196,6 +196,38 @@ def informe():
     cerca = sorted(((dist_km(float(s["longitud"]), float(s["latitud"])), s["nombreEstacion"], s["codigoNacional"]) for s in red))[:4]
     print("  EMAs DMC más cercanas a Curacautín: " + "; ".join(f"{n} ({c}) {d:.0f} km" for d, n, c in cerca))
 
+    # --- retrospectiva de monitor@araucania (instanciado el 13-oct 01:46Z; ventana de 54 h
+    #     hacia atrás) sobre la evidencia que congeló freeze_evidence.py en su primer ciclo
+    M = os.path.join(E, "monitor_araucania")
+    man = json.load(open(os.path.join(M, "manifest.json")))
+    print(f"\nRETROSPECTIVA monitor@araucania (commit {man['monitor_commit']}, a*=5.5, nivel {man.get('alert_level', 0.391)}; "
+          f"racha congelada desde {man['racha']['ep_first']}; IMERG Early en relleno cero desde "
+          f"{man['feeds']['primary'].get('zerofill_en_ventana', ['-'])[0]} en el ciclo de la alerta)")
+    nivel = 0.391
+    print(f"{'paso UTC':14s} {'Chile':6s} {'celdas≥niv':>10s} {'peligro Curacautín':>18s}   IMERG  GOES   DGA  (mm/30 min en la celda de la ciudad) | vecina E (-71.75,-38.35): peligro IMERG")
+    for p in sorted(glob.glob(os.path.join(M, "hazard", "hazard_*.tif"))):
+        k = os.path.basename(p)[7:-4]
+        with rasterio.open(p) as d:
+            h = d.read(1); r, c = d.index(*CIUDAD); r2, c2 = d.index(-71.75, -38.35)
+            n_al = int((np.isfinite(h) & (h >= nivel)).sum())
+        mm = []
+        for feed in ("primary", "goes", "dga"):
+            q = os.path.join(M, "feeds", feed, f"step_{k}.tif")
+            if os.path.exists(q):
+                with rasterio.open(q) as d:
+                    a = d.read(1); v = float(a[r, c]); v2 = float(a[r2, c2])
+                mm.append(0.0 if not np.isfinite(v) else v)
+                if feed == "primary":
+                    im2 = 0.0 if not np.isfinite(v2) else v2
+            else:
+                mm.append(float("nan"))
+                if feed == "primary":
+                    im2 = float("nan")
+        t = datetime.strptime(k, "%Y%m%dT%H%M").replace(tzinfo=timezone.utc)
+        print(f"{k:14s} {t.astimezone(CHILE):%H:%M}  {n_al:10d} {h[r, c]:18.2f}   " + " ".join(f"{v:5.2f}" for v in mm)
+              + f"              | {h[r2, c2]:.2f} {im2:5.2f}")
+    print("  (nan = IMERG aún no publicado en ese ciclo: relleno cero. Evento según prensa: ~18:10–18:50Z, 15:10–15:50 Chile)")
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 2 and sys.argv[1] == "--extraer":
