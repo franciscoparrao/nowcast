@@ -1,0 +1,14 @@
+{
+ "utc": "2026-10-12T23:43:04Z",
+ "feed": "goes-qpe:noaa-goes19",
+ "newest_step": "20261012T2300",
+ "stale_minutes": 43.067536249999996,
+ "n_steps": 17,
+ "n_gaps": 0,
+ "gap_fraction": 0.0,
+ "fetched_this_cycle": 51,
+ "convert_failures": 0,
+ "partial_steps": 1,
+ "low_coverage_granules": 0,
+ "stale_hours_threshold": 24.0
+}

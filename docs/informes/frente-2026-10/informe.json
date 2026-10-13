@@ -7,9 +7,9 @@
     "autor": "Francisco Parra O. (con Claude Fable 5.1)",
     "fecha": "2026-10-12T13:24:33-03:00",
     "root": "../../..",
-    "commit": "832c7e1"
+    "commit": "beb510f"
   },
-  "bluf": "El frente entra el lunes 12 en la tarde (ECMWF e ICON) o el martes 13 en la tarde (GFS). En el piedemonte de Las Condes los acumulados pronosticados igualan o superan los del 8 de octubre (12.7–30.7 mm en 120 h, picos de 1.4–3.2 mm/h), pero ningún modelo resuelve la ráfaga sub-horaria que gatilló ese aluvión, así que el pronóstico no confirma ni descarta una repetición. Fuera de Las Condes el único lugar con dos modelos sobre el umbral es Lonquimay; las señales de un solo modelo están en la precordillera de la RM (ICON, ocho ciclos seguidos), Machalí (ECMWF) y el secano de Coquimbo (ECMWF e ICON, lunes en la tarde). El monitor de la RM tuvo su primer cruce real el lunes 12 entre las 13:30 y las 16:30 de Chile, en la celda de Tobalaba (6.4 mm/h en la hora pico, 13 mm en 3 h), sostenido solo por el pluviómetro: IMERG y GOES no vieron nada y el GLM contó una descarga. El ciclo de las 17:15Z lo suprimió la histéresis de estado, tal como se había previsto; el aviso salió a las 14:46 de Chile con la histéresis por cruce recién instalada, y desde las 20:48Z la evidencia de la racha se congela sola. Con Caine global no habría cruzado. No hay reporte de daño al cierre: no se clasifica aún como acierto ni como falsa alarma. Las tres cicatrices del megaincendio de enero (Concepción–Penco 18.533 ha, Florida–Ránquil 8.065 ha, Laja 4.040 ha) quedaron en la cascada post-incendio; esta semana no cambian ningún nivel comunal porque la lluvia pronosticada ahí es baja.",
+  "bluf": "El frente entra el lunes 12 en la tarde (ECMWF e ICON) o el martes 13 en la tarde (GFS). En el piedemonte de Las Condes los acumulados pronosticados igualan o superan los del 8 de octubre (12.7–30.7 mm en 120 h, picos de 1.4–3.2 mm/h), pero ningún modelo resuelve la ráfaga sub-horaria que gatilló ese aluvión, así que el pronóstico no confirma ni descarta una repetición. Fuera de Las Condes el único lugar con dos modelos sobre el umbral es Lonquimay; las señales de un solo modelo están en la precordillera de la RM (ICON, ocho ciclos seguidos), Machalí (ECMWF) y el secano de Coquimbo (ECMWF e ICON, lunes en la tarde). El monitor de la RM tuvo su primer cruce real el lunes 12 entre las 13:30 y las 16:30 de Chile, en la celda de Tobalaba (6.4 mm/h en la hora pico, 13 mm en 3 h), sostenido solo por el pluviómetro: IMERG y GOES no vieron nada y el GLM contó una descarga. El ciclo de las 17:15Z lo suprimió la histéresis de estado, tal como se había previsto; el aviso salió a las 14:46 de Chile con la histéresis por cruce recién instalada, y desde las 20:48Z la evidencia de la racha se congela sola. Con Caine global no habría cruzado. No hay reporte de daño al cierre: no se clasifica aún como acierto ni como falsa alarma. Esa misma tarde una granizada convectiva de 20 minutos inundó 21 viviendas en Curacautín (Araucanía), donde no corre ningún monitor: el pronóstico comunal la tenía en MEDIO por ECMWF, pero en una celda cordillerana a 41 km y por coincidencia de día; en la celda de la ciudad ningún modelo pasó de 0.10, GOES QPE midió 3.5 mm y no hay EMA en la comuna. El GLM sí vio la celda, desde una hora antes de que llegara a la ciudad, como en Las Condes: dos eventos convectivos en cuatro días en los que la única señal útil fue la eléctrica. Las tres cicatrices del megaincendio de enero (Concepción–Penco 18.533 ha, Florida–Ránquil 8.065 ha, Laja 4.040 ha) quedaron en la cascada post-incendio; esta semana no cambian ningún nivel comunal porque la lluvia pronosticada ahí es baja.",
   "afirmaciones": [
     {
       "id": "A1",
@@ -620,6 +620,195 @@
         "A21"
       ],
       "evidencia": []
+    },
+    {
+      "id": "A24",
+      "texto": "Evento (prensa regional y nacional, sin verificación con la DMC ni con SENAPRED): la tarde del lunes 12-oct una granizada con tormenta eléctrica de unos 20 minutos inundó 21 viviendas en Curacautín (Malleco, Araucanía) por el desborde del río Loncocapira (Villa Centenario, 5 viviendas), de un canal vecinal (población Manuel Rodríguez, 15) y del estero Manzano Ko (Calama con Chorrillos, 1); sin lesionados ni albergados, cifra de SENAPRED Malleco. Ninguna nota trae un dato de lluvia en mm; la primera nota es de las 18:15 de Chile.",
+      "estado": "supuesto",
+      "tema": "Curacautín 12-oct: evento convectivo fuera del monitor",
+      "evidencia": [
+        {
+          "tipo": "referencia",
+          "ref": "https://araucanianoticias.cl/2026/fuerte-granizada-provoca-inundaciones-en-curacautin-y-deja-21-viviendas-afectadas/1012316953",
+          "nota": ""
+        },
+        {
+          "tipo": "referencia",
+          "ref": "https://www.latercera.com/nacional/noticia/intensas-lluvias-y-granizos-provocan-inundaciones-en-al-menos-20-viviendas-de-curacautin/",
+          "nota": ""
+        },
+        {
+          "tipo": "referencia",
+          "ref": "https://www.temucoya.cl/2026/10/12/desborde-de-estero-anega-viviendas-en-curacautin-tras-granizadas-y-tormenta-electrica/",
+          "nota": ""
+        },
+        {
+          "tipo": "referencia",
+          "ref": "https://alertanoticiastemuco.cl/2026/10/12/inundaciones-curacautin-21-viviendas-afectadas/",
+          "nota": ""
+        }
+      ]
+    },
+    {
+      "id": "A25",
+      "texto": "Pronóstico comunal (región 9 → dominio chile-centro-sur; GFS y ECMWF con a*=5.5, ICON con Caine global; ALTO ≥0.5): Curacautín estuvo en BAJO los cuatro ciclos del sábado 10, ALTO el domingo 11 a las 00Z (GFS 0.92, con pico el jueves 15), BAJO a las 06Z, MEDIO a las 12Z (GFS 0.41), BAJO a las 18Z, MEDIO en los dos ciclos previos al evento (lunes 12, 00Z y 06Z) y ALTO a las 12Z (GFS 0.95, pico el miércoles 14). El MEDIO del lunes lo ponía ECMWF con 0.72 el lunes a las 18Z (15:00 de Chile): la hora coincide con el evento, el lugar no, porque la celda es (−71.45, −38.55), en el rincón cordillerano de la comuna a 41 km de la ciudad. En la celda de la ciudad (−71.89, −38.43) ningún modelo pasó de 0.10 entre las 17Z y las 21Z del lunes en ningún ciclo, y los máximos de toda la ventana fueron GFS 0.11–0.26 (miércoles y jueves), ECMWF 0.10 e ICON 0.04; lluvia de 120 h en esa celda: GFS 30–32, ECMWF 15, ICON 15–19 mm. Curacautín figuró en la lista de vigilancia (criterio peligro) en los ciclos del lunes 00Z, 06Z y 12Z (este último también por exposición) y el domingo 00Z.",
+      "estado": "verificado",
+      "tema": "Curacautín 12-oct: evento convectivo fuera del monitor",
+      "evidencia": [
+        {
+          "tipo": "codigo",
+          "ruta": "docs/informes/frente-2026-10/scripts/curacautin_20261012.py",
+          "lineas": [
+            111,
+            131
+          ],
+          "sha256": "8f2071202dce16baf8ddc58d9083c4ae5f33b9fdc6647c90e828f4fda75a889a",
+          "extracto": "def informe():\n    P = json.load(open(os.path.join(E, \"pronostico\", \"por_ciclo.json\")))\n    print(\"PRONÓSTICO COMUNAL — Curacautín (CUT 9203), dominio chile-centro-sur, nivel ALTO ≥0.5\")\n    print(f\"{'ciclo':13s} {'nivel':6s} {'GFS':>6s} {'ECMWF':>6s} {'ICON':>6s}  watchlist      pico ECMWF (dónde, cuándo)                 ciudad lun 12 17–21Z: GFS/ECMWF/ICON máx\")\n    for r in P[\"ciclos\"]:\n        e = r[\"modelos\"].get(\"ecmwf\", {}).get(\"max_comuna\", {})\n        lun = {}\n        for m, v in r[\"modelos\"].items():\n            s = [x[1] for x in v[\"serie_celda_ciudad\"] if \"2026-10-12T17\" <= x[0] <= \"2026-10-12T21\"]\n            lun[m] = max(s) if s else float(\"nan\")\n        wl = \",\".join(s[\"name\"] + (\"+exp\" if \"exposicion\" in s[\"en_lista\"] else \"\") for s in r[\"watchlist\"]) or \"-\"\n        print(f\"{r['ciclo']:13s} {r['nivel']:6s} {r['peak']['gfs']:6.2f} {r['peak']['ecmwf']:6.2f} {r['peak']['icon']:6.2f}  {wl:14s} \"\n              f\"{e.get('valor', 0):.2f} en {e.get('celda')} {e.get('utc', '')}   \"\n              + \"/\".join(f\"{lun.get(m, float('nan')):.2f}\" for m in (\"gfs\", \"ecmwf\", \"icon\")))\n    ult = [r for r in P[\"ciclos\"] if r[\"ciclo\"] in (\"20261012T00z\", \"20261012T06z\")]\n    for r in ult:\n        print(f\"  {r['ciclo']}: máx en la celda de la ciudad por modelo (toda la ventana): \"\n              + \", \".join(f\"{m} {v['max_celda_ciudad'][1]:.2f} ({v['max_celda_ciudad'][0]})\" for m, v in r[\"modelos\"].items())\n              + \"; lluvia 120 h en la celda: \" + \", \".join(f\"{m} {v['lluvia_120h_celda_ciudad_mm']:.0f} mm\" for m, v in r[\"modelos\"].items()))\n    e06 = [r for r in P[\"ciclos\"] if r[\"ciclo\"] == \"20261012T06z\"][0][\"modelos\"][\"ecmwf\"][\"max_comuna\"]\n    print(f\"  distancia del pico ECMWF del ciclo 06z a la ciudad: {dist_km(*e06['celda']):.0f} km\")"
+        },
+        {
+          "tipo": "codigo",
+          "ruta": "docs/informes/frente-2026-10/scripts/curacautin_20261012.py",
+          "lineas": [
+            43,
+            108
+          ],
+          "sha256": "78f1a296674b4db9b78ee869bcba2c7d45bd3cb0e5d766b3852c44c2f5f955ef",
+          "extracto": "def extraer(raiz):\n    import rasterio\n    from rasterio.features import geometry_mask\n    from shapely.geometry import shape\n    out = []\n    for cyc in sorted(glob.glob(os.path.join(raiz, \"2026101[0-2]T*z\"))):\n        c = os.path.basename(cyc)\n        gj = os.path.join(cyc, \"comuna_impact\", \"comuna_impact.geojson\")\n        if not os.path.exists(gj):\n            print(\"sin geojson:\", c, file=sys.stderr)\n            continue\n        feat = [f for f in json.load(open(gj))[\"features\"] if f[\"properties\"].get(\"CUT\") == CUT][0]\n        pr = feat[\"properties\"]\n        geom = shape(feat[\"geometry\"])\n        w = json.load(open(os.path.join(cyc, \"watchlist.json\")))\n        wl = [s for s in w[\"selected\"] if s.get(\"comuna\", \"\").upper() == \"CURACAUTÍN\"]\n        rec = {\"ciclo\": c, \"nivel\": pr[\"nivel\"],\n               \"peak\": {m: round(pr[f\"peak_{m}\"], 3) for m in (\"gfs\", \"ecmwf\", \"icon\")},\n               \"peak_terreno\": round(pr[\"peak_terreno\"], 3),\n               \"watchlist\": [{\"name\": s[\"name\"], \"en_lista\": s[\"en_lista\"]} for s in wl],\n               \"modelos\": {}}\n        dom = os.path.join(cyc, DOMINIO)\n        for m, sub, var, meta in ((\"gfs\", \"\", \"hazard_regional-a5.5\", \"forecast.json\"),\n                                  (\"ecmwf\", \"ecmwf\", \"hazard_regional-a5.5\", \"ecmwf/ecmwf.json\"),\n                                  (\"icon\", \"icon\", \"hazard_caine-global\", \"icon/icon.json\")):\n            d = os.path.join(dom, sub, var)\n            if not os.path.isdir(d):\n                continue\n            info = json.load(open(os.path.join(dom, meta)))\n            desde = datetime.strptime(info[\"ventana\"][\"desde\"], \"%Y%m%dT%H%M\").replace(tzinfo=timezone.utc)\n            sh = int(info.get(\"step_hours\", 1))\n            files = sorted(glob.glob(os.path.join(d, \"hazard_*.tif\")))\n            serie = []\n            best = (0.0, None, None)\n            mask = None\n            for i, p in enumerate(files):\n                b = os.path.basename(p)[7:-4]\n                t = (datetime.strptime(b, \"%Y%m%dT%H%M\").replace(tzinfo=timezone.utc)\n                     if \"T\" in b else desde + timedelta(hours=sh * i))\n                with rasterio.open(p) as ds:\n                    a = ds.read(1)\n                    if mask is None:\n                        mask = ~geometry_mask([geom], out_shape=a.shape, transform=ds.transform, all_touched=True)\n                        r, col = ds.index(*CIUDAD)\n                    v = float(a[r, col]) if np.isfinite(a[r, col]) else 0.0\n                    am = np.where(mask & np.isfinite(a), a, -1)\n                    j = int(am.argmax()); vm = float(am.flat[j])\n                    if vm > best[0]:\n                        rr, cc = np.unravel_index(j, a.shape)\n                        best = (vm, t.strftime(\"%Y-%m-%dT%H:%MZ\"), [round(x, 2) for x in ds.xy(rr, cc)])\n                serie.append([t.strftime(\"%Y-%m-%dT%H:%MZ\"), round(v, 3)])\n            rain = os.path.join(dom, sub, \"rain_liquid_total.tif\")\n            with rasterio.open(rain) as ds:\n                lluvia = float(ds.read(1)[r, col])\n            rec[\"modelos\"][m] = {\"serie_celda_ciudad\": serie, \"max_comuna\": {\"valor\": round(best[0], 3), \"utc\": best[1], \"celda\": best[2]},\n                                 \"lluvia_120h_celda_ciudad_mm\": round(lluvia, 1),\n                                 \"max_celda_ciudad\": max(serie, key=lambda x: x[1])}\n        out.append(rec)\n        print(c, rec[\"nivel\"], rec[\"peak\"], [s[\"name\"] for s in wl], file=sys.stderr)\n    p = os.path.join(E, \"pronostico\", \"por_ciclo.json\")\n    os.makedirs(os.path.dirname(p), exist_ok=True)\n    json.dump({\"comuna\": \"CURACAUTÍN\", \"cut\": CUT, \"celda_ciudad\": CIUDAD, \"nivel_alerta\": NIVEL_FORECAST,\n               \"umbral_por_modelo\": {\"gfs\": \"regional-a5.5\", \"ecmwf\": \"regional-a5.5\", \"icon\": \"caine-global\"},\n               \"ciclos\": out}, open(p, \"w\"), ensure_ascii=False, indent=1)\n    print(\"escrito\", p, file=sys.stderr)\n"
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/curacautin_20261012/pronostico/por_ciclo.json",
+          "sha256": "c55bd819bcebadf0253c4c23d63c21a4063c96ce6ff55bdf08c295daa4cff51b",
+          "bytes": 191366
+        },
+        {
+          "tipo": "comando",
+          "cmd": "PATH=$HOME/nowcast-monitor/venv/bin:$PATH python3 docs/informes/frente-2026-10/scripts/curacautin_20261012.py | sed -n '1,17p'",
+          "cwd": ".",
+          "exit": 0,
+          "sha256": "79cccb8adf31a209580410574cb1c3991c54d4a3cadb506b157ac70a37403966",
+          "salida": "PRONÓSTICO COMUNAL — Curacautín (CUT 9203), dominio chile-centro-sur, nivel ALTO ≥0.5\nciclo         nivel     GFS  ECMWF   ICON  watchlist      pico ECMWF (dónde, cuándo)                 ciudad lun 12 17–21Z: GFS/ECMWF/ICON máx\n20261010T00z  BAJO     0.09   0.25   0.06  -              0.25 en [-71.45, -38.55] 2026-10-12T21:00Z   0.05/0.03/0.04\n20261010T06z  BAJO     0.20   0.25   0.06  -              0.25 en [-71.45, -38.55] 2026-10-12T21:00Z   0.05/0.03/0.03\n20261010T12z  BAJO     0.18   0.24   0.05  -              0.24 en [-71.45, -38.35] 2026-10-12T21:00Z   0.08/0.06/0.03\n20261010T18z  BAJO     0.10   0.24   0.08  -              0.24 en [-71.45, -38.35] 2026-10-12T21:00Z   0.05/0.06/0.06\n20261011T00z  ALTO     0.92   0.31   0.10  curacautin     0.31 en [-71.95, -38.25] 2026-10-12T06:00Z   0.05/0.05/0.06\n20261011T06z  BAJO     0.23   0.31   0.06  -              0.31 en [-71.95, -38.25] 2026-10-12T06:00Z   0.06/0.05/0.04\n20261011T12z  MEDIO    0.41   0.34   0.05  -              0.34 en [-71.45, -38.45] 2026-10-12T18:00Z   0.06/0.03/0.04\n20261011T18z  BAJO     0.21   0.34   0.05  -              0.34 en [-71.45, -38.45] 2026-10-12T18:00Z   0.05/0.03/0.03\n20261012T00z  MEDIO    0.48   0.72   0.05  curacautin     0.72 en [-71.45, -38.55] 2026-10-12T18:00Z   0.06/0.08/0.02\n20261012T06z  MEDIO    0.33   0.72   0.05  curacautin     0.72 en [-71.45, -38.55] 2026-10-12T18:00Z   0.06/0.08/0.03\n20261012T12z  ALTO     0.95   0.34   0.06  curacautin+exp 0.34 en [-71.75, -38.25] 2026-10-12T15:00Z   0.07/0.10/0.04\n  20261012T00z: máx en la celda de la ciudad por modelo (toda la ventana): gfs 0.26 (2026-10-15T22:00Z), ecmwf 0.10 (2026-10-12T12:00Z), icon 0.04 (2026-10-14T07:00Z); lluvia 120 h en la celda: gfs 32 mm, ecmwf 15 mm, icon 19 mm\n  20261012T06z: máx en la celda de la ciudad por modelo (toda la ventana): gfs 0.11 (2026-10-13T01:00Z), ecmwf 0.10 (2026-10-12T12:00Z), icon 0.04 (2026-10-12T21:00Z); lluvia 120 h en la celda: gfs 30 mm, ecmwf 15 mm, icon 15 mm\n  distancia del pico ECMWF del ciclo 06z a la ciudad: 41 km\n",
+          "fecha": "2026-10-12T22:02:22-03:00",
+          "segundos": 0.16
+        }
+      ]
+    },
+    {
+      "id": "A26",
+      "texto": "El sensor de rayos GLM de GOES-19 vio la celda sobre la ciudad y la vio antes. Barrido de 1.257 archivos GLM-L2-LCFA de las 16Z a las 23Z del 12-oct (monitor/fetch_glm.py, mismo lector del feed del monitor): 2.129 descargas en la Araucanía, 408 en un recuadro de ±0,4° en torno a la ciudad y 118 a 5 km o menos de ella. La primera descarga a 7 km o menos fue a las 17:05Z (14:05 de Chile) y a 5 km o menos a las 17:11Z; el conteo a ≤5 km sube de 2 a 24 por 10 min entre las 17:10Z y las 18:10Z, y el centroide de las descargas del recuadro queda a 1–3 km de la ciudad entre las 18:10Z y las 18:50Z (15:10–15:50 de Chile), que es la hora del evento según la prensa. Después la celda se desplaza al oeste (centroide a 25–36 km desde las 19:50Z) y el máximo regional, 160 descargas por 10 min, cae a las 20:50Z lejos de Curacautín. El GLM dio una hora de anticipación respecto de la llegada de la celda a la ciudad, como en Las Condes el 8-oct (A14).",
+      "estado": "verificado",
+      "tema": "Curacautín 12-oct: evento convectivo fuera del monitor",
+      "evidencia": [
+        {
+          "tipo": "codigo",
+          "ruta": "docs/informes/frente-2026-10/scripts/curacautin_20261012.py",
+          "lineas": [
+            133,
+            159
+          ],
+          "sha256": "d662d97bafd3e0cfddf1ce6d41d9aaa6b26cb248b45eaee0193e857ba1cedbdd",
+          "extracto": "    G = json.load(open(os.path.join(E, \"glm\", \"flashes_curacautin_12oct.json\")))\n    bins = G[\"bins\"]; pts = G[\"curacautin_pts\"]\n    print(\"\\nGLM GOES-19 (barrido GLM-L2-LCFA 16Z–23Z) — descargas por 10 min UTC: Araucanía | caja ±0.4° Curacautín | ≤5 km de la ciudad\")\n    d5 = {}\n    for lat, lon, hms in pts:\n        if dist_km(lon, lat) <= 5:\n            slot = hms[:4] + \"0\"\n            d5[slot] = d5.get(slot, 0) + 1\n    for slot in sorted(bins):\n        a, cu = bins[slot].get(\"araucania\", 0), bins[slot].get(\"curacautin\", 0)\n        if cu or d5.get(slot):\n            print(f\"  {slot}  {a:5d} | {cu:4d} | {d5.get(slot, 0):3d}\")\n    tot_a = sum(b.get(\"araucania\", 0) for b in bins.values())\n    print(f\"  total Araucanía {tot_a}, caja {len(pts)}, ≤5 km {sum(d5.values())}; \"\n          f\"máximo regional {max(bins.values(), key=lambda b: b.get('araucania', 0)).get('araucania')} /10 min a las \"\n          f\"{max(bins, key=lambda s: bins[s].get('araucania', 0))}Z\")\n    # centroide por 10 min y primera descarga a ≤7 km\n    print(\"  centroide de las descargas de la caja por 10 min (distancia a la ciudad):\")\n    cent = {}\n    for lat, lon, hms in pts:\n        cent.setdefault(hms[:4] + \"0\", []).append((lon, lat))\n    for slot in sorted(cent):\n        xs = np.array(cent[slot]); c = xs.mean(0)\n        print(f\"    {slot}  n={len(xs):3d}  centroide ({c[0]:.2f},{c[1]:.2f}) a {dist_km(*c):4.1f} km\")\n    pr7 = min((hms for lat, lon, hms in pts if dist_km(lon, lat) <= 7), default=None)\n    pr5 = min((hms for lat, lon, hms in pts if dist_km(lon, lat) <= 5), default=None)\n    print(f\"  primera descarga a ≤7 km: {pr7}Z; a ≤5 km: {pr5}Z (Chile = UTC−3)\")"
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/curacautin_20261012/glm/flashes_curacautin_12oct.json",
+          "sha256": "1aaeac234df5c69912def2a7782f992779ed2d51cdf457858d2cd56f0b236ea3",
+          "bytes": 23659
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/curacautin_20261012/glm/glm_curacautin.py",
+          "sha256": "25119380d9c3684eea30ee862d48ab0f564b9a0f5c0e0a59d33abe0dcdf63823",
+          "bytes": 2297
+        },
+        {
+          "tipo": "comando",
+          "cmd": "PATH=$HOME/nowcast-monitor/venv/bin:$PATH python3 docs/informes/frente-2026-10/scripts/curacautin_20261012.py | sed -n '/^GLM GOES-19/,/primera descarga/p'",
+          "cwd": ".",
+          "exit": 0,
+          "sha256": "52aaa8df1842eb21d5db1220ac23e7995a5c5ae8228b17a8a80bf8978f798685",
+          "salida": "  19:00     22 |   14 |   0\n  19:10     19 |    8 |   0\n  19:20     42 |    9 |   0\n  19:30     40 |    6 |   0\n  19:40     39 |   11 |   0\n  19:50     56 |   21 |   0\n  20:00     53 |   24 |   0\n  20:10     50 |   30 |   0\n  20:20     39 |   21 |   0\n  20:30     45 |   12 |   0\n  20:40    107 |   10 |   0\n  20:50    160 |    3 |   0\n  total Araucanía 2129, caja 408, ≤5 km 118; máximo regional 160 /10 min a las 20:50Z\n  centroide de las descargas de la caja por 10 min (distancia a la ciudad):\n    16:40  n=  3  centroide (-71.82,-38.30) a 15.3 km\n    17:00  n=  6  centroide (-71.85,-38.38) a  6.7 km\n    17:10  n= 13  centroide (-71.86,-38.38) a  5.8 km\n    17:20  n= 19  centroide (-71.85,-38.39) a  6.0 km\n    17:30  n= 21  centroide (-71.84,-38.40) a  5.6 km\n    17:40  n= 18  centroide (-71.83,-38.37) a  8.8 km\n    17:50  n= 26  centroide (-71.84,-38.37) a  7.9 km\n    18:00  n= 20  centroide (-71.85,-38.39) a  5.4 km\n    18:10  n= 29  centroide (-71.88,-38.43) a  1.1 km\n    18:20  n= 20  centroide (-71.90,-38.45) a  2.2 km\n    18:30  n= 20  centroide (-71.88,-38.42) a  1.3 km\n    18:40  n= 19  centroide (-71.88,-38.40) a  3.3 km\n    18:50  n= 25  centroide (-71.92,-38.43) a  2.9 km\n    19:00  n= 14  centroide (-71.85,-38.30) a 15.2 km\n    19:10  n=  8  centroide (-71.87,-38.36) a  7.7 km\n    19:20  n=  9  centroide (-72.18,-38.41) a 25.0 km\n    19:30  n=  6  centroide (-71.82,-38.24) a 22.2 km\n    19:40  n= 11  centroide (-72.08,-38.48) a 17.8 km\n    19:50  n= 21  centroide (-72.16,-38.51) a 25.0 km\n    20:00  n= 24  centroide (-72.18,-38.52) a 26.9 km\n    20:10  n= 30  centroide (-72.19,-38.54) a 28.3 km\n    20:20  n= 21  centroide (-72.23,-38.53) a 31.6 km\n    20:30  n= 12  centroide (-72.25,-38.55) a 34.2 km\n    20:40  n= 10  centroide (-72.26,-38.57) a 35.9 km\n    20:50  n=  3  centroide (-72.23,-38.47) a 30.3 km\n  primera descarga a ≤7 km: 17:05:20Z; a ≤5 km: 17:11:20Z (Chile = UTC−3)",
+          "fecha": "2026-10-12T22:02:23-03:00",
+          "segundos": 0.17
+        }
+      ]
+    },
+    {
+      "id": "A27",
+      "texto": "GOES QPE (ABI-L2-RRQPEF, el mismo fetcher del monitor sobre el recuadro −72,30/−38,75/−71,50/−38,10, 17 pasos de 30 min 15Z–23Z) sí vio lluvia esta vez, pero poca: en la celda de la ciudad 3,5 mm en total, con 0,49–0,88 mm por paso entre las 17Z y las 19:30Z; el máximo del recuadro fue 2,5 mm por 30 min a 13–25 km de la ciudad (18:00Z y 18:30Z) y 2,6 mm a 33 km (20:00Z). A diferencia de Las Condes (A12: IMERG 0,37 y GOES 1,66 mm contra 12,6 observados) acá el QPE no estuvo en cero, pero 0,9 mm/30 min queda muy por debajo de lo que cruza un umbral I-D (a*=5.5 pide del orden de 5 mm/h sostenidos). No hay EMA de la DMC en la comuna: las más cercanas son Victoria (380063, 45 km al oeste) y Lonquimay (380018, 46 km al este), archivadas con archive_ema antes de que la API perdiera la ventana: Victoria 0,1 mm a las 14Z y nada más; Lonquimay 0,0 mm en todo el día; Angol (370067) no entrega datos desde julio. No existe medición de lluvia en superficie de este evento.",
+      "estado": "verificado",
+      "tema": "Curacautín 12-oct: evento convectivo fuera del monitor",
+      "evidencia": [
+        {
+          "tipo": "codigo",
+          "ruta": "docs/informes/frente-2026-10/scripts/curacautin_20261012.py",
+          "lineas": [
+            161,
+            198
+          ],
+          "sha256": "792d4101364ffd6c604418c4b6b3f1cedf18680572815fb421343dbbb7faa247",
+          "extracto": "    import rasterio\n    print(\"\\nGOES QPE (ABI-L2-RRQPEF, pasos de 30 min) — mm en la celda de la ciudad | máximo de la caja (dónde)\")\n    tot = 0.0\n    for p in sorted(glob.glob(os.path.join(E, \"goes\", \"steps\", \"step_*.tif\"))):\n        k = os.path.basename(p)[5:-4]\n        with rasterio.open(p) as ds:\n            a = ds.read(1); r, c = ds.index(*CIUDAD)\n            v = float(a[r, c]) if np.isfinite(a[r, c]) else 0.0\n            am = np.where(np.isfinite(a), a, 0); j = int(am.argmax()); rr, cc = np.unravel_index(j, a.shape)\n            x, y = ds.xy(rr, cc)\n        tot += v\n        if \"T1600\" <= k[8:] <= \"T2100\":\n            print(f\"  {k}  {v:5.2f} | {am.max():5.2f} en ({x:.2f},{y:.2f}) a {dist_km(x, y):4.1f} km\")\n    print(f\"  total en la celda de la ciudad, todos los pasos congelados: {tot:.1f} mm\")\n\n    print(\"\\nEMAs DMC (archivo archive_ema, registros crudos del 12-oct) — mm por hora UTC 12Z–23Z\")\n    red = json.load(open(os.path.join(E, \"ema\", \"estaciones_araucania.json\")))\n    for code in (\"380063\", \"380018\"):\n        p = os.path.join(E, \"ema\", f\"{code}-2026-10-12.jsonl\")\n        st = [s for s in red if str(s[\"codigoNacional\"]) == code][0]\n        hor = {}\n        n = 0\n        for l in open(p):\n            d = json.loads(l); n += 1\n            mm = d.get(\"aguaCaidaDelMinuto\") or d.get(\"mm\") or \"0\"\n            try:\n                v = float(str(mm).split()[0].replace(\",\", \".\"))\n            except ValueError:\n                v = 0.0\n            h = (d.get(\"momento\") or d.get(\"utc\") or \"\").replace(\" \", \"T\")[:13]\n            hor[h] = hor.get(h, 0.0) + v\n        hs = sorted(h for h in hor if \"2026-10-12T12\" <= h <= \"2026-10-12T23\")\n        print(f\"  {code} {st['nombreEstacion']:18s} ({float(st['longitud']):.2f},{float(st['latitud']):.2f}) a {dist_km(float(st['longitud']), float(st['latitud'])):3.0f} km: \"\n              + \" \".join(f\"{h[11:13]}Z:{hor[h]:.1f}\" for h in hs) + f\"  | {n} registros\")\n    print(\"  370067 Angol, Húsares: solo 5 registros, de julio (estación sin datos en la API)\")\n    cerca = sorted(((dist_km(float(s[\"longitud\"]), float(s[\"latitud\"])), s[\"nombreEstacion\"], s[\"codigoNacional\"]) for s in red))[:4]\n    print(\"  EMAs DMC más cercanas a Curacautín: \" + \"; \".join(f\"{n} ({c}) {d:.0f} km\" for d, n, c in cerca))\n"
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/curacautin_20261012/goes/status.json",
+          "sha256": "7067be968ad8bdd8ccb69702fd46f55c04282bc29878cde407e7dd090e251eda",
+          "bytes": 323
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/curacautin_20261012/ema/380063-2026-10-12.jsonl",
+          "sha256": "29e38f8c8b17570b9552775cb43bcdcb2d1c696142a0857aec64f5e90a9d4d70",
+          "bytes": 651565
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/curacautin_20261012/ema/380018-2026-10-12.jsonl",
+          "sha256": "0f01e0f2ca241e0a7bc1aec9af1ca86f8a504d4ee7f2fc4180657c5d5b1649e3",
+          "bytes": 609770
+        },
+        {
+          "tipo": "dato",
+          "ruta": "docs/informes/frente-2026-10/evidencia/curacautin_20261012/ema/estaciones_araucania.json",
+          "sha256": "bab44b8ec7e00e3f718fd748da2123870c3c6449e17e95732bcac6cea0098dea",
+          "bytes": 3352
+        },
+        {
+          "tipo": "comando",
+          "cmd": "PATH=$HOME/nowcast-monitor/venv/bin:$PATH python3 docs/informes/frente-2026-10/scripts/curacautin_20261012.py | sed -n '/^GOES QPE/,$p'",
+          "cwd": ".",
+          "exit": 0,
+          "sha256": "2c967fe6980e887ad4f22af6e518622e274e77c1455577142704517162ca2b75",
+          "salida": "GOES QPE (ABI-L2-RRQPEF, pasos de 30 min) — mm en la celda de la ciudad | máximo de la caja (dónde)\n  20261012T1600   0.00 |  0.06 en (-71.75,-38.55) a 18.0 km\n  20261012T1630   0.12 |  0.13 en (-71.75,-38.45) a 12.4 km\n  20261012T1700   0.59 |  0.80 en (-71.85,-38.55) a 13.7 km\n  20261012T1730   0.49 |  1.21 en (-71.75,-38.65) a 27.2 km\n  20261012T1800   0.49 |  2.48 en (-71.85,-38.55) a 13.7 km\n  20261012T1830   0.06 |  2.49 en (-71.85,-38.65) a 24.6 km\n  20261012T1900   0.73 |  2.21 en (-71.75,-38.35) a 15.1 km\n  20261012T1930   0.88 |  1.75 en (-71.65,-38.45) a 21.0 km\n  20261012T2000   0.09 |  2.56 en (-72.15,-38.65) a 33.3 km\n  20261012T2030   0.00 |  2.24 en (-72.25,-38.75) a 47.3 km\n  20261012T2100   0.00 |  0.65 en (-72.25,-38.75) a 47.3 km\n  total en la celda de la ciudad, todos los pasos congelados: 3.5 mm\n\nEMAs DMC (archivo archive_ema, registros crudos del 12-oct) — mm por hora UTC 12Z–23Z\n  380063 Victoria (Reg.)    (-72.34,-38.23) a  45 km: 12Z:0.0 13Z:0.0 14Z:0.1 15Z:0.0 16Z:0.0 17Z:0.0 18Z:0.0 19Z:0.0 20Z:0.0 21Z:0.0 22Z:0.0 23Z:0.0  | 710 registros\n  380018 Lonquimay          (-71.36,-38.45) a  46 km: 12Z:0.0 13Z:0.0 14Z:0.0 15Z:0.0 16Z:0.0 17Z:0.0 18Z:0.0 19Z:0.0 20Z:0.0 21Z:0.0 22Z:0.0  | 665 registros\n  370067 Angol, Húsares: solo 5 registros, de julio (estación sin datos en la API)\n  EMAs DMC más cercanas a Curacautín: Victoria (Reg.) (380063) 45 km; Lonquimay (380018) 46 km; Rucamanque-UFRO (380032) 67 km; Maquehue, Temuco Ad. (380013) 75 km",
+          "fecha": "2026-10-12T22:02:23-03:00",
+          "segundos": 0.25
+        }
+      ]
+    },
+    {
+      "id": "A28",
+      "texto": "Curacautín repite el patrón de Las Condes (A12–A14) con un segundo evento convectivo en cuatro días: la celda de 20 minutos no la resuelve ningún QPF (los tres modelos la ponen en otra parte o en otro día, y el acuerdo entre modelos para la comuna nunca existió: GFS y ECMWF alternaron el nivel ciclo a ciclo) ni, en la práctica, el QPE satelital (3,5 mm donde hubo granizo y desbordes), y la única señal con la hora y el lugar correctos fue la eléctrica. Que la comuna estuviera en MEDIO y en la lista de vigilancia es coincidencia de día, no un acierto del mecanismo: ECMWF apuntaba a la cordillera. Con un dominio de monitor en la Araucanía y el feed GLM activo (umbral de dominio 50 descargas en 60 min) el aviso de convección habría salido hacia las 17:30Z (14:30 de Chile), antes de que la celda llegara a la ciudad; hoy ese dominio no existe (solo corren atacama y rm). La lectura se sostiene en datos de sensores y prensa, no en una medición de lluvia en superficie, que no hay.",
+      "estado": "inferido",
+      "confianza": "muy probable",
+      "tema": "Curacautín 12-oct: evento convectivo fuera del monitor",
+      "depende_de": [
+        "A25",
+        "A26",
+        "A27"
+      ],
+      "evidencia": []
+    },
+    {
+      "id": "A29",
+      "texto": "El mecanismo de daño (desborde de un río menor, un canal vecinal y un estero urbano por granizo y lluvia intensa de 20 minutos) está fuera del modelo ladera × I-D del motor, como lo estuvo el canal de San Carlos de Apoquindo: aunque el monitor hubiera cruzado, el producto habría dicho peligro de remoción en masa en la celda, no inundación urbana por obstrucción de cauces con granizo. La utilidad operacional del sistema en estos casos es el aviso de convección eléctrica, no el índice I-D.",
+      "estado": "inferido",
+      "confianza": "probable",
+      "tema": "Curacautín 12-oct: evento convectivo fuera del monitor",
+      "depende_de": [
+        "A24",
+        "A27"
+      ],
+      "evidencia": []
     }
   ],
   "pendientes": [
@@ -628,7 +817,8 @@
     "Validar las máscaras de Ñuble–Biobío contra un perímetro oficial (CONAF/SENAPRED) cuando exista; descartar cortes de plantación.",
     "Fuente in situ densa para el piedemonte (Netatmo, enlaces de microondas): ningún producto satelital vio la ráfaga del 8-oct ni la lluvia frontal del 12-oct.",
     "Validar los umbrales del feed GLM (10 descargas sobre cicatriz, 50 en el dominio) y de la corroboración (1 mm, 3 h, fracción 0.5) sobre más eventos: ¿todas las ráfagas de piedemonte tienen rayos?",
-    "Retención de WORK_DIR/evidence/: nadie lo poda (hoy ~3 MB por racha, casi todo registros crudos de EMAs)."
+    "Retención de WORK_DIR/evidence/: nadie lo poda (hoy ~3 MB por racha, casi todo registros crudos de EMAs).",
+    "Decidir si se instancia monitor@araucania con GLM_ENABLED=1: dos eventos convectivos en cuatro días (Las Condes 8-oct, Curacautín 12-oct) sin monitor NRT en la región; el feed GLM habría avisado una hora antes en los dos. Si se instancia, sumar las EMAs 380063 y 380018 a archive_ema aunque estén a 45 km."
   ],
   "reproducir": [
     "Reproduce el pronóstico: python3 docs/informes/frente-2026-10/scripts/pronostico_rm.py ~/nowcast-forecast/20261012T06z",
@@ -636,6 +826,7 @@
     "Reproduce la revisión de la alerta: python3 docs/informes/frente-2026-10/scripts/alerta_rm_20261010.py (lee evidencia/alerta_rm_20261010/)",
     "Reproduce las cicatrices: python3 docs/informes/frente-2026-10/scripts/cicatrices.py <comunas.geojson> y susc_en_cicatriz.py (requiere KINGSTON montado)",
     "Recalcula una cicatriz: monitor/postfire_scar.py --nombre … --pre … --post … --bbox … --fecha-incendio … --basin … (ver meta.json de cada una)",
-    "Reproduce el cruce real del 12-oct: PATH=~/nowcast-monitor/venv/bin:$PATH python3 docs/informes/frente-2026-10/scripts/cruce_rm_20261012.py (lee evidencia/cruce_rm_20261012/)"
+    "Reproduce el cruce real del 12-oct: PATH=~/nowcast-monitor/venv/bin:$PATH python3 docs/informes/frente-2026-10/scripts/cruce_rm_20261012.py (lee evidencia/cruce_rm_20261012/)",
+    "Reproduce Curacautín: PATH=~/nowcast-monitor/venv/bin:$PATH python3 docs/informes/frente-2026-10/scripts/curacautin_20261012.py (lee evidencia/curacautin_20261012/; --extraer ~/nowcast-forecast regenera pronostico/por_ciclo.json con venv-forecast)"
   ]
 }
