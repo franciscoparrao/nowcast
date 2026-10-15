@@ -1040,6 +1040,19 @@ forcing is adequate and the engine discriminates observed floods out of sample
 the triggering process}, not resolution in the abstract, a daily product that is
 useless for convective-burst landslides is sufficient for routed floods.
 
+\textbf{The product ceiling, observed live.} The first weeks of shadow operation
+(limitation~(iii)) add a case the hindcasts could not: two convective bursts of
+twenty to sixty minutes, one of which caused a debris flow, that both half-hourly
+satellite products under-recorded by an order of magnitude at Las Condes and by
+enough to stay below any I--D curve at Curacaut\'in, while a rain gauge 7\,km
+away and the geostationary lightning mapper did not. Half-hourly resolution is
+necessary but not sufficient: at the scale of a single convective cell the
+satellite rainfall estimate, not the time step, is the binding constraint, and
+the low-latency sensor that resolves the burst is the one that does not measure
+rain. For burst-driven landslides the forcing interface therefore has to admit
+dense in-situ networks and convective proxies alongside satellite QPE, which is
+exactly the swap the design was built to make cheap.
+
 The same arithmetic bites on a second, less obvious surface: the
 \emph{climatological reference} against which an event is judged anomalous. For
 the 2026 event of limitation~(iii) we compared the observed half-hourly
@@ -1102,15 +1115,40 @@ the full ensemble of 35 published I--D thresholds (Section~5.1), but a formal
 calibration with uncertainty against an \emph{operational} early-warning system
 remains future work. (iii) The engine includes a streaming nowcast that ingests
 forcing step by step and emits alerts online (bit-identical to the batch engine).
-A live multi-feed ingestion chain is now wired (half-hourly GPM IMERG Early NRT,
+A live multi-feed ingestion chain is wired (half-hourly GPM IMERG Early NRT,
 GOES-East QPE and in-situ rain gauges, fused by noisy-OR), and we replayed one dated
 2026 landslide event through it end to end. The engine placed the affected
 commune in alert for a ten-hour window on the day of the flows, crossing the
 threshold at 01:30 local time. But the alert covered roughly 40\,\% of the domain at
 its peak: at $0.1^{\circ}$ the run identifies the region and the timing, not the
 commune, so this is a consistency check rather than an operational skill
-estimate. A shadow season against independent reports remains the necessary
-step, and the validation reported in Sections~5.1--5.6 is hindcast throughout.
+estimate. Since October 2026 the chain has run in shadow mode over three domains
+(Atacama, Santiago and the Araucan\'ia), and its first weeks already sharpen the
+forcing diagnosis of the Discussion. On 8 October a one-hour convective burst on
+the Andean piedmont of Santiago produced a debris flow; a gauge 7\,km from the
+site recorded 12.6\,mm in four hours, 8.2 of them in the hour before the flow,
+while IMERG Early and GOES QPE recorded 0.37 and 1.66\,mm in the same cell. On
+satellite forcing alone the hazard in the burn scar stayed below 0.05 with either
+intercept; the gauge feed with the regional intercept crossed the alert level
+(0.29 against 0.267) at the hour of the flow, with no lead. On 12 October the
+Santiago domain produced its first real-time crossing, again sustained only by
+the gauge feed (9.4\,mm in the cell against 0.3 and 0.1\,mm from the two satellite
+products); no damage has been reported and it is not yet classified. The same
+afternoon a twenty-minute hail storm flooded 21 houses in Curacaut\'in, 600\,km
+to the south, where no gauge exists within 45\,km: GOES QPE saw 3.5\,mm in the
+city cell, and IMERG Early did resolve the cell (3.6\,mm in 30\,min), so that the
+hazard crossed one hour after the event, but that product is published some four
+hours late. In both convective cases the geostationary lightning mapper on the
+same satellite \citep{goodman2013} registered the cell first: 233 flashes over
+the piedmont with the peak thirty minutes before the Las Condes flow, and 118
+flashes within 5\,km of Curacaut\'in from an hour before the flooding. The chain
+now carries lightning as a diagnostic rather than a forcing, weighs a single-feed
+crossing by which feed sustains it, and freezes the evidence of every alert
+automatically. Three events in five days, reported by the press rather than by an
+inventory, do not constitute a skill estimate, and the false-alarm rate of the
+regional intercept is still being measured; the shadow season remains the
+necessary step, and the validation reported in Sections~5.1--5.6 is hindcast
+throughout.
 (iv) Antecedent soil moisture is captured only implicitly through long rolling
 windows, not as an explicit state. (v) The multi-trigger combination weights and
 the deformation critical rate are not yet calibrated. (vi) The snowmelt, InSAR-deformation
@@ -1324,6 +1362,12 @@ Garreaud, R.D., Boisier, J.P., Rondanelli, R., Montecinos, A., Sep\'ulveda, H.H.
 Veloso-Aguila, D., 2019. The Central Chile Mega Drought (2010--2018): a climate
 dynamics perspective. Int.\ J.\ Climatol.\ 40 (1), 421--439.
 \url{https://doi.org/10.1002/joc.6219}.
+
+\bibitem[Goodman et al.(2013)]{goodman2013}
+Goodman, S.J., Blakeslee, R.J., Koshak, W.J., Mach, D., Bailey, J., Buechler, D.,
+Carey, L., Schultz, C., Bateman, M., McCaul, E., Stano, G., 2013. The GOES-R
+Geostationary Lightning Mapper (GLM). Atmos.\ Res.\ 125--126, 34--49.
+\url{https://doi.org/10.1016/j.atmosres.2013.01.006}.
 
 \bibitem[Gregersen et al.(2007)]{gregersen2007}
 Gregersen, J.B., Gijsbers, P.J.A., Westen, S.J.P., 2007. OpenMI: Open modelling

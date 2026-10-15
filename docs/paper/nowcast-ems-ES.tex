@@ -1200,6 +1200,20 @@ la forzante \emph{relativa al proceso gatillante}, no a la resolución en abstra
 un producto diario que es inútil para deslizamientos por ráfaga convectiva es
 suficiente para crecidas ruteadas.
 
+\textbf{El techo del producto, observado en vivo.} Las primeras semanas de
+operación en sombra (limitación~(iii)) agregan un caso que los hindcasts no
+podían: dos ráfagas convectivas de veinte a sesenta minutos, una de las cuales
+causó un flujo de detritos, que los dos productos satelitales semihorarios
+subregistraron en un orden de magnitud en Las Condes y lo bastante para quedar
+bajo cualquier curva I--D en Curacautín, mientras un pluviómetro a 7\,km y el
+mapeador geoestacionario de rayos no. La resolución semihoraria es necesaria pero
+no suficiente: a la escala de una sola celda convectiva la restricción que manda es
+la estimación satelital de lluvia, no el paso de tiempo, y el sensor de baja
+latencia que resuelve la ráfaga es el que no mide lluvia. Para deslizamientos
+gatillados por ráfagas la interfaz de forzante tiene entonces que admitir redes in
+situ densas y proxies convectivos junto al QPE satelital, que es exactamente el
+intercambio que el diseño se construyó para abaratar.
+
 La misma aritmética muerde en una segunda superficie, menos obvia: la
 \emph{referencia climatológica} contra la cual se juzga anómalo un evento. Para el
 evento de 2026 de la limitación~(iii) comparamos la acumulación semihoraria
@@ -1273,16 +1287,42 @@ completo de 35 umbrales I--D publicados (Sección~5.1), pero una calibración fo
 con incertidumbre contra un sistema de alerta temprana \emph{operacional} queda
 como trabajo futuro. (iii) El motor incluye un nowcast por streaming que ingiere la
 forzante paso a paso y emite alertas en línea (bit-idéntico al motor batch). Una
-cadena de ingesta multi-feed en vivo está ahora conectada (GPM IMERG Early NRT
+cadena de ingesta multi-feed en vivo está conectada (GPM IMERG Early NRT
 semihorario, QPE de GOES-East y pluviómetros in situ, fusionados por noisy-OR), y
 reprodujimos un evento de deslizamiento fechado de 2026 a través de ella de punta a
 punta. El motor puso a la comuna afectada en alerta durante una ventana de diez
 horas el día de los flujos, cruzando el umbral a las 01:30 hora local. Pero la
 alerta cubrió aproximadamente el 40\,\% del dominio en su peak: a $0.1^{\circ}$ la
 corrida identifica la región y el timing, no la comuna, así que esto es un chequeo
-de consistencia más que una estimación de skill operacional. Una temporada en modo
-sombra contra reportes independientes sigue siendo el paso necesario, y la
-validación reportada en las Secciones~5.1--5.6 es hindcast en su totalidad. (iv) La
+de consistencia más que una estimación de skill operacional. Desde octubre de 2026
+la cadena corre en modo sombra sobre tres dominios (Atacama, Santiago y la
+Araucanía), y sus primeras semanas ya afinan el diagnóstico sobre la forzante de la
+Discusión. El 8 de octubre una ráfaga convectiva de una hora en el piedemonte
+andino de Santiago produjo un flujo de detritos; un pluviómetro a 7\,km del sitio
+registró 12.6\,mm en cuatro horas, 8.2 de ellos en la hora previa al flujo,
+mientras IMERG Early y el QPE de GOES registraron 0.37 y 1.66\,mm en la misma
+celda. Solo con forzante satelital el peligro en la cicatriz quemada se mantuvo
+bajo 0.05 con cualquiera de los dos interceptos; el feed de pluviómetros con el
+intercepto regional cruzó el nivel de alerta (0.29 contra 0.267) a la hora del
+flujo, sin anticipación. El 12 de octubre el dominio de Santiago produjo su primer
+cruce en tiempo real, sostenido otra vez solo por el feed de pluviómetros
+(9.4\,mm en la celda contra 0.3 y 0.1\,mm de los dos productos satelitales); no se
+ha reportado daño y aún no está clasificado. Esa misma tarde una granizada de
+veinte minutos inundó 21 viviendas en Curacautín, 600\,km al sur, donde no existe
+pluviómetro en 45\,km a la redonda: el QPE de GOES vio 3.5\,mm en la celda de la
+ciudad, e IMERG Early sí resolvió la celda (3.6\,mm en 30\,min), de modo que el
+peligro cruzó una hora después del evento, pero ese producto se publica con unas
+cuatro horas de retraso. En los dos casos convectivos el mapeador geoestacionario
+de rayos del mismo satélite \citep{goodman2013} registró la celda primero: 233
+descargas sobre el piedemonte con el peak treinta minutos antes del flujo de Las
+Condes, y 118 descargas a menos de 5\,km de Curacautín desde una hora antes de la
+inundación. La cadena ahora lleva los rayos como diagnóstico y no como forzante,
+pondera un cruce de un solo feed según cuál feed lo sostiene y congela la
+evidencia de cada alerta automáticamente. Tres eventos en cinco días, reportados
+por la prensa y no por un inventario, no constituyen una estimación de skill, y la
+tasa de falsas alarmas del intercepto regional todavía se está midiendo; la
+temporada en modo sombra sigue siendo el paso necesario, y la validación reportada
+en las Secciones~5.1--5.6 es hindcast en su totalidad. (iv) La
 humedad antecedente del suelo se captura solo implícitamente mediante ventanas
 móviles largas, no como un estado explícito. (v) Los pesos de combinación
 multi-gatillo y la tasa crítica de deformación aún no están calibrados. (vi) Los
@@ -1505,6 +1545,12 @@ Garreaud, R.D., Boisier, J.P., Rondanelli, R., Montecinos, A., Sep\'ulveda, H.H.
 Veloso-Aguila, D., 2019. The Central Chile Mega Drought (2010--2018): a climate
 dynamics perspective. Int.\ J.\ Climatol.\ 40 (1), 421--439.
 \url{https://doi.org/10.1002/joc.6219}.
+
+\bibitem[Goodman et al.(2013)]{goodman2013}
+Goodman, S.J., Blakeslee, R.J., Koshak, W.J., Mach, D., Bailey, J., Buechler, D.,
+Carey, L., Schultz, C., Bateman, M., McCaul, E., Stano, G., 2013. The GOES-R
+Geostationary Lightning Mapper (GLM). Atmos.\ Res.\ 125--126, 34--49.
+\url{https://doi.org/10.1016/j.atmosres.2013.01.006}.
 
 \bibitem[Gregersen et al.(2007)]{gregersen2007}
 Gregersen, J.B., Gijsbers, P.J.A., Westen, S.J.P., 2007. OpenMI: Open modelling
