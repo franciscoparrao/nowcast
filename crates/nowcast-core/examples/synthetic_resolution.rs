@@ -78,6 +78,39 @@ const THETA_CRIT_MM: f64 = 12.0; // failure when the store exceeds this
 
 const SWEEP_K: [usize; 6] = [1, 2, 6, 12, 24, 48]; // aggregation factors (× 0.5 h)
 
+/// The knobs a reviewer will ask about, gathered so the `--sweep` mode can move
+/// them one at a time. `Cfg::paper()` reproduces the constants above exactly
+/// (the default run is bit-identical to the pre-sweep version of this example).
+#[derive(Clone, Copy)]
+struct Cfg {
+    /// Burst totals (mm) delivered in ~1 h.
+    event_total: (f64, f64),
+    /// Store drainage rate (1/h); the time constant is its inverse.
+    drain_per_h: f64,
+    /// Failure when the store exceeds this (mm).
+    theta_crit: f64,
+    /// I–D intercept (mm/h) of the trigger under test.
+    a_intercept: f64,
+    label: &'static str,
+}
+
+impl Cfg {
+    const fn paper() -> Cfg {
+        Cfg {
+            event_total: EVENT_TOTAL,
+            drain_per_h: DRAIN_PER_H,
+            theta_crit: THETA_CRIT_MM,
+            a_intercept: A_INTERCEPT,
+            label: "paper (bursts 8–30 mm, τ 4 h, θ 12 mm, a 5.5)",
+        }
+    }
+    /// Daily total at which a burst spread over 24 h reaches the I–D curve:
+    /// `I_crit(24 h) · 24 = a · 24^(1-b)`.
+    fn daily_ceiling_mm(&self) -> f64 {
+        self.a_intercept * 24f64.powf(1.0 - B_EXPONENT)
+    }
+}
+
 fn data_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data")
 }
@@ -129,7 +162,7 @@ fn build_susceptibility(dims: GridDims, rng: &mut Lcg) -> SusceptibilityMap {
 /// Build the half-hourly rainfall field and record which `(cell, day)` were
 /// generated as bursts — the *class*, kept only to report how far the physical
 /// labels depart from it (they are not the labels).
-fn build_rainfall(dims: GridDims, rng: &mut Lcg) -> (Vec<f64>, BTreeSet<(usize, usize)>) {
+fn build_rainfall(dims: GridDims, rng: &mut Lcg, cfg: &Cfg) -> (Vec<f64>, BTreeSet<(usize, usize)>) {
     let n = dims.len();
     let n_steps = N_DAYS * STEPS_PER_DAY;
     let mut depths = vec![0.0_f64; n_steps * n];
@@ -150,7 +183,7 @@ fn build_rainfall(dims: GridDims, rng: &mut Lcg) -> (Vec<f64>, BTreeSet<(usize, 
             let roll = rng.unit();
             if roll < P_EVENT_DAY {
                 // EVENT: short intense burst (~1 h = 2 half-hour steps), random hour
-                let total = rng.range(EVENT_TOTAL.0, EVENT_TOTAL.1);
+                let total = rng.range(cfg.event_total.0, cfg.event_total.1);
                 let start_h = rng.range(2.0, 21.0);
                 let s0 = day * STEPS_PER_DAY + (start_h / DT_SUB_H) as usize;
                 depths[s0 * n + cell] += total * 0.55;
@@ -184,10 +217,10 @@ fn build_rainfall(dims: GridDims, rng: &mut Lcg) -> (Vec<f64>, BTreeSet<(usize, 
 /// faster than the store drains accumulates) rather than through a power law,
 /// and infiltration capping means very intense rain partly runs off instead of
 /// loading the profile — a mechanism an I--D curve does not represent at all.
-fn soil_failures(dims: GridDims, depths: &[f64]) -> BTreeSet<(usize, usize)> {
+fn soil_failures(dims: GridDims, depths: &[f64], cfg: &Cfg) -> BTreeSet<(usize, usize)> {
     let n = dims.len();
     let n_steps = depths.len() / n;
-    let decay = 1.0 - DRAIN_PER_H * DT_SUB_H;
+    let decay = 1.0 - cfg.drain_per_h * DT_SUB_H;
     let infilt_cap = INFILT_MAX_MM_H * DT_SUB_H;
     let mut theta = vec![0.0_f64; n];
     let mut failures = BTreeSet::new();
@@ -196,7 +229,7 @@ fn soil_failures(dims: GridDims, depths: &[f64]) -> BTreeSet<(usize, usize)> {
         for cell in 0..n {
             let infiltrated = depths[step * n + cell].min(infilt_cap);
             theta[cell] = theta[cell] * decay + infiltrated;
-            if theta[cell] > THETA_CRIT_MM {
+            if theta[cell] > cfg.theta_crit {
                 failures.insert((cell, day));
             }
         }
@@ -229,6 +262,7 @@ fn day_max_hazard(
     susc: &SusceptibilityMap,
     depths: &[f64],
     dt_h: f64,
+    a_intercept: f64,
 ) -> Vec<f64> {
     let n = dims.len();
     let steps_per_day = (24.0 / dt_h).round() as usize;
@@ -237,7 +271,7 @@ fn day_max_hazard(
     let nowcast = Nowcast::new(
         susc.clone(),
         forcing,
-        IdThreshold::new(A_INTERCEPT, B_EXPONENT).unwrap(),
+        IdThreshold::new(a_intercept, B_EXPONENT).unwrap(),
         TriggerModel::default(),
         max_window,
     )
@@ -335,13 +369,13 @@ struct LabelAudit {
 }
 
 /// Per-resolution metrics for one realisation (one random seed).
-fn metrics_for_seed(dims: GridDims, seed: u64) -> (Vec<ResRow>, LabelAudit) {
+fn metrics_for_seed(dims: GridDims, seed: u64, cfg: &Cfg) -> (Vec<ResRow>, LabelAudit) {
     let n = dims.len();
     let mut rng = Lcg(seed);
     let susc = build_susceptibility(dims, &mut rng);
-    let (depths_sub, bursts) = build_rainfall(dims, &mut rng);
+    let (depths_sub, bursts) = build_rainfall(dims, &mut rng, cfg);
     // Ground truth from the independent mechanism, at native resolution.
-    let failures = soil_failures(dims, &depths_sub);
+    let failures = soil_failures(dims, &depths_sub, cfg);
     let audit = LabelAudit {
         n_positive: failures.len(),
         bursts_missed: bursts.difference(&failures).count(),
@@ -360,8 +394,8 @@ fn metrics_for_seed(dims: GridDims, seed: u64) -> (Vec<ResRow>, LabelAudit) {
     for &k in &SWEEP_K {
         let dt_h = DT_SUB_H * k as f64;
         let agg = aggregate(&depths_sub, n, k);
-        let haz_flat = day_max_hazard(dims, &flat, &agg, dt_h);
-        let haz_susc = day_max_hazard(dims, &susc, &agg, dt_h);
+        let haz_flat = day_max_hazard(dims, &flat, &agg, dt_h, cfg.a_intercept);
+        let haz_susc = day_max_hazard(dims, &susc, &agg, dt_h, cfg.a_intercept);
         rows.push((
             dt_h,
             auc(&haz_flat, &positive),
@@ -381,8 +415,85 @@ fn mean_sd(xs: &[f64]) -> (f64, f64) {
     (m, var.sqrt())
 }
 
+fn seed_for(s: usize) -> u64 {
+    // Distinct, deterministic seed per realisation (golden-ratio + FNV stride).
+    0x9E3779B97F4A7C15u64.wrapping_add((s as u64).wrapping_mul(0x100000001B3))
+}
+
+/// `--sweep`: move the design knobs one at a time from the paper configuration
+/// and report where the burst-driven collapse appears and disappears. The
+/// paper's collapse (0.46 → 0.00) is entailed by its burst range sitting below
+/// the daily ceiling of the a*=5.5 curve (38 mm/day); this mode shows what
+/// happens when bursts straddle or exceed that ceiling, when the store drains
+/// over days instead of hours, when the failure wetness changes, and under the
+/// global Caine intercept. Fewer seeds (5) than the headline run: this is a
+/// map, not a measurement.
+fn sweep(dims: GridDims) {
+    const SEEDS: usize = 5;
+    let base = Cfg::paper();
+    let configs: Vec<Cfg> = vec![
+        base,
+        Cfg { event_total: (30.0, 60.0), label: "bursts 30–60 mm (straddle the 38 mm daily ceiling)", ..base },
+        Cfg { event_total: (60.0, 120.0), label: "bursts 60–120 mm (all above the daily ceiling)", ..base },
+        Cfg { drain_per_h: 1.0, label: "τ 1 h (store drains within the burst)", ..base },
+        Cfg { drain_per_h: 1.0 / 24.0, label: "τ 24 h (store remembers a day)", ..base },
+        Cfg { drain_per_h: 1.0 / 120.0, label: "τ 120 h (antecedent-controlled failures)", ..base },
+        Cfg { theta_crit: 6.0, label: "θ_crit 6 mm (fails easily)", ..base },
+        Cfg { theta_crit: 24.0, label: "θ_crit 24 mm (fails rarely)", ..base },
+        Cfg { a_intercept: curves::PUBLISHED[0].0, label: "a 14.82 (Caine global)", ..base },
+        Cfg { event_total: (30.0, 60.0), drain_per_h: 1.0 / 24.0, label: "bursts 30–60 mm + τ 24 h", ..base },
+        Cfg { event_total: (60.0, 120.0), a_intercept: curves::PUBLISHED[0].0, label: "bursts 60–120 mm + a 14.82", ..base },
+    ];
+    let nk = SWEEP_K.len();
+    let dt_list: Vec<f64> = SWEEP_K.iter().map(|&k| DT_SUB_H * k as f64).collect();
+    println!(
+        "Synthetic sweep — {SEEDS} seeds per configuration; POD@5% on burst-driven | accumulation-driven failures
+         at dt = 0.5, 3, 6, 12, 24 h; 'half' = coarsest dt at which burst POD is still ≥ half its 0.5 h value;
+         'fail' = share of generated bursts that the store fails; 'non-burst' = failures on non-burst days (per seed).
+"
+    );
+    println!("{:<56} | {:>6} | {:>24} | {:>12} | {:>5} | {:>5} | {:>9}",
+        "configuration", "ceil", "burst POD 0.5/3/6/12/24h", "accum 0.5/24", "half", "fail", "non-burst");
+    println!("{}", "-".repeat(140));
+    let mut csv = String::from("config,daily_ceiling_mm,dt_h,pod_burst,pod_accum,auc_susc,trig,burst_fail_share,non_burst_failures
+");
+    for cfg in &configs {
+        let (mut pb, mut pa, mut au, mut tr) = (vec![vec![]; nk], vec![vec![]; nk], vec![vec![]; nk], vec![vec![]; nk]);
+        let (mut fail_share, mut nonburst) = (Vec::new(), Vec::new());
+        for sd in 0..SEEDS {
+            let (rows, audit) = metrics_for_seed(dims, seed_for(sd), cfg);
+            fail_share.push(1.0 - audit.bursts_missed as f64 / audit.n_bursts.max(1) as f64);
+            nonburst.push(audit.non_burst_failures as f64);
+            for (i, &(_, _, as_, _, trig, b, a)) in rows.iter().enumerate() {
+                pb[i].push(b); pa[i].push(a); au[i].push(as_); tr[i].push(trig);
+            }
+        }
+        let pbm: Vec<f64> = pb.iter().map(|v| mean_sd(v).0).collect();
+        let pam: Vec<f64> = pa.iter().map(|v| mean_sd(v).0).collect();
+        let half_dt = dt_list.iter().zip(pbm.iter()).filter(|&(_, &p)| p >= 0.5 * pbm[0]).map(|(&d, _)| d).fold(0.0, f64::max);
+        let (fs, _) = mean_sd(&fail_share);
+        let (nb, _) = mean_sd(&nonburst);
+        let pick = |i: usize| 100.0 * pbm[i];
+        println!("{:<56} | {:>4.0}mm | {:>3.0}/{:>3.0}/{:>3.0}/{:>3.0}/{:>3.0}% | {:>4.0}/{:>4.0}% | {:>4.1}h | {:>4.0}% | {:>9.0}",
+            cfg.label, cfg.daily_ceiling_mm(), pick(0), pick(2), pick(3), pick(4), pick(5),
+            100.0 * pam[0], 100.0 * pam[5], half_dt, 100.0 * fs, nb);
+        for i in 0..nk {
+            csv.push_str(&format!("\"{}\",{:.1},{:.2},{:.4},{:.4},{:.4},{:.4},{:.4},{:.1}\n",
+                cfg.label, cfg.daily_ceiling_mm(), dt_list[i], pbm[i], pam[i], mean_sd(&au[i]).0, mean_sd(&tr[i]).0, fs, nb));
+        }
+    }
+    let path = data_dir().join("synthetic_sweep.csv");
+    std::fs::write(&path, csv).unwrap();
+    eprintln!("wrote sweep ({SEEDS} seeds × {} configurations) to {}", configs.len(), path.display());
+}
+
 fn main() {
     let dims = GridDims::new(NCOLS, NROWS);
+    if std::env::args().any(|a| a == "--sweep") {
+        sweep(dims);
+        return;
+    }
+    let cfg = Cfg::paper();
     let n = dims.len();
     let nk = SWEEP_K.len();
 
@@ -394,9 +505,7 @@ fn main() {
     let mut pos_counts = Vec::with_capacity(N_SEEDS);
     let (mut missed_v, mut burst_v, mut nonburst_v) = (Vec::new(), Vec::new(), Vec::new());
     for s in 0..N_SEEDS {
-        // Distinct, deterministic seed per realisation (golden-ratio + FNV stride).
-        let seed = 0x9E3779B97F4A7C15u64.wrapping_add((s as u64).wrapping_mul(0x100000001B3));
-        let (rows, audit) = metrics_for_seed(dims, seed);
+        let (rows, audit) = metrics_for_seed(dims, seed_for(s), &cfg);
         pos_counts.push(audit.n_positive);
         missed_v.push(audit.bursts_missed as f64);
         burst_v.push(audit.n_bursts as f64);
@@ -417,14 +526,16 @@ fn main() {
     let (nonburst_m, _) = mean_sd(&nonburst_v);
     println!(
         "Synthetic resolution experiment — {NCOLS}×{NROWS} grid ({n} cells), {N_DAYS} days, {N_SEEDS} seeds\n\
-         ~{:.0} failing cell-days/seed ({:.2}% positives), I–D a={A_INTERCEPT}, b={B_EXPONENT}, max duration {MAX_DURATION_H} h\n\
-         Labels come from an INDEPENDENT mechanism (pore-pressure store, τ={:.0} h, θ_crit={THETA_CRIT_MM} mm),\n\
+         ~{:.0} failing cell-days/seed ({:.2}% positives), I–D a={}, b={B_EXPONENT}, max duration {MAX_DURATION_H} h\n\
+         Labels come from an INDEPENDENT mechanism (pore-pressure store, τ={:.0} h, θ_crit={} mm),\n\
          not from the I–D rule under test. Label audit per seed: {:.0} of {:.0} bursts do NOT fail,\n\
          and {:.0} failures happen on days that were not bursts — the label is not the class.\n\
          Same field per seed, aggregated to coarser resolution. Discrimination (mean ± sd over seeds):\n",
         pos_mean,
         100.0 * pos_mean / (N_DAYS * n) as f64,
-        1.0 / DRAIN_PER_H,
+        cfg.a_intercept,
+        1.0 / cfg.drain_per_h,
+        cfg.theta_crit,
         missed_m,
         burst_m,
         nonburst_m,

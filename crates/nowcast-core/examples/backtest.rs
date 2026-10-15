@@ -23,7 +23,7 @@
 //! the susceptibility surface a slide occurs — that arrives with distributed
 //! forcing in v0.2.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
 use nowcast_core::{
@@ -97,6 +97,142 @@ fn alert_days(depths: &[f64], a: f64) -> Vec<bool> {
         .into_iter()
         .map(|f| f.max_probability() >= ALERT_LEVEL)
         .collect()
+}
+
+/// Wilson 95 % interval for `k` successes in `n` trials.
+fn wilson(k: u64, n: u64) -> (f64, f64) {
+    if n == 0 {
+        return (f64::NAN, f64::NAN);
+    }
+    let (z, p, n) = (1.96_f64, k as f64 / n as f64, n as f64);
+    let denom = 1.0 + z * z / n;
+    let centre = (p + z * z / (2.0 * n)) / denom;
+    let half = z * (p * (1.0 - p) / n + z * z / (4.0 * n * n)).sqrt() / denom;
+    (centre - half, centre + half)
+}
+
+/// Same counting as `monthly_contingency`, on month-level sets (used by the
+/// permutation null, which shuffles alert months rather than days).
+fn month_contingency(
+    present: &BTreeSet<MonthKey>,
+    alerted: &BTreeSet<MonthKey>,
+    observed: &BTreeSet<MonthKey>,
+    tol: i32,
+) -> Contingency {
+    let shift = |(y, m): MonthKey, d: i32| -> MonthKey {
+        let idx = y * 12 + (m as i32 - 1) + d;
+        (idx.div_euclid(12), (idx.rem_euclid(12) + 1) as u32)
+    };
+    let alert_near = |mk: MonthKey| (-tol..=tol).any(|d| alerted.contains(&shift(mk, d)));
+    let event_near = |mk: MonthKey| (-tol..=tol).any(|d| observed.contains(&shift(mk, d)));
+    let mut c = Contingency::default();
+    for &ev in observed {
+        if alert_near(ev) {
+            c.hits += 1;
+        } else {
+            c.misses += 1;
+        }
+    }
+    for &mk in present {
+        if event_near(mk) {
+            continue;
+        }
+        if alerted.contains(&mk) {
+            c.false_alarms += 1;
+        } else {
+            c.correct_negatives += 1;
+        }
+    }
+    c
+}
+
+/// Deterministic LCG (Numerical Recipes constants) — no `rand` dependency.
+struct Lcg(u64);
+impl Lcg {
+    fn next_u32(&mut self) -> u32 {
+        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (self.0 >> 32) as u32
+    }
+    fn below(&mut self, n: usize) -> usize {
+        (self.next_u32() as usize) % n
+    }
+}
+
+fn nulls_and_intervals(day_month: &[MonthKey], alerts: &[bool], events: &[MonthKey], a: f64) {
+    const N_PERM: usize = 2000;
+    let present: BTreeSet<MonthKey> = day_month.iter().copied().collect();
+    let alerted: BTreeSet<MonthKey> = day_month
+        .iter()
+        .zip(alerts)
+        .filter_map(|(&mk, &al)| al.then_some(mk))
+        .collect();
+    let observed: BTreeSet<MonthKey> =
+        events.iter().copied().filter(|mk| present.contains(mk)).collect();
+    let years: Vec<i32> = {
+        let mut v: Vec<i32> = present.iter().map(|&(y, _)| y).collect();
+        v.dedup();
+        v
+    };
+    println!(
+        "\nUncertainty and nulls at a*={a:.1}: {} event-months, {} alert-months of {} ({:.0} % alert rate)",
+        observed.len(),
+        alerted.len(),
+        present.len(),
+        100.0 * alerted.len() as f64 / present.len() as f64
+    );
+    println!(
+        "{:>6} | {:>22} | {:>22} | {:>6} || {:>26} | {:>8} | {:>12}",
+        "tol", "POD [Wilson 95%]", "FAR [Wilson 95%]", "CSI", "year-shuffle POD mean/p95", "CSI p95", "P(CSI>=obs)"
+    );
+    println!("{}", "-".repeat(124));
+    let mut rng = Lcg(20261015);
+    for tol in 0..=3i32 {
+        let c = month_contingency(&present, &alerted, &observed, tol);
+        let (pod_lo, pod_hi) = wilson(c.hits, c.hits + c.misses);
+        let (far_lo, far_hi) = wilson(c.false_alarms, c.hits + c.false_alarms);
+        let obs_csi = c.csi().unwrap_or(0.0);
+        // Year-shuffle null: alert months of year y are reassigned to year perm(y).
+        let (mut pods, mut csis) = (Vec::with_capacity(N_PERM), Vec::with_capacity(N_PERM));
+        let mut ge = 0usize;
+        for _ in 0..N_PERM {
+            let mut perm = years.clone();
+            for i in (1..perm.len()).rev() {
+                let j = rng.below(i + 1);
+                perm.swap(i, j);
+            }
+            let map: BTreeMap<i32, i32> = years.iter().copied().zip(perm).collect();
+            let shuffled: BTreeSet<MonthKey> = alerted.iter().map(|&(y, m)| (map[&y], m)).collect();
+            let cn = month_contingency(&present, &shuffled, &observed, tol);
+            let csi_n = cn.csi().unwrap_or(0.0);
+            pods.push(cn.pod().unwrap_or(0.0));
+            csis.push(csi_n);
+            if csi_n >= obs_csi {
+                ge += 1;
+            }
+        }
+        pods.sort_by(|x, y| x.partial_cmp(y).unwrap());
+        csis.sort_by(|x, y| x.partial_cmp(y).unwrap());
+        let mean = pods.iter().sum::<f64>() / pods.len() as f64;
+        let p95 = |v: &[f64]| v[(0.95 * (v.len() - 1) as f64) as usize];
+        println!(
+            "{:>4}mo | {:>4.2} [{:.2}, {:.2}] (n={:>2}) | {:>4.2} [{:.2}, {:.2}] (n={:>3}) | {:>6.3} || {:>12.2} / {:<11.2} | {:>8.3} | {:>12.3}",
+            tol, c.pod().unwrap_or(0.0), pod_lo, pod_hi, c.hits + c.misses,
+            c.far().unwrap_or(0.0), far_lo, far_hi, c.hits + c.false_alarms, obs_csi,
+            mean, p95(&pods), p95(&csis), ge as f64 / N_PERM as f64
+        );
+    }
+    // Wet-season alerter: every May–September month.
+    let wet: BTreeSet<MonthKey> = present.iter().copied().filter(|&(_, m)| (5..=9).contains(&m)).collect();
+    println!("\nWet-season alerter (every May–September month, {} alert-months):", wet.len());
+    for tol in 0..=3i32 {
+        print_row(&format!("wet ±{tol}"), &month_contingency(&present, &wet, &observed, tol));
+    }
+    // Independent-alerter chance curve at the observed alert rate (the reviewer's formula).
+    let f = alerted.len() as f64 / present.len() as f64;
+    println!(
+        "Independent alerter at rate f={f:.2}: P(hit within ±t) = {}",
+        (0..=3).map(|t| format!("{:.2}", 1.0 - (1.0 - f).powi(2 * t + 1))).collect::<Vec<_>>().join(" / ")
+    );
 }
 
 fn print_row(label: &str, c: &Contingency) {
@@ -220,6 +356,16 @@ fn main() {
             &monthly_contingency(&day_month, &best_alerts, &events, tol).unwrap(),
         );
     }
+
+    // --- Uncertainty and nulls (added after the EMS review, 2026-10-15) --------
+    // The scores above are point values over ~18 event-months; a reviewer
+    // computed that the rise of POD with the match tolerance is what an
+    // alerter firing at random at the same monthly rate would produce. So:
+    // (1) Wilson 95 % intervals on POD and FAR, (2) a year-shuffle null that
+    // keeps seasonality and within-year clustering of the alerts but breaks
+    // their link to the event years, (3) the wet-season alerter (every
+    // May–September month), and (4) the alert rate itself.
+    nulls_and_intervals(&day_month, &best_alerts, &events, best.0);
 
     // --- Caine global threshold for reference -------------------------------
     println!("\nReference — Caine (1980) global threshold a=14.82:");

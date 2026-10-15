@@ -74,7 +74,7 @@ por lluvia en la cuenca del Río Maipo muestra que el umbral global de
 intensidad--duración de Caine (1980) dispara en solo 7 de 13\,880 días, ninguno
 coincidente con un evento registrado (probabilidad de detección, POD $=0$),
 mientras que un intercepto regional calibrado transfiere en validación por
-partición (POD de validación $\approx 0.50$). Distribuir esa forzante diaria
+partición (POD de validación $\approx 0.50$) pero no se distingue de un nulo que conserva la estacionalidad sobre los 19 meses con evento del registro. Distribuir esa forzante diaria
 sobre la cuenca y ponderarla por un ráster de susceptibilidad real de aprendizaje
 automático no mejora la discriminación. El área bajo la curva ROC es
 indistinguible del azar (AUC $\approx 0.48$; el IC al 95\,\% por bootstrap de
@@ -608,16 +608,30 @@ lluvia, el umbral global de Caine ($a=14.82$) se cruza en solo \textbf{7 de
 13\,880 días} con forzante diaria CR2MET (POD $=0$): a 24\,h de duración la curva queda en $I_{\mathrm{crit}}=4.29$\,mm\,h$^{-1}$, un
 total diario de 103\,mm, que solo esos siete días alcanzan, y ninguno cae en un mes
 con evento. Un
-intercepto regional calibrado $a^\star\approx5.5$\,mm\,h$^{-1}$ es robusto, las
-calibraciones de período completo y de años impares coinciden, y transfiere por
-partición (POD de validación $\approx 0.50$; Fig.~\ref{fig:idsweep}). La razón de
-falsas alarmas es alta (FAR $\approx 0.92$) pero estructural: con una tasa base de
-eventos cercana al 4\,\% de los meses y un único pluviómetro representativo en un clima
-mediterráneo de estación húmeda, un gatillo I--D por sí solo sobre-predice. El
-fechado a nivel de mes del inventario topa el POD alcanzable: ampliar la tolerancia
-de emparejamiento de $\pm0$ a $\pm3$ meses eleva el POD de 0.21 a 0.68
-(Tabla~\ref{tab:lumped}), de modo que una fracción grande de los ``fallos'' es
-error de fecha del inventario y no error del modelo.
+intercepto regional $a^\star\approx5.5$\,mm\,h$^{-1}$ maximiza el CSI tanto en el
+período completo como en los años impares, y la validación en años pares da POD
+$\approx 0.50$ (Fig.~\ref{fig:idsweep}); pero el objetivo es plano (CSI 0.06--0.08
+en $a=2$--13\,mm\,h$^{-1}$), así que $a^\star$ está débilmente identificado, y los
+puntajes llevan intervalos anchos sobre los 19 meses con evento del registro: a
+$\pm1$ mes, POD 0.53 [0.32, 0.73] y FAR 0.92 [0.85, 0.95] (Wilson 95\,\%). La
+razón de falsas alarmas es estructural: con una tasa base de eventos cercana al
+4\,\% de los meses y un único pluviómetro representativo en un clima mediterráneo
+de estación húmeda, un gatillo I--D por sí solo sobre-predice (126 meses con
+alerta, 28\,\% del registro). Si discrimina más allá de la estacionalidad es la
+pregunta difícil, y la respuesta es marginal. Contra un nulo por barajado de años
+que conserva la estacionalidad y el agrupamiento intra-anual de los meses con
+alerta pero los reasigna a años aleatorios (2\,000 permutaciones), el CSI observado
+de 0.077 se supera en el 10.5\,\% de las permutaciones (POD medio del nulo 0.46,
+percentil 95 0.58), y un alertador que dispara todos los meses de mayo a
+septiembre alcanza POD 0.47 con la misma tolerancia. El fechado a nivel de mes del
+inventario sigue topando lo que cualquier gatillo puede puntuar aquí, pero la
+subida del POD con la tolerancia de emparejamiento ($0.21\to0.68$ de $\pm0$ a
+$\pm3$ meses, Tabla~\ref{tab:lumped}) no es evidencia de ello: el nulo sube igual
+($0.27\to0.68$), igual que un alertador independiente a la misma tasa mensual
+($0.28\to0.90$). El backtest agrupado muestra, por tanto, que $a^\star$ dispara el
+gatillo en la estación correcta, no que separe los meses con evento del resto de la
+estación húmeda; esa es la pregunta de discriminación que retoman el backtest
+distribuido y el experimento controlado.
 
 \begin{table}[ht]
 \centering
@@ -628,9 +642,11 @@ error de fecha del inventario y no error del modelo.
 Configuración & POD & FAR & nota \\
 \midrule
 Caine global, $a=14.82$ & 0.00 & 1.00 & dispara 7/13\,880 d, ninguno en mes de evento \\
-Regional $a^\star=5.5$ (período completo) & 0.53 & 0.92 & calibración max-CSI \\
+Regional $a^\star=5.5$ (período completo) & 0.53 [0.32, 0.73] & 0.92 [0.85, 0.95] & calibración max-CSI; 19 meses con evento, Wilson 95\,\% \\
 Regional $a^\star=5.5$ (partición) & 0.50 & 0.93 & calibra impares $\to$ valida pares \\
-$a^\star=5.5$, tol. $\pm0/\pm1/\pm2/\pm3$\,meses & \multicolumn{2}{c}{POD 0.21/0.53/0.58/0.68} & ruido de fecha del inventario \\
+$a^\star=5.5$, tol. $\pm0/\pm1/\pm2/\pm3$\,meses & \multicolumn{2}{c}{POD 0.21/0.53/0.58/0.68} & sube como los nulos de abajo \\
+Nulo por barajado de años, $\pm0/\pm1/\pm2/\pm3$\,meses & \multicolumn{2}{c}{POD 0.27/0.46/0.56/0.68 (media)} & 2\,000 perm.; $P(\mathrm{CSI}\geq0.077)=0.105$ a $\pm1$ \\
+Alertador de estación húmeda (may--sep), $\pm1$\,mes & 0.47 & 0.95 & 190 meses con alerta, sin lluvia \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -640,9 +656,8 @@ $a^\star=5.5$, tol. $\pm0/\pm1/\pm2/\pm3$\,meses & \multicolumn{2}{c}{POD 0.21/0
 \includegraphics[width=0.62\linewidth]{figs/fig2_idsweep.pdf}
 \caption{Calibración del intercepto I--D $a$ sobre el backtest agrupado del Maipo
 (contingencia mensual, emparejamiento $\pm1$ mes). El POD cae y la razón de falsas
-alarmas se mantiene alta a lo largo del barrido; el índice crítico de éxito alcanza
-su máximo en $a^\star\approx5.5$\,mm\,h$^{-1}$ (línea segmentada), muy por debajo
-del valor global de Caine de 14.82.}
+alarmas se mantiene alta a lo largo del barrido; el índice crítico de éxito es plano (0.06--0.08 en $a=2$--13\,mm\,h$^{-1}$) con su máximo en $a^\star\approx5.5$\,mm\,h$^{-1}$ (línea segmentada), muy por debajo
+del valor global de Caine de 14.82: el intercepto queda débilmente identificado por este objetivo (Sección~\ref{sec:lumped}).}
 \label{fig:idsweep}
 \end{figure}
 
@@ -1345,7 +1360,7 @@ flujo de detritos basado en agentes, un sustrato geoespacial y deformación InSA
 atribución exacta en forma cerrada de cada alerta. Usado como instrumento
 experimental sobre cuencas chilenas, arroja un diagnóstico que, argumentamos, generaliza: lo que la forzante sub-diaria le compra a un gatillo intensidad--duración es timing intra-diario en todos los casos y detección solo para ráfagas breves, mientras que el error de magnitud del producto de lluvia, y en operación el sensor, mandan en el resto. Un umbral I--D global se alcanza en 7 de
 13\,880 días y nunca en un mes con evento registrado; un umbral regional calibrado
-transfiere pero, distribuido a resolución diaria, no discrimina las ubicaciones de
+transfiere por partición pero no se distingue de un nulo estacional y, distribuido a resolución diaria, no discrimina las ubicaciones de
 eventos (AUC $\approx 0.48$); el gatillo idéntico sobre forzante satelital
 semihoraria ubica el cruce del umbral en una marca de tiempo horas antes de los
 flujos documentados del mismo día en tres eventos climáticamente distintos, y una descomposición

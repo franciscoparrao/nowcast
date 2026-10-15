@@ -48,7 +48,7 @@ landslides in the R\'io Maipo basin shows that the global Caine (1980)
 intensity--duration threshold fires on only 7 of 13\,880 days, none coinciding with a
 recorded event (probability of
 detection, POD $=0$), whereas a calibrated regional intercept transfers
-split-sample (validation POD $\approx 0.50$). Distributing that daily forcing
+split-sample (validation POD $\approx 0.50$) but is not distinguishable from a seasonality-preserving null over the 19 event-months of the record. Distributing that daily forcing
 over the basin and weighting by a real machine-learning susceptibility raster
 does not improve discrimination. The area under the ROC curve is indistinguishable
 from random (AUC $\approx 0.48$; month-block bootstrap 95\,\% CI spans 0.5): at
@@ -507,15 +507,29 @@ Over 13\,880 daily steps (1979--2016) and 157 dated rainfall-triggered events, t
 global Caine threshold ($a=14.82$) is crossed on only \textbf{7 of 13\,880 days} on CR2MET daily forcing
 (POD $=0$): at 24\,h duration the curve sits at $I_{\mathrm{crit}}=4.29$\,mm\,h$^{-1}$, a daily
 total of 103\,mm, which only those seven days reach, and none of them falls in an
-event month. A calibrated regional intercept $a^\star\approx5.5$\,mm\,h$^{-1}$
-is robust, the full-period and odd-year calibrations agree, and transfers
-split-sample (validation POD $\approx 0.50$; Fig.~\ref{fig:idsweep}). The
-false-alarm ratio is high (FAR $\approx 0.92$) but structural: with an event base rate near 4\,\% of months and a
+event month. A regional intercept $a^\star\approx5.5$\,mm\,h$^{-1}$
+maximises CSI on the full period and on the odd years alike, and the even-year
+validation gives POD $\approx 0.50$ (Fig.~\ref{fig:idsweep}); but the objective is
+flat (CSI 0.06--0.08 over $a=2$--13\,mm\,h$^{-1}$), so $a^\star$ is weakly
+identified, and the scores carry wide intervals over the 19 event-months of the
+record: at $\pm1$ month, POD 0.53 [0.32, 0.73] and FAR 0.92 [0.85, 0.95]
+(Wilson 95\,\%). The false-alarm ratio is structural: with an event base rate near 4\,\% of months and a
 single representative gauge in a Mediterranean wet-season climate, an I--D trigger
-alone over-predicts. The inventory's month-level dating caps attainable POD:
-widening the match tolerance from $\pm0$ to $\pm3$ months raises POD from 0.21 to
-0.68 (Table~\ref{tab:lumped}), so a large share of ``misses'' is date error in the
-inventory, not model error.
+alone over-predicts (126 alert-months, 28\,\% of the record). Whether it
+discriminates beyond seasonality is the harder question, and the answer is marginal.
+Against a year-shuffle null that keeps the seasonality and the within-year
+clustering of the alert-months but reassigns them to random years (2\,000
+permutations), the observed CSI of 0.077 is exceeded in 10.5\,\% of permutations
+(null POD mean 0.46, 95th percentile 0.58), and an alerter that fires on every
+May--September month reaches POD 0.47 at the same tolerance. The inventory's
+month-level dating still caps what any trigger can score here, but the rise of
+POD with the match tolerance ($0.21\to0.68$ from $\pm0$ to $\pm3$ months,
+Table~\ref{tab:lumped}) is not evidence of it: the null rises the same way
+($0.27\to0.68$), as does an independent alerter at the same monthly rate
+($0.28\to0.90$). The lumped backtest therefore shows that $a^\star$ fires the
+trigger in the right season, not that it separates event months from the rest of
+the wet season; that is the discrimination question the distributed backtest and
+the controlled experiment take up.
 
 \begin{table}[ht]
 \centering
@@ -526,9 +540,11 @@ inventory, not model error.
 Configuration & POD & FAR & note \\
 \midrule
 Caine global, $a=14.82$ & 0.00 & 1.00 & fires 7/13\,880 d, none on event month \\
-Regional $a^\star=5.5$ (full period) & 0.53 & 0.92 & max-CSI calibration \\
+Regional $a^\star=5.5$ (full period) & 0.53 [0.32, 0.73] & 0.92 [0.85, 0.95] & max-CSI calibration; 19 event-months, Wilson 95\,\% \\
 Regional $a^\star=5.5$ (split-sample) & 0.50 & 0.93 & calibrate odd $\to$ validate even \\
-$a^\star=5.5$, tol. $\pm0/\pm1/\pm2/\pm3$\,mo & \multicolumn{2}{c}{POD 0.21/0.53/0.58/0.68} & inventory date noise \\
+$a^\star=5.5$, tol. $\pm0/\pm1/\pm2/\pm3$\,mo & \multicolumn{2}{c}{POD 0.21/0.53/0.58/0.68} & rises like the nulls below \\
+Year-shuffle null, $\pm0/\pm1/\pm2/\pm3$\,mo & \multicolumn{2}{c}{POD 0.27/0.46/0.56/0.68 (mean)} & 2\,000 perm.; $P(\mathrm{CSI}\geq0.077)=0.105$ at $\pm1$ \\
+Wet-season alerter (May--Sep), $\pm1$\,mo & 0.47 & 0.95 & 190 alert-months, no rainfall \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -538,8 +554,8 @@ $a^\star=5.5$, tol. $\pm0/\pm1/\pm2/\pm3$\,mo & \multicolumn{2}{c}{POD 0.21/0.53
 \includegraphics[width=0.62\linewidth]{figs/fig2_idsweep.pdf}
 \caption{Calibration of the I--D intercept $a$ on the lumped Maipo backtest
 (monthly contingency, $\pm1$-month match). POD falls and false-alarm ratio stays
-high across the sweep; the critical success index peaks at $a^\star\approx5.5$\,mm\,h$^{-1}$
-(dashed line), far below the Caine global value of 14.82.}
+high across the sweep; the critical success index is flat (0.06--0.08 over $a=2$--13\,mm\,h$^{-1}$) with its maximum at $a^\star\approx5.5$\,mm\,h$^{-1}$
+(dashed line), far below the Caine global value of 14.82: the intercept is weakly identified by this objective (Section~\ref{sec:lumped}).}
 \label{fig:idsweep}
 \end{figure}
 
@@ -1170,7 +1186,7 @@ susceptibility into a time-varying hazard through a single interchangeable forci
 interface and a composable trigger, with native providers for rainfall--runoff,
 snowmelt, shallow-water inundation, agent-based debris-flow runout, a geospatial
 substrate and InSAR deformation, and exact closed-form attribution of every alert.
-Used as an experimental instrument over Chilean basins, it yields a diagnosis that, we argue, generalises: what sub-daily forcing buys an intensity--duration trigger is intra-day timing in every case and detection only for short bursts, while the magnitude error of the rainfall product, and in operation the sensor, bind elsewhere. A global I--D threshold is reached on 7 of 13\,880 days and never on a recorded event month. A calibrated regional threshold transfers, but at daily resolution and distributed over the basin it does not discriminate event locations (AUC $\approx 0.48$). The identical trigger on half-hourly satellite forcing places
+Used as an experimental instrument over Chilean basins, it yields a diagnosis that, we argue, generalises: what sub-daily forcing buys an intensity--duration trigger is intra-day timing in every case and detection only for short bursts, while the magnitude error of the rainfall product, and in operation the sensor, bind elsewhere. A global I--D threshold is reached on 7 of 13\,880 days and never on a recorded event month. A calibrated regional threshold transfers split-sample but is not distinguishable from a seasonal null, and at daily resolution and distributed over the basin it does not discriminate event locations (AUC $\approx 0.48$). The identical trigger on half-hourly satellite forcing places
 the threshold crossing at a timestamp hours ahead of the documented flows on the same day across three
 climatically distinct events, and a single-factor decomposition separates what that
 gain owes to the rainfall product from what it owes to its resolution, which turns
