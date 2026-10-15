@@ -706,7 +706,30 @@ alike, and that is the result. \textbf{Stratified by mechanism, the operational
 catch rate on burst-driven failures collapses from $0.46\pm0.09$ at half-hourly to
 $0.00\pm0.01$ at daily, while accumulation-driven failures are caught at
 ${\approx}0.42$ at \emph{every} resolution} (POD at a 5\,\% alerted-area budget).
-The collapse itself is expected from the design and we do not present it as a discovery: no burst in the 8--30\,mm range exceeds the $a^\star$ curve once spread over 24\,h (the largest gives $E=0.79$; crossing the daily ceiling at $a^\star=5.5$ takes 38\,mm in a day), so what the experiment measures is where between half-hourly and daily the catch rate falls, and that accumulation-driven failures are spared, not whether daily forcing can ever see a burst. Bursts large enough to cross the daily ceiling are the 7 Maipo days of Section~\ref{sec:lumped}; a sweep of burst magnitude, drainage time constant and $\theta_\mathrm{crit}$ is the obvious extension and is not reported here.
+The collapse itself is expected from the design and we do not present it as a discovery: no burst in the 8--30\,mm range exceeds the $a^\star$ curve once spread over 24\,h (the largest gives $E=0.79$; crossing the daily ceiling at $a^\star=5.5$ takes 38\,mm in a day), so what the experiment measures is where between half-hourly and daily the catch rate falls, and that accumulation-driven failures are spared, not whether daily forcing can ever see a burst. Bursts large enough to cross the daily ceiling are the 7 Maipo days of Section~\ref{sec:lumped}. Moving the design knobs one at a time (Table~\ref{tab:sweep}; five realisations each) says where the collapse lives. It is a property of the burst magnitude relative to the daily ceiling: with bursts of 30--60\,mm, straddling the ceiling, the daily catch rate on burst-driven failures stays at 0.46, and with bursts of 60--120\,mm the daily product scores \emph{higher} than the half-hourly one (0.70 against 0.47), because a burst that dominates its day is easier to rank at the coarse step. The drainage time constant decides something else: with $\tau$ of 24 or 120\,h, failures become antecedent-controlled and the I--D trigger catches under 10\,\% of the accumulation-driven ones at \emph{any} resolution (0.09 and 0.04 at half-hourly), which is a limit of the trigger, not of the forcing; that case is taken up in Section~\ref{sec:limits}. The failure wetness $\theta_\mathrm{crit}$ moves the mixture of the two routes (at 24\,mm no accumulation failures occur; at 6\,mm they dominate) without changing the shape of the burst collapse, and the global Caine intercept shifts the ceiling to 103\,mm per day and leaves the collapse in place. The stratification rule is the generating class: a failure is burst-driven if its cell-day was generated as a burst, accumulation-driven otherwise; seeds are deterministic (golden-ratio stride from a fixed base) and printed by the example.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{One-at-a-time sweep of the controlled experiment (five realisations per row): POD at a 5\,\% alerted-area budget on burst-driven failures at half-hourly and daily resolution, the coarsest resolution at which it is still at least half its half-hourly value, and POD on accumulation-driven failures. ``Ceiling'' is the daily total at which a burst spread over 24\,h reaches the curve, $a\cdot24^{1-b}$.}
+\label{tab:sweep}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Setting & Ceiling (mm) & Burst POD 0.5\,h $\to$ 24\,h & Half-POD resolution & Accum.\ POD 0.5\,h $\to$ 24\,h \\
+\midrule
+Paper: bursts 8--30\,mm, $\tau$ 4\,h, $\theta$ 12\,mm, $a^\star$ 5.5 & 38 & 0.49 $\to$ 0.00 & 6\,h & 0.45 $\to$ 0.43 \\
+Bursts 30--60\,mm & 38 & 0.48 $\to$ 0.46 & 24\,h & 0.40 $\to$ 0.33 \\
+Bursts 60--120\,mm & 38 & 0.47 $\to$ 0.70 & 24\,h & 0.38 $\to$ 0.28 \\
+$\tau$ 1\,h & 38 & 0.49 $\to$ 0.00 & 6\,h & no accumulation failures \\
+$\tau$ 24\,h & 38 & 0.49 $\to$ 0.00 & 3\,h & 0.09 $\to$ 0.12 \\
+$\tau$ 120\,h & 38 & 0.49 $\to$ 0.00 & 3\,h & 0.04 $\to$ 0.05 \\
+$\theta_\mathrm{crit}$ 6\,mm & 38 & 0.49 $\to$ 0.00 & 3\,h & 0.16 $\to$ 0.23 \\
+$\theta_\mathrm{crit}$ 24\,mm & 38 & 0.50 $\to$ 0.00 & 12\,h & no accumulation failures \\
+Caine, $a=14.82$ & 103 & 0.98 $\to$ 0.00 & 3\,h & 0.44 $\to$ 0.43 \\
+Bursts 60--120\,mm, $a=14.82$ & 103 & 0.96 $\to$ 0.96 & 24\,h & 0.10 $\to$ 0.22 \\
+\bottomrule
+\end{tabular}
+\end{table}
 The trigger rate falls from 27\,\% to 9\,\% of cell-days over the same sweep.
 
 The pooled scores, by contrast, decay only mildly --- trigger-only AUC
@@ -986,6 +1009,38 @@ Villa Santa Luc\'ia & 19.1 & 9.4 & 2.0$\times$ & $9.4 < a \leq 19.1$ \\
 \end{tabular}
 \end{table}
 
+\paragraph{Sensitivity to the remaining hyperparameters}
+The exponent $b$, the maximum I--D duration, the logistic steepness $k$ and the alert level are held fixed elsewhere in the paper. Moving each one at a time on the lumped backtest (Table~\ref{tab:oat}) shows that the \emph{optimum} moves and the \emph{skill at the optimum} does not: re-calibrating $a^\star$ by maximum CSI under $b=0.19$, $0.565$ (the median of the 35 published curves) and $0.78$ gives $a^\star$ of 2.5, 13.5 and 13.0\,mm\,h$^{-1}$ with CSI 0.080, 0.082 and 0.066 against 0.077 at the paper's setting, and every (steepness, level) pair, which enters only through the exceedance at which the hazard crosses the level, $E_\mathrm{thr}=1+\ln[L/(1-L)]/k$, leaves CSI within 0.071--0.079. At the paper's fixed $a^\star=5.5$ the scores do move with $b$ (POD 0.11 at $b=0.19$, 0.89 at $b=0.78$), which is the statement that $a$ and $b$ are not separately identified by a monthly contingency. At the three storm cores the half-hourly exceedance changes little with $b$ but the daily one changes a lot, because the daily window is 24\,h and $D^b$ grows with $b$: at $b=0.78$ the daily series at Atacama and Villa Santa Luc\'ia crosses comfortably and the Caj\'on del Maipo daily value reaches 1.47, so the ``daily does not fire'' column of Table~\ref{tab:singlefactor} is the $b$-sensitive one and holds for exponents up to about 0.6. Rank-based scores are invariant to $k$ by construction (Section~4.2) and were not re-run; the 30\,m-to-5\,km aggregation operator of Section~5.2 (the 90th percentile per cell) was not varied, which remains a gap.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{One-at-a-time sensitivity of the lumped Maipo backtest ($\pm1$ month) and of the storm-core exceedances. Left: the max-CSI intercept re-calibrated under each setting, with POD/FAR/CSI at that optimum and at the paper's fixed $a^\star=5.5$. Right: peak exceedance $E$ at $a^\star=5.5$ for the half-hourly and the daily series of each core (24\,h maximum window), which crosses the curve when $E\geq1$.}
+\label{tab:oat}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Setting & $a^\star$ & POD / FAR / CSI at $a^\star$ & POD / FAR / CSI at 5.5 & \\
+\midrule
+Paper: $b$ 0.39, $m_{\max}$ 7\,d, $k$ 4, level 0.5 & 5.5 & 0.53 / 0.92 / 0.077 & 0.53 / 0.92 / 0.077 & \\
+$b=0.19$ & 2.5 & 0.58 / 0.91 / 0.080 & 0.11 / 0.94 / 0.041 & \\
+$b=0.565$ & 13.5 & 0.47 / 0.91 / 0.082 & 0.63 / 0.94 / 0.056 & \\
+$b=0.78$ & 13.0 & 0.74 / 0.93 / 0.066 & 0.89 / 0.95 / 0.053 & \\
+$m_{\max}=1$\,d & 4.5 & 0.53 / 0.92 / 0.071 & 0.42 / 0.93 / 0.067 & \\
+$m_{\max}=3$\,d & 4.5 & 0.58 / 0.92 / 0.075 & 0.47 / 0.92 / 0.071 & \\
+$k$ 4, level 0.4 ($E_\mathrm{thr}$ 0.90) & 7.0 & 0.47 / 0.91 / 0.078 & 0.53 / 0.92 / 0.072 & \\
+$k$ 4, level 0.6 ($E_\mathrm{thr}$ 1.10) & 5.0 & 0.53 / 0.92 / 0.077 & 0.47 / 0.92 / 0.075 & \\
+$k$ 2, level 0.6 ($E_\mathrm{thr}$ 1.20) & 4.0 & 0.58 / 0.92 / 0.079 & 0.42 / 0.92 / 0.072 & \\
+$k$ 8, level 0.6 ($E_\mathrm{thr}$ 1.05) & 6.0 & 0.47 / 0.91 / 0.078 & 0.47 / 0.92 / 0.072 & \\
+\midrule
+Core $E$ (half-hourly / daily) & Atacama & Caj\'on del Maipo & Villa Santa Luc\'ia & \\
+$b=0.19$ & 7.83 / 1.49 & 1.06 / 0.23 & 3.07 / 0.91 & \\
+$b=0.39$ (paper) & 8.88 / 2.82 & 1.23 / 0.43 & 3.47 / 1.72 & \\
+$b=0.565$ & 10.80 / 4.91 & 1.51 / 0.74 & 4.35 / 2.99 & \\
+$b=0.78$ & 14.14 / 9.73 & 2.00 / 1.47 & 7.46 / 5.93 & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Flood path: a routed-discharge check against observed streamflow}
 
 To exercise the discharge trigger we run GR4J \citep{perrin2003} on the CAMELS-CL
@@ -1047,7 +1102,7 @@ Distributing daily rainfall and adding a real susceptibility raster does not lif
 discrimination above chance, yet the identical trigger on sub-daily forcing
 resolves the threshold crossing to within hours. The binding constraint on
 \emph{timing} is therefore the resolution of the forcing, not the susceptibility model or the
-threshold logic; on \emph{detection} the evidence is narrower, as the rest of this paragraph sets out. This is intuitive once stated (with a daily value the maximum
+threshold logic; on \emph{detection} the evidence is narrower, as the rest of this paragraph sets out, and where failures are antecedent-controlled the trigger itself is the ceiling (Table~\ref{tab:sweep}). This is intuitive once stated (with a daily value the maximum
 resolvable intensity is total$/24$\,h, so short, intense, convective bursts are
 smeared below any I--D curve), and the threshold literature has measured its first-order effect: coarse temporal resolution biases fitted thresholds downward \citep{marra2019,gariano2020}, and rainfall-estimation uncertainty and spatial aggregation shift them \citep{nikolopoulos2014,marra2017}. Those studies refit the threshold to each dataset; what is rarely isolated is the effect of resolution under one fixed trigger, separated from the product, which is what the one-factor design does. Isolating it
 demands care in the other direction too: comparing a daily gauge-blended product
@@ -1179,7 +1234,7 @@ regional intercept is still being measured; the shadow season remains the
 necessary step, and the validation reported in Sections~5.1--5.8 is hindcast
 throughout.
 (iv) Antecedent soil moisture is captured only implicitly through long rolling
-windows, not as an explicit state. (v) The multi-trigger combination weights and
+windows, not as an explicit state, and the controlled experiment measures what that costs: when failures are controlled by a store that drains over days rather than hours, the I--D trigger catches under 10\,\% of them at any resolution (Table~\ref{tab:sweep}), so for antecedent-controlled landslides the model, not the forcing, is the ceiling, and a state trigger fed by the sibling rainfall--runoff store is the one-adapter change the architecture was built for. (v) The multi-trigger combination weights and
 the deformation critical rate are not yet calibrated. (vi) The snowmelt, InSAR-deformation
 and debris-flow-runout adapters (Section~5.9) exercise the architecture but are not
 validated predictions; only the on-demand coupling's compute saving is quantified

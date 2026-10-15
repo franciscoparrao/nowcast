@@ -65,10 +65,13 @@ EXAMPLES=(
     multi_event_leadtime      # 5.5 multi-event sub-daily lead time
     single_factor_resolution  # 5.6 product vs resolution
     intercept_sensitivity     # 5.7 intercept sensitivity
+    sensitivity_oat           # 5.7 one-at-a-time sensitivity (b, m_max, k, alert level)
 )
 cargo build --release -p nowcast-core --examples
 for ex in "${EXAMPLES[@]}"; do
     echo "[reproduce] $ex"
     cargo run --release -q -p nowcast-core --example "$ex" > "$OUT/$ex.txt"
 done
+echo "[reproduce] synthetic_resolution --sweep"
+cargo run --release -q -p nowcast-core --example synthetic_resolution -- --sweep > "$OUT/synthetic_sweep.txt"
 echo "[reproduce] done — outputs in $OUT"

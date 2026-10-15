@@ -821,7 +821,30 @@ agregación no los trata igual, y ese es el resultado. \textbf{Estratificada por
 mecanismo, la tasa operacional de captura de las fallas por ráfaga colapsa de
 $0.46\pm0.09$ en semihorario a $0.00\pm0.01$ en diario, mientras que las fallas por
 acumulación se capturan en ${\approx}0.42$ a \emph{toda} resolución} (POD con un
-presupuesto de área alertada del 5\,\%). El colapso mismo es esperable por el diseño y no lo presentamos como un descubrimiento: ninguna ráfaga del rango 8--30\,mm supera la curva de $a^\star$ una vez repartida en 24\,h (la mayor da $E=0.79$; cruzar el techo diario con $a^\star=5.5$ requiere 38\,mm en un día), así que lo que el experimento mide es dónde, entre lo semihorario y lo diario, cae la tasa de captura, y que las fallas por acumulación quedan a salvo, no si la forzante diaria puede alguna vez ver una ráfaga. Las ráfagas lo bastante grandes para cruzar el techo diario son los 7 días del Maipo de la Sección~\ref{sec:lumped}; un barrido de magnitud de ráfaga, constante de tiempo de drenaje y $\theta_\mathrm{crit}$ es la extensión obvia y no se reporta aquí. La tasa de gatillado cae del 27\,\% al
+presupuesto de área alertada del 5\,\%). El colapso mismo es esperable por el diseño y no lo presentamos como un descubrimiento: ninguna ráfaga del rango 8--30\,mm supera la curva de $a^\star$ una vez repartida en 24\,h (la mayor da $E=0.79$; cruzar el techo diario con $a^\star=5.5$ requiere 38\,mm en un día), así que lo que el experimento mide es dónde, entre lo semihorario y lo diario, cae la tasa de captura, y que las fallas por acumulación quedan a salvo, no si la forzante diaria puede alguna vez ver una ráfaga. Las ráfagas lo bastante grandes para cruzar el techo diario son los 7 días del Maipo de la Sección~\ref{sec:lumped}. Mover las perillas del diseño una a la vez (Tabla~\ref{tab:sweep}; cinco realizaciones cada una) dice dónde vive el colapso. Es una propiedad de la magnitud de la ráfaga relativa al techo diario: con ráfagas de 30--60\,mm, a caballo del techo, la tasa de captura diaria de las fallas por ráfaga se queda en 0.46, y con ráfagas de 60--120\,mm el producto diario puntúa \emph{más alto} que el semihorario (0.70 contra 0.47), porque una ráfaga que domina su día es más fácil de ordenar en el paso grueso. La constante de tiempo de drenaje decide otra cosa: con $\tau$ de 24 o 120\,h las fallas pasan a estar controladas por la humedad antecedente y el gatillo I--D captura menos del 10\,\% de las fallas por acumulación a \emph{cualquier} resolución (0.09 y 0.04 a semihorario), lo que es un límite del gatillo, no de la forzante; ese caso se retoma en la Sección~\ref{sec:limits}. La humedad de falla $\theta_\mathrm{crit}$ mueve la mezcla de las dos rutas (a 24\,mm no ocurren fallas por acumulación; a 6\,mm dominan) sin cambiar la forma del colapso por ráfaga, y el intercepto global de Caine corre el techo a 103\,mm por día y deja el colapso en su lugar. La regla de estratificación es la clase generadora: una falla es por ráfaga si su celda-día se generó como ráfaga, por acumulación en otro caso; las semillas son deterministas (paso de razón áurea desde una base fija) y el ejemplo las imprime.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Barrido uno a la vez del experimento controlado (cinco realizaciones por fila): POD con presupuesto de área alertada del 5\,\% sobre fallas por ráfaga a resolución semihoraria y diaria, la resolución más gruesa a la que sigue siendo al menos la mitad de su valor semihorario, y POD sobre fallas por acumulación. ``Techo'' es el total diario con el que una ráfaga repartida en 24\,h alcanza la curva, $a\cdot24^{1-b}$.}
+\label{tab:sweep}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Configuración & Techo (mm) & POD ráfaga 0.5\,h $\to$ 24\,h & Resolución de medio POD & POD acum.\ 0.5\,h $\to$ 24\,h \\
+\midrule
+Paper: ráfagas 8--30\,mm, $\tau$ 4\,h, $\theta$ 12\,mm, $a^\star$ 5.5 & 38 & 0.49 $\to$ 0.00 & 6\,h & 0.45 $\to$ 0.43 \\
+Ráfagas 30--60\,mm & 38 & 0.48 $\to$ 0.46 & 24\,h & 0.40 $\to$ 0.33 \\
+Ráfagas 60--120\,mm & 38 & 0.47 $\to$ 0.70 & 24\,h & 0.38 $\to$ 0.28 \\
+$\tau$ 1\,h & 38 & 0.49 $\to$ 0.00 & 6\,h & sin fallas por acumulación \\
+$\tau$ 24\,h & 38 & 0.49 $\to$ 0.00 & 3\,h & 0.09 $\to$ 0.12 \\
+$\tau$ 120\,h & 38 & 0.49 $\to$ 0.00 & 3\,h & 0.04 $\to$ 0.05 \\
+$\theta_\mathrm{crit}$ 6\,mm & 38 & 0.49 $\to$ 0.00 & 3\,h & 0.16 $\to$ 0.23 \\
+$\theta_\mathrm{crit}$ 24\,mm & 38 & 0.50 $\to$ 0.00 & 12\,h & sin fallas por acumulación \\
+Caine, $a=14.82$ & 103 & 0.98 $\to$ 0.00 & 3\,h & 0.44 $\to$ 0.43 \\
+Ráfagas 60--120\,mm, $a=14.82$ & 103 & 0.96 $\to$ 0.96 & 24\,h & 0.10 $\to$ 0.22 \\
+\bottomrule
+\end{tabular}
+\end{table} La tasa de gatillado cae del 27\,\% al
 9\,\% de las celdas-día en el mismo barrido.
 
 Los puntajes agrupados, en cambio, decaen solo levemente --- AUC de solo gatillo
@@ -1127,6 +1150,38 @@ Villa Santa Lucía & 19.1 & 9.4 & 2.0$\times$ & $9.4 < a \leq 19.1$ \\
 \end{tabular}
 \end{table}
 
+\paragraph{Sensibilidad a los demás hiperparámetros}
+El exponente $b$, la duración máxima I--D, la pendiente logística $k$ y el nivel de alerta se mantienen fijos en el resto del paper. Mover cada uno a la vez sobre el backtest agrupado (Tabla~\ref{tab:oat}) muestra que el \emph{óptimo} se mueve y el \emph{skill en el óptimo} no: recalibrar $a^\star$ por CSI máximo con $b=0.19$, $0.565$ (la mediana de las 35 curvas publicadas) y $0.78$ da $a^\star$ de 2.5, 13.5 y 13.0\,mm\,h$^{-1}$ con CSI 0.080, 0.082 y 0.066 contra 0.077 en la configuración del paper, y cada par (pendiente, nivel), que entra solo por la excedencia a la que el peligro cruza el nivel, $E_\mathrm{thr}=1+\ln[L/(1-L)]/k$, deja el CSI entre 0.071 y 0.079. Con el $a^\star=5.5$ fijo del paper los puntajes sí se mueven con $b$ (POD 0.11 con $b=0.19$, 0.89 con $b=0.78$), que es la afirmación de que $a$ y $b$ no están identificados por separado por una contingencia mensual. En los tres núcleos de tormenta la excedencia semihoraria cambia poco con $b$ pero la diaria cambia mucho, porque la ventana diaria es de 24\,h y $D^b$ crece con $b$: con $b=0.78$ la serie diaria de Atacama y de Villa Santa Lucía cruza con holgura y el valor diario del Cajón del Maipo llega a 1.47, así que la columna ``lo diario no dispara'' de la Tabla~\ref{tab:singlefactor} es la sensible a $b$ y se sostiene para exponentes hasta cerca de 0.6. Los puntajes por rango son invariantes a $k$ por construcción (Sección~4.2) y no se volvieron a correr; el operador de agregación de 30\,m a 5\,km de la Sección~5.2 (el percentil 90 por celda) no se varió, lo que sigue siendo un vacío.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Sensibilidad uno a la vez del backtest agrupado del Maipo ($\pm1$ mes) y de las excedencias de los núcleos de tormenta. Izquierda: el intercepto de CSI máximo recalibrado bajo cada configuración, con POD/FAR/CSI en ese óptimo y en el $a^\star=5.5$ fijo del paper. Derecha: excedencia peak $E$ con $a^\star=5.5$ para la serie semihoraria y la diaria de cada núcleo (ventana máxima de 24\,h), que cruza la curva cuando $E\geq1$.}
+\label{tab:oat}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Configuración & $a^\star$ & POD / FAR / CSI en $a^\star$ & POD / FAR / CSI en 5.5 & \\
+\midrule
+Paper: $b$ 0.39, $m_{\max}$ 7\,d, $k$ 4, nivel 0.5 & 5.5 & 0.53 / 0.92 / 0.077 & 0.53 / 0.92 / 0.077 & \\
+$b=0.19$ & 2.5 & 0.58 / 0.91 / 0.080 & 0.11 / 0.94 / 0.041 & \\
+$b=0.565$ & 13.5 & 0.47 / 0.91 / 0.082 & 0.63 / 0.94 / 0.056 & \\
+$b=0.78$ & 13.0 & 0.74 / 0.93 / 0.066 & 0.89 / 0.95 / 0.053 & \\
+$m_{\max}=1$\,d & 4.5 & 0.53 / 0.92 / 0.071 & 0.42 / 0.93 / 0.067 & \\
+$m_{\max}=3$\,d & 4.5 & 0.58 / 0.92 / 0.075 & 0.47 / 0.92 / 0.071 & \\
+$k$ 4, nivel 0.4 ($E_\mathrm{thr}$ 0.90) & 7.0 & 0.47 / 0.91 / 0.078 & 0.53 / 0.92 / 0.072 & \\
+$k$ 4, nivel 0.6 ($E_\mathrm{thr}$ 1.10) & 5.0 & 0.53 / 0.92 / 0.077 & 0.47 / 0.92 / 0.075 & \\
+$k$ 2, nivel 0.6 ($E_\mathrm{thr}$ 1.20) & 4.0 & 0.58 / 0.92 / 0.079 & 0.42 / 0.92 / 0.072 & \\
+$k$ 8, nivel 0.6 ($E_\mathrm{thr}$ 1.05) & 6.0 & 0.47 / 0.91 / 0.078 & 0.47 / 0.92 / 0.072 & \\
+\midrule
+$E$ del núcleo (semihorario / diario) & Atacama & Cajón del Maipo & Villa Santa Lucía & \\
+$b=0.19$ & 7.83 / 1.49 & 1.06 / 0.23 & 3.07 / 0.91 & \\
+$b=0.39$ (paper) & 8.88 / 2.82 & 1.23 / 0.43 & 3.47 / 1.72 & \\
+$b=0.565$ & 10.80 / 4.91 & 1.51 / 0.74 & 4.35 / 2.99 & \\
+$b=0.78$ & 14.14 / 9.73 & 2.00 / 1.47 & 7.46 / 5.93 & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Vía de crecidas: un chequeo de caudal ruteado contra caudal observado}
 
 Para ejercitar el gatillo de caudal corremos GR4J \citep{perrin2003} sobre la
@@ -1200,7 +1255,7 @@ la lluvia diaria y agregar un ráster de susceptibilidad real no eleva la
 discriminación por sobre el azar, y sin embargo el gatillo idéntico sobre forzante
 sub-diaria resuelve el cruce del umbral con precisión de horas. La restricción
 vinculante sobre el \emph{timing} es por tanto la resolución de la forzante, no el modelo de
-susceptibilidad ni la lógica del umbral; sobre la \emph{detección} la evidencia es más estrecha, como expone el resto de este párrafo. Esto es intuitivo una vez enunciado (con
+susceptibilidad ni la lógica del umbral; sobre la \emph{detección} la evidencia es más estrecha, como expone el resto de este párrafo, y donde las fallas las controla la humedad antecedente el techo es el gatillo mismo (Tabla~\ref{tab:sweep}). Esto es intuitivo una vez enunciado (con
 un valor diario la máxima intensidad resoluble es total$/24$\,h, así que las
 ráfagas convectivas breves e intensas quedan difuminadas bajo cualquier curva
 I--D), y la literatura de umbrales ha medido su efecto de primer orden: la resolución temporal gruesa sesga hacia abajo los umbrales ajustados \citep{marra2019,gariano2020}, y la incertidumbre de la estimación de lluvia y la agregación espacial los desplazan \citep{nikolopoulos2014,marra2017}. Esos estudios reajustan el umbral a cada conjunto de datos; lo que rara vez se aísla es el efecto de la resolución bajo un gatillo fijo, separado del producto, que es lo que hace el diseño de un factor. Aislarlo exige cuidado
@@ -1351,7 +1406,7 @@ tasa de falsas alarmas del intercepto regional todavía se está midiendo; la
 temporada en modo sombra sigue siendo el paso necesario, y la validación reportada
 en las Secciones~5.1--5.8 es hindcast en su totalidad. (iv) La
 humedad antecedente del suelo se captura solo implícitamente mediante ventanas
-móviles largas, no como un estado explícito. (v) Los pesos de combinación
+móviles largas, no como un estado explícito, y el experimento controlado mide lo que eso cuesta: cuando las fallas las controla un almacén que drena en días y no en horas, el gatillo I--D captura menos del 10\,\% de ellas a cualquier resolución (Tabla~\ref{tab:sweep}), así que para deslizamientos controlados por la humedad antecedente el techo es el modelo y no la forzante, y un gatillo de estado alimentado por el almacén del motor hermano de lluvia--escorrentía es el cambio de un adaptador para el que la arquitectura se construyó. (v) Los pesos de combinación
 multi-gatillo y la tasa crítica de deformación aún no están calibrados. (vi) Los
 adaptadores de deshielo, deformación InSAR y runout de flujo de detritos
 (Sección~5.9) ejercitan la arquitectura pero no son predicciones validadas; solo el
