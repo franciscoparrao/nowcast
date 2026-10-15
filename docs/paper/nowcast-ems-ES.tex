@@ -40,8 +40,8 @@
 \begin{frontmatter}
 
 \title{nowcast: un motor Rust agnóstico a la forzante para nowcasting dinámico
-de geoamenazas, y por qué la resolución de la forzante, no el modelo, fija el
-techo de skill}
+de geoamenazas, y qué le compra la resolución de la lluvia a un gatillo
+intensidad--duración}
 
 \author[1]{Francisco Parra\corref{cor1}}
 \ead{francisco.parra.o@usach.cl}
@@ -89,34 +89,33 @@ resolución. Un experimento controlado cuyas etiquetas provienen de un mecanismo
 de falla \emph{independiente}, y no de la regla bajo prueba, aísla el porqué:
 agregar el campo idéntico a resolución diaria hace colapsar la tasa de captura de
 las fallas por ráfaga de 0.46 a 0.00, mientras deja intactas las fallas por
-acumulación en ${\approx}0.42$, con el modelo y el terreno fijos. El cuello de
-botella es, por tanto, la resolución de la forzante y no el modelo. A resolución
-semihoraria de GPM IMERG el mismo gatillo intensidad--duración fija el cruce del
-umbral a una marca de tiempo horas antes de los flujos documentados, algo que
-ningún producto diario puede hacer con ninguna magnitud, porque su intensidad
-media más fina resoluble es total$/24$\,h. A lo largo de tres eventos fechados en
+acumulación en ${\approx}0.42$, con el modelo y el terreno fijos; el colapso mismo se sigue del diseño, porque ninguna ráfaga de ese tamaño supera la curva una vez repartida en un día, así que el experimento mide dónde, entre lo semihorario y lo diario, cae la tasa de captura y que las fallas por acumulación quedan a salvo, no si la forzante diaria puede alguna vez ver una ráfaga. A resolución
+semihoraria de GPM IMERG el mismo gatillo intensidad--duración ubica el cruce del
+umbral en una marca de tiempo horas antes de los flujos documentados del mismo día, un timing que
+ningún producto diario puede dar con ninguna magnitud, porque su intensidad
+media más fina resoluble es total$/24$\,h; sin hora de inicio del evento ni tasa de cruces fuera de evento, estas son demostraciones de timing, no puntajes de skill. A lo largo de tres eventos fechados en
 climas opuestos de Chile descomponemos ese contraste un factor a la vez,
 insertando la misma serie satelital agregada a 24\,h para separar el producto de
 lluvia de su resolución: la resolución gobierna el \emph{timing} en todos los
 casos y gobierna la detección para una ráfaga convectiva breve, mientras que para
 una tormenta de gran magnitud es el producto, no la resolución, el que decide si
-la curva llega a cruzarse. El resultado tampoco descansa en el umbral elegido:
+la curva llega a cruzarse, y en las primeras semanas de operación en vivo los dos productos satelitales semihorarios se perdieron una ráfaga convectiva que un pluviómetro y el sensor de rayos sí vieron. Lo que compra la resolución es, por tanto, timing intra-diario en general y detección solo para ráfagas breves; el error de magnitud del producto de lluvia, y en operación el sensor, mandan en el resto. El resultado tampoco descansa en el umbral elegido:
 cada evento tiene una banda medible de interceptos, de un factor 2--3, en la que
 la resolución por sí sola decide la detección, y el contraste persiste a lo largo
 de las curvas I--D publicadas en la literatura. Una vía complementaria de
 crecidas, validada contra caudal diario \emph{observado} en el Río Itata,
 discrimina crecidas observadas fuera de muestra (ROC-AUC 0.90), porque el ruteo
 de caudal integra la lluvia que un gatillo sub-diario de deslizamientos debe en
-cambio resolver directamente. El motor, su marco de backtesting y todos los
-ejemplos son abiertos y reproducibles.
+cambio resolver directamente. El motor, su marco de backtesting y los
+ejemplos detrás de los resultados centrales son abiertos y reproducibles desde una instantánea archivada; los crates proveedores necesitan los motores hermanos.
 \end{abstract}
 
 \begin{highlights}
 \item Un motor Rust agnóstico a la forzante acopla susceptibilidad estática con gatillos dinámicos
 \item Lluvia, deshielo, caudal y deformación InSAR entran por una sola interfaz
 \item Distribuir la lluvia diaria no mejora la discriminación (AUC $\approx 0.48$)
-\item La resolución de la forzante, no el modelo, fija el techo de skill intensidad--duración
-\item La forzante satelital semihoraria fija el cruce del umbral horas antes de los flujos
+\item La lluvia sub-diaria le compra a un gatillo I--D timing intra-diario siempre, detección solo para ráfagas breves
+\item La magnitud del producto de lluvia, no el paso de tiempo, decide la detección en la mayoría de los eventos
 \end{highlights}
 
 \begin{keyword}
@@ -192,9 +191,9 @@ incompletos.
 Presentamos \textbf{nowcast}, un motor Rust que aborda estos tres problemas con
 una sola abstracción (una interfaz de \emph{forzante} intercambiable y un
 \emph{gatillo} componible), y luego lo usamos como instrumento experimental para
-formular una pregunta rara vez planteada de forma directa: manteniendo fijo el
+formular una pregunta que la literatura de umbrales ha empezado a plantear con datos de pluviómetros y radar: manteniendo fijo el
 modelo, ¿cuánto determina la \emph{resolución de la forzante} el skill
-alcanzable? Las contribuciones son computacionales, no una nueva ley de amenaza.
+alcanzable? Se sabe que la resolución temporal gruesa sesga hacia abajo los umbrales I--D ajustados \citep{marra2019,gariano2020}, que la agregación espacial y la incertidumbre de la estimación de lluvia desplazan los umbrales de flujos de detritos \citep{marra2017,nikolopoulos2014}, que los productos satelitales de lluvia siguen a cierta distancia del uso operacional en umbrales \citep{brunetti2018}, y los sistemas territoriales de alerta temprana construidos sobre esos umbrales fueron revisados por \citet{piciullo2018}. Esos estudios reajustan el umbral a cada conjunto de datos; aquí el gatillo se mantiene fijo y la forzante varía un factor a la vez, dentro de un motor que además corre el mismo gatillo en línea. Las contribuciones son computacionales, no una nueva ley de amenaza.
 (1)~Un diseño \emph{agnóstico a la forzante} cuyo trait de forzante de acceso
 aleatorio hace que el streaming en línea y el backtesting por reproducción de
 eventos fechados salgan de una sola interfaz, de modo que el mismo motor es a la
@@ -212,9 +211,8 @@ Caine, un factor logístico, ventanas por sumas de prefijos) entran como bloques
 construcción y no se reclaman como novedosos; la contribución es la arquitectura
 que los hace intercambiables de forma independiente y el diagnóstico que esa
 arquitectura habilita. Sobre datos chilenos reales, distribuir la forzante diaria
-y agregar susceptibilidad real no mejora la discriminación; este resultado nulo
-honesto, junto con un head-to-head sub-diario, ubica la restricción vinculante en
-la resolución de la forzante y no en el modelo; una vía de crecidas validada
+y agregar susceptibilidad real no mejora la discriminación; ese resultado nulo
+se diagnostica en vez de atribuirse; un head-to-head sub-diario y una descomposición de un factor muestran luego que la resolución gobierna el timing intra-diario en todos los eventos y la detección solo en una ráfaga breve, con el error de magnitud del producto de lluvia mandando en el resto; una vía de crecidas validada
 contra caudal observado muestra lo converso: donde el ruteo integra la forzante,
 la resolución diaria alcanza (ROC-AUC fuera de muestra 0.90).
 
@@ -808,7 +806,7 @@ agregación no los trata igual, y ese es el resultado. \textbf{Estratificada por
 mecanismo, la tasa operacional de captura de las fallas por ráfaga colapsa de
 $0.46\pm0.09$ en semihorario a $0.00\pm0.01$ en diario, mientras que las fallas por
 acumulación se capturan en ${\approx}0.42$ a \emph{toda} resolución} (POD con un
-presupuesto de área alertada del 5\,\%). La tasa de gatillado cae del 27\,\% al
+presupuesto de área alertada del 5\,\%). El colapso mismo es esperable por el diseño y no lo presentamos como un descubrimiento: ninguna ráfaga del rango 8--30\,mm supera la curva de $a^\star$ una vez repartida en 24\,h (la mayor da $E=0.79$; cruzar el techo diario con $a^\star=5.5$ requiere 38\,mm en un día), así que lo que el experimento mide es dónde, entre lo semihorario y lo diario, cae la tasa de captura, y que las fallas por acumulación quedan a salvo, no si la forzante diaria puede alguna vez ver una ráfaga. Las ráfagas lo bastante grandes para cruzar el techo diario son los 7 días del Maipo de la Sección~\ref{sec:lumped}; un barrido de magnitud de ráfaga, constante de tiempo de drenaje y $\theta_\mathrm{crit}$ es la extensión obvia y no se reporta aquí. La tasa de gatillado cae del 27\,\% al
 9\,\% de las celdas-día en el mismo barrido.
 
 Los puntajes agrupados, en cambio, decaen solo levemente --- AUC de solo gatillo
@@ -1173,16 +1171,15 @@ son el diagnóstico de resolución (Sección~\ref{sec:synthetic}), la vía de cr
 \section{Discusión}
 
 El titular es un resultado de método obtenido \emph{porque} el motor mantiene fijo
-el modelo mientras varía la forzante. \textbf{El techo de resolución.} Distribuir
+el modelo mientras varía la forzante. \textbf{Qué compra la resolución.} Distribuir
 la lluvia diaria y agregar un ráster de susceptibilidad real no eleva la
 discriminación por sobre el azar, y sin embargo el gatillo idéntico sobre forzante
 sub-diaria resuelve el cruce del umbral con precisión de horas. La restricción
-vinculante es por tanto la resolución de la forzante, no el modelo de
-susceptibilidad ni la lógica del umbral. Esto es intuitivo una vez enunciado (con
+vinculante sobre el \emph{timing} es por tanto la resolución de la forzante, no el modelo de
+susceptibilidad ni la lógica del umbral; sobre la \emph{detección} la evidencia es más estrecha, como expone el resto de este párrafo. Esto es intuitivo una vez enunciado (con
 un valor diario la máxima intensidad resoluble es total$/24$\,h, así que las
 ráfagas convectivas breves e intensas quedan difuminadas bajo cualquier curva
-I--D), pero rara vez se aísla, porque la mayoría de los estudios varía el modelo
-sobre un producto en vez del producto bajo un modelo. Aislarlo exige cuidado
+I--D), y la literatura de umbrales ha medido su efecto de primer orden: la resolución temporal gruesa sesga hacia abajo los umbrales ajustados \citep{marra2019,gariano2020}, y la incertidumbre de la estimación de lluvia y la agregación espacial los desplazan \citep{nikolopoulos2014,marra2017}. Esos estudios reajustan el umbral a cada conjunto de datos; lo que rara vez se aísla es el efecto de la resolución bajo un gatillo fijo, separado del producto, que es lo que hace el diseño de un factor. Aislarlo exige cuidado
 también en la otra dirección: comparar un producto diario mezclado con
 pluviómetros contra uno satelital semihorario varía el producto además de su
 resolución, y la Sección~\ref{sec:singlefactor} muestra que los dos factores pueden
@@ -1194,8 +1191,7 @@ breve. El experimento controlado (Sección~\ref{sec:synthetic}) hace explícito 
 mecanismo sobre un objetivo cuyas etiquetas vienen de un proceso físico
 independiente: con el modelo y el terreno fijos, la agregación lleva a cero la tasa
 de captura de las fallas por ráfaga mientras respeta enteramente las de
-acumulación, de modo que el nulo en datos reales refleja la resolución de la
-forzante y no una ausencia de señal recuperable en principio. Muestra además por
+acumulación, de modo que el nulo en datos reales es consistente con un límite de resolución sobre las fallas por ráfaga, que por sí solo no puede establecer (Sección~5.2), y el experimento controlado mide el mecanismo y no el skill de campo. Muestra además por
 qué un puntaje agrupado de skill puede ocultar esto, al promediar las dos
 poblaciones. El corolario práctico es que un nowcast I--D es tan bueno como la
 resolución temporal de su lluvia; el esfuerzo puesto en sofisticar la
@@ -1347,19 +1343,16 @@ interfaz de forzante intercambiable y un gatillo componible, con proveedores
 nativos para lluvia--escorrentía, deshielo, inundación de aguas someras, runout de
 flujo de detritos basado en agentes, un sustrato geoespacial y deformación InSAR, y
 atribución exacta en forma cerrada de cada alerta. Usado como instrumento
-experimental sobre cuencas chilenas, arroja un resultado honesto y, argumentamos,
-generalizable: la resolución de la forzante, no el modelo, fija el techo de skill
-del nowcasting por intensidad--duración. Un umbral I--D global se alcanza en 7 de
+experimental sobre cuencas chilenas, arroja un diagnóstico que, argumentamos, generaliza: lo que la forzante sub-diaria le compra a un gatillo intensidad--duración es timing intra-diario en todos los casos y detección solo para ráfagas breves, mientras que el error de magnitud del producto de lluvia, y en operación el sensor, mandan en el resto. Un umbral I--D global se alcanza en 7 de
 13\,880 días y nunca en un mes con evento registrado; un umbral regional calibrado
 transfiere pero, distribuido a resolución diaria, no discrimina las ubicaciones de
 eventos (AUC $\approx 0.48$); el gatillo idéntico sobre forzante satelital
-semihoraria fija el cruce del umbral a una marca de tiempo horas antes de los
-flujos documentados en tres eventos climáticamente distintos, y una descomposición
+semihoraria ubica el cruce del umbral en una marca de tiempo horas antes de los
+flujos documentados del mismo día en tres eventos climáticamente distintos, y una descomposición
 por factor único separa cuánto de esa ganancia le debe al producto de lluvia y
 cuánto a su resolución, lo que resulta diferir según el evento. El motor, su marco
 de backtesting y todos los ejemplos son reproducibles, y la arquitectura está
-diseñada de modo que una forzante de mayor resolución, la vía demostrada hacia el
-skill, pueda enchufarse sin tocar la lógica de peligro.
+diseñada de modo que una forzante de mayor resolución y mejor medida, la vía demostrada hacia el timing y la vía diagnosticada hacia la detección, pueda enchufarse sin tocar la lógica de peligro.
 
 \section*{Disponibilidad de código y datos}
 
@@ -1500,6 +1493,11 @@ Boisier, J.P., Alvarez-Garret\'on, C., Cepeda, J., Osses, A., V\'asquez, N.,
 Rondanelli, R., 2018b. CR2MET: A high-resolution precipitation and temperature
 dataset for hydroclimatic research in Chile. EGU General Assembly 2018.
 
+\bibitem[Brunetti et al.(2018)]{brunetti2018}
+Brunetti, M.T., Melillo, M., Peruccacci, S., Ciabatta, L., Brocca, L., 2018. How
+far are we from the use of satellite rainfall products in landslide forecasting?
+Remote Sens.\ Environ.\ 210, 65--75. \url{https://doi.org/10.1016/j.rse.2018.03.016}.
+
 \bibitem[Brier(1950)]{brier1950}
 Brier, G.W., 1950. Verification of forecasts expressed in terms of probability.
 Mon.\ Weather Rev.\ 78 (1), 1--3.
@@ -1546,6 +1544,12 @@ machine. Ann.\ Stat.\ 29 (5), 1189--1232.
 Gariano, S.L., Guzzetti, F., 2016. Landslides in a changing climate.
 Earth-Sci.\ Rev.\ 162, 227--252.
 \url{https://doi.org/10.1016/j.earscirev.2016.08.011}.
+
+\bibitem[Gariano et al.(2020)]{gariano2020}
+Gariano, S.L., Melillo, M., Peruccacci, S., Brunetti, M.T., 2020. How much does
+the rainfall temporal resolution affect rainfall thresholds for landslide
+triggering? Nat.\ Hazards 100 (2), 655--670.
+\url{https://doi.org/10.1007/s11069-019-03830-x}.
 
 \bibitem[Garreaud et al.(2020)]{garreaud2019}
 Garreaud, R.D., Boisier, J.P., Rondanelli, R., Montecinos, A., Sep\'ulveda, H.H.,
@@ -1605,6 +1609,17 @@ Lundberg, S.M., Lee, S.-I., 2017. A unified approach to interpreting model
 predictions. In: Advances in Neural Information Processing Systems 30 (NeurIPS
 2017). \url{https://proceedings.neurips.cc/paper/2017/hash/8a20a8621978632d76c43dfd28b67767-Abstract.html}.
 
+\bibitem[Marra(2019)]{marra2019}
+Marra, F., 2019. Rainfall thresholds for landslide occurrence: systematic
+underestimation using coarse temporal resolution data. Nat.\ Hazards 95 (3),
+883--890. \url{https://doi.org/10.1007/s11069-018-3508-4}.
+
+\bibitem[Marra et al.(2017)]{marra2017}
+Marra, F., Destro, E., Nikolopoulos, E.I., Zoccatelli, D., Creutin, J.D.,
+Guzzetti, F., Borga, M., 2017. Impact of rainfall spatial aggregation on the
+identification of debris flow occurrence thresholds. Hydrol.\ Earth Syst.\ Sci.\
+21 (9), 4525--4532. \url{https://doi.org/10.5194/hess-21-4525-2017}.
+
 \bibitem[Melillo et al.(2018)]{melillo2018}
 Melillo, M., Brunetti, M.T., Peruccacci, S., Gariano, S.L., Roccati, A.,
 Guzzetti, F., 2018. A tool for the automatic calculation of rainfall thresholds
@@ -1628,6 +1643,12 @@ supervised learning. In: Proceedings of the 22nd International Conference on
 Machine Learning (ICML), pp.\ 625--632.
 \url{https://doi.org/10.1145/1102351.1102430}.
 
+\bibitem[Nikolopoulos et al.(2014)]{nikolopoulos2014}
+Nikolopoulos, E.I., Crema, S., Marchi, L., Marra, F., Guzzetti, F., Borga, M.,
+2014. Impact of uncertainty in rainfall estimation on the identification of
+rainfall thresholds for debris flow occurrence. Geomorphology 221, 286--297.
+\url{https://doi.org/10.1016/j.geomorph.2014.06.015}.
+
 \bibitem[Peckham et al.(2013)]{peckham2013}
 Peckham, S.D., Hutton, E.W.H., Norris, B., 2013. A component-based approach to
 integrated modeling in the geosciences: The design of CSDMS. Comput.\ Geosci.\
@@ -1648,6 +1669,11 @@ early warning thresholds. Nat.\ Hazards Earth Syst.\ Sci.\ 18 (2), 633--646.
 Perrin, C., Michel, C., Andr\'eassian, V., 2003. Improvement of a parsimonious
 model for streamflow simulation. J.\ Hydrol.\ 279, 275--289.
 \url{https://doi.org/10.1016/S0022-1694(03)00225-7}.
+
+\bibitem[Piciullo et al.(2018)]{piciullo2018}
+Piciullo, L., Calvello, M., Cepeda, J.M., 2018. Territorial early warning systems
+for rainfall-induced landslides. Earth-Sci.\ Rev.\ 179, 228--247.
+\url{https://doi.org/10.1016/j.earscirev.2018.02.013}.
 
 \bibitem[Reichenbach et al.(2018)]{reichenbach2018}
 Reichenbach, P., Rossi, M., Malamud, B.D., Mihir, M., Guzzetti, F., 2018. A review

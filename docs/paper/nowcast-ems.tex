@@ -17,7 +17,7 @@
 \begin{frontmatter}
 
 \title{nowcast: a forcing-agnostic Rust engine for dynamic geohazard
-nowcasting, and why forcing resolution, not the model, sets the skill ceiling}
+nowcasting, and what rainfall resolution buys an intensity--duration trigger}
 
 \author[1]{Francisco Parra\corref{cor1}}
 \ead{francisco.parra.o@usach.cl}
@@ -61,32 +61,31 @@ signal --- so we do not rest the resolution claim on it. A controlled experiment
 \emph{independent} failure mechanism, not from the rule under test, isolates why:
 aggregating the identical field to daily resolution collapses the catch rate on
 burst-driven failures from 0.46 to 0.00 while leaving accumulation-driven failures
-untouched at ${\approx}0.42$, with the model and terrain held fixed. The bottleneck is therefore the resolution of the
-forcing rather than the model. At half-hourly GPM IMERG
-resolution the same intensity--duration trigger pins the threshold crossing to a
-timestamp hours ahead of the documented flows, which no daily product can do at any
-magnitude, because its finest resolvable mean intensity is total$/24$\,h. Across
+untouched at ${\approx}0.42$, with the model and terrain held fixed; the collapse itself follows from the design, since no burst of that size exceeds the curve once spread over a day, so the experiment measures where between half-hourly and daily the catch rate falls and that accumulation-driven failures are spared, not whether daily forcing can ever see a burst. At half-hourly GPM IMERG
+resolution the same intensity--duration trigger places the threshold crossing at a
+timestamp hours ahead of the documented flows on the same day, a timing that no daily product can give at any
+magnitude, because its finest resolvable mean intensity is total$/24$\,h; without an event onset hour and an off-event crossing rate these are timing demonstrations, not skill scores. Across
 three dated events spanning opposite Chilean climates we decompose that contrast
 one factor at a time, inserting the same satellite series aggregated to 24\,h to
 separate the rainfall product from its resolution: resolution governs the timing in
 every case and governs detection for a short convective burst, whereas for a
 high-magnitude storm it is the product, not the resolution, that decides whether
-the curve is crossed at all. The result does not rest on the
+the curve is crossed at all, and in the first weeks of live operation both half-hourly satellite products missed a convective burst that a rain gauge and the lightning sensor saw. What resolution buys is therefore intra-day timing in general and detection only for short bursts; the magnitude error of the rainfall product, and in operation the sensor, bind elsewhere. The result does not rest on the
 threshold chosen either: each event has a measurable band of intercepts, spanning a
 factor of 2--3, in which resolution alone decides detection, and the contrast
 persists across the published I--D curves of the literature. A complementary flood path,
 validated against observed daily streamflow on the R\'io Itata, discriminates
 observed floods out of sample (ROC-AUC 0.90), because discharge routing integrates
 the rainfall that a sub-daily landslide trigger must instead resolve directly. The
-engine, its backtesting framework and all examples are open and reproducible.
+engine, its backtesting framework and the examples behind the core results are open and reproducible from an archived snapshot; the provider crates need the sibling engines.
 \end{abstract}
 
 \begin{highlights}
 \item A forcing-agnostic Rust engine couples static susceptibility to dynamic triggers
 \item Rainfall, snowmelt, discharge and InSAR deformation enter through one interface
 \item Distributing daily rainfall does not improve discrimination (AUC $\approx 0.48$)
-\item Forcing resolution, not the model, sets the intensity--duration skill ceiling
-\item Half-hourly satellite forcing pins the threshold crossing hours ahead of flows
+\item Sub-daily rainfall buys an I--D trigger intra-day timing always, detection only for short bursts
+\item Rainfall-product magnitude, not the time step, decides detection in most events
 \end{highlights}
 
 \begin{keyword}
@@ -138,8 +137,8 @@ spatially sparse, incomplete records.
 We present \textbf{nowcast}, a Rust engine that addresses these three problems
 with one abstraction (an interchangeable \emph{forcing} interface and a
 composable \emph{trigger}), and we then use it as an experimental instrument to
-ask a question rarely posed directly: holding the model fixed, how much does the
-\emph{resolution of the forcing} determine attainable skill? The contributions
+ask a question that the threshold literature has begun to pose with gauge and radar data: holding the model fixed, how much does the
+\emph{resolution of the forcing} determine attainable skill? Coarse temporal resolution is known to bias fitted I--D thresholds downward \citep{marra2019,gariano2020}, spatial aggregation and rainfall-estimation uncertainty to shift debris-flow thresholds \citep{marra2017,nikolopoulos2014}, satellite rainfall products to remain some way from operational threshold use \citep{brunetti2018}, and territorial early-warning systems built on such thresholds have been reviewed by \citet{piciullo2018}. Those studies refit the threshold to each dataset; here the trigger is held fixed and the forcing varies one factor at a time, inside an engine that also runs the same trigger online. The contributions
 are computational rather than a new hazard law. (1)~A \emph{forcing-agnostic}
 design whose random-access forcing trait makes online streaming and dated-event
 replay backtesting fall out of one interface, so the same engine is both an
@@ -154,7 +153,7 @@ with metrics appropriate for sparse, month-dated inventories, and the resolution
 diagnosis that this instrument makes possible. The established components (the
 Caine I--D law, a logistic factor, prefix-sum windows) enter as building blocks
 and are not claimed as novel; the contribution is the architecture that makes
-them independently swappable and the diagnosis that architecture enables. On real Chilean data, distributing daily forcing and adding real susceptibility does not improve discrimination. That null, together with a sub-daily head-to-head, places the binding constraint on the resolution of the forcing, not on the model. A flood path validated against observed streamflow shows the converse case: where routing integrates the forcing, daily resolution suffices (out-of-sample ROC-AUC 0.90).
+them independently swappable and the diagnosis that architecture enables. On real Chilean data, distributing daily forcing and adding real susceptibility does not improve discrimination. That null is diagnosed rather than attributed; a sub-daily head-to-head and a one-factor decomposition then show that resolution governs intra-day timing in every event and detection only for a short burst, with the magnitude error of the rainfall product binding elsewhere. A flood path validated against observed streamflow shows the converse case: where routing integrates the forcing, daily resolution suffices (out-of-sample ROC-AUC 0.90).
 
 \section{The nowcast engine}
 
@@ -691,6 +690,7 @@ alike, and that is the result. \textbf{Stratified by mechanism, the operational
 catch rate on burst-driven failures collapses from $0.46\pm0.09$ at half-hourly to
 $0.00\pm0.01$ at daily, while accumulation-driven failures are caught at
 ${\approx}0.42$ at \emph{every} resolution} (POD at a 5\,\% alerted-area budget).
+The collapse itself is expected from the design and we do not present it as a discovery: no burst in the 8--30\,mm range exceeds the $a^\star$ curve once spread over 24\,h (the largest gives $E=0.79$; crossing the daily ceiling at $a^\star=5.5$ takes 38\,mm in a day), so what the experiment measures is where between half-hourly and daily the catch rate falls, and that accumulation-driven failures are spared, not whether daily forcing can ever see a burst. Bursts large enough to cross the daily ceiling are the 7 Maipo days of Section~\ref{sec:lumped}; a sweep of burst magnitude, drainage time constant and $\theta_\mathrm{crit}$ is the obvious extension and is not reported here.
 The trigger rate falls from 27\,\% to 9\,\% of cell-days over the same sweep.
 
 The pooled scores, by contrast, decay only mildly --- trigger-only AUC
@@ -1017,15 +1017,14 @@ coupling's compute saving (Section~2.5).
 \section{Discussion}
 
 The headline is a methods result obtained \emph{because} the engine holds the
-model fixed while the forcing varies. \textbf{The resolution ceiling.}
+model fixed while the forcing varies. \textbf{What resolution buys.}
 Distributing daily rainfall and adding a real susceptibility raster does not lift
 discrimination above chance, yet the identical trigger on sub-daily forcing
-resolves the threshold crossing to within hours. The binding constraint is
-therefore the resolution of the forcing, not the susceptibility model or the
-threshold logic. This is intuitive once stated (with a daily value the maximum
+resolves the threshold crossing to within hours. The binding constraint on
+\emph{timing} is therefore the resolution of the forcing, not the susceptibility model or the
+threshold logic; on \emph{detection} the evidence is narrower, as the rest of this paragraph sets out. This is intuitive once stated (with a daily value the maximum
 resolvable intensity is total$/24$\,h, so short, intense, convective bursts are
-smeared below any I--D curve), but it is rarely isolated, because most studies
-vary the model on one product rather than the product under one model. Isolating it
+smeared below any I--D curve), and the threshold literature has measured its first-order effect: coarse temporal resolution biases fitted thresholds downward \citep{marra2019,gariano2020}, and rainfall-estimation uncertainty and spatial aggregation shift them \citep{nikolopoulos2014,marra2017}. Those studies refit the threshold to each dataset; what is rarely isolated is the effect of resolution under one fixed trigger, separated from the product, which is what the one-factor design does. Isolating it
 demands care in the other direction too: comparing a daily gauge-blended product
 against a half-hourly satellite one varies the product as well as its resolution,
 and Section~\ref{sec:singlefactor} shows the two factors can point to different
@@ -1036,9 +1035,7 @@ where the triggering burst is short. The
 controlled experiment (Section~\ref{sec:synthetic}) makes the mechanism explicit on
 a target whose labels come from an independent physical process: with the model and
 terrain held fixed, aggregation drives the catch rate on burst-driven failures to
-zero while sparing accumulation-driven ones entirely, so the real-data null
-reflects the resolution of the forcing, not an absence of recoverable signal in
-principle. It also shows why a pooled skill score can conceal this, by averaging
+zero while sparing accumulation-driven ones entirely, so the real-data null is consistent with a resolution limit on burst-driven failures, which it cannot establish on its own (Section~5.2), and the controlled experiment measures the mechanism rather than the field skill. It also shows why a pooled skill score can conceal this, by averaging
 the two populations. The practical corollary is that an I--D nowcast is only as good as its
 rainfall's temporal resolution; effort spent on susceptibility sophistication is
 wasted where the forcing is daily. The flood path makes the same point with a
@@ -1173,14 +1170,13 @@ susceptibility into a time-varying hazard through a single interchangeable forci
 interface and a composable trigger, with native providers for rainfall--runoff,
 snowmelt, shallow-water inundation, agent-based debris-flow runout, a geospatial
 substrate and InSAR deformation, and exact closed-form attribution of every alert.
-Used as an experimental instrument over Chilean basins, it yields a result that, we argue, generalises: the resolution of the forcing, not the
-model, sets the skill ceiling of intensity--duration nowcasting. A global I--D threshold is reached on 7 of 13\,880 days and never on a recorded event month. A calibrated regional threshold transfers, but at daily resolution and distributed over the basin it does not discriminate event locations (AUC $\approx 0.48$). The identical trigger on half-hourly satellite forcing pins
-the threshold crossing to a timestamp hours ahead of documented flows across three
+Used as an experimental instrument over Chilean basins, it yields a diagnosis that, we argue, generalises: what sub-daily forcing buys an intensity--duration trigger is intra-day timing in every case and detection only for short bursts, while the magnitude error of the rainfall product, and in operation the sensor, bind elsewhere. A global I--D threshold is reached on 7 of 13\,880 days and never on a recorded event month. A calibrated regional threshold transfers, but at daily resolution and distributed over the basin it does not discriminate event locations (AUC $\approx 0.48$). The identical trigger on half-hourly satellite forcing places
+the threshold crossing at a timestamp hours ahead of the documented flows on the same day across three
 climatically distinct events, and a single-factor decomposition separates what that
 gain owes to the rainfall product from what it owes to its resolution, which turns
 out to differ by event. The engine, its backtesting framework and all
 examples are reproducible, and the architecture is designed so that
-higher-resolution forcing, the demonstrated path to skill, can be plugged in
+higher-resolution and better-measured forcing, the demonstrated path to timing and the diagnosed path to detection, can be plugged in
 without touching the hazard logic.
 
 \section*{Code and data availability}
@@ -1318,6 +1314,11 @@ Boisier, J.P., Alvarez-Garret\'on, C., Cepeda, J., Osses, A., V\'asquez, N.,
 Rondanelli, R., 2018b. CR2MET: A high-resolution precipitation and temperature
 dataset for hydroclimatic research in Chile. EGU General Assembly 2018.
 
+\bibitem[Brunetti et al.(2018)]{brunetti2018}
+Brunetti, M.T., Melillo, M., Peruccacci, S., Ciabatta, L., Brocca, L., 2018. How
+far are we from the use of satellite rainfall products in landslide forecasting?
+Remote Sens.\ Environ.\ 210, 65--75. \url{https://doi.org/10.1016/j.rse.2018.03.016}.
+
 \bibitem[Brier(1950)]{brier1950}
 Brier, G.W., 1950. Verification of forecasts expressed in terms of probability.
 Mon.\ Weather Rev.\ 78 (1), 1--3.
@@ -1364,6 +1365,12 @@ machine. Ann.\ Stat.\ 29 (5), 1189--1232.
 Gariano, S.L., Guzzetti, F., 2016. Landslides in a changing climate.
 Earth-Sci.\ Rev.\ 162, 227--252.
 \url{https://doi.org/10.1016/j.earscirev.2016.08.011}.
+
+\bibitem[Gariano et al.(2020)]{gariano2020}
+Gariano, S.L., Melillo, M., Peruccacci, S., Brunetti, M.T., 2020. How much does
+the rainfall temporal resolution affect rainfall thresholds for landslide
+triggering? Nat.\ Hazards 100 (2), 655--670.
+\url{https://doi.org/10.1007/s11069-019-03830-x}.
 
 \bibitem[Garreaud et al.(2020)]{garreaud2019}
 Garreaud, R.D., Boisier, J.P., Rondanelli, R., Montecinos, A., Sep\'ulveda, H.H.,
@@ -1423,6 +1430,17 @@ Lundberg, S.M., Lee, S.-I., 2017. A unified approach to interpreting model
 predictions. In: Advances in Neural Information Processing Systems 30 (NeurIPS
 2017). \url{https://proceedings.neurips.cc/paper/2017/hash/8a20a8621978632d76c43dfd28b67767-Abstract.html}.
 
+\bibitem[Marra(2019)]{marra2019}
+Marra, F., 2019. Rainfall thresholds for landslide occurrence: systematic
+underestimation using coarse temporal resolution data. Nat.\ Hazards 95 (3),
+883--890. \url{https://doi.org/10.1007/s11069-018-3508-4}.
+
+\bibitem[Marra et al.(2017)]{marra2017}
+Marra, F., Destro, E., Nikolopoulos, E.I., Zoccatelli, D., Creutin, J.D.,
+Guzzetti, F., Borga, M., 2017. Impact of rainfall spatial aggregation on the
+identification of debris flow occurrence thresholds. Hydrol.\ Earth Syst.\ Sci.\
+21 (9), 4525--4532. \url{https://doi.org/10.5194/hess-21-4525-2017}.
+
 \bibitem[Melillo et al.(2018)]{melillo2018}
 Melillo, M., Brunetti, M.T., Peruccacci, S., Gariano, S.L., Roccati, A.,
 Guzzetti, F., 2018. A tool for the automatic calculation of rainfall thresholds
@@ -1446,6 +1464,12 @@ supervised learning. In: Proceedings of the 22nd International Conference on
 Machine Learning (ICML), pp.\ 625--632.
 \url{https://doi.org/10.1145/1102351.1102430}.
 
+\bibitem[Nikolopoulos et al.(2014)]{nikolopoulos2014}
+Nikolopoulos, E.I., Crema, S., Marchi, L., Marra, F., Guzzetti, F., Borga, M.,
+2014. Impact of uncertainty in rainfall estimation on the identification of
+rainfall thresholds for debris flow occurrence. Geomorphology 221, 286--297.
+\url{https://doi.org/10.1016/j.geomorph.2014.06.015}.
+
 \bibitem[Peckham et al.(2013)]{peckham2013}
 Peckham, S.D., Hutton, E.W.H., Norris, B., 2013. A component-based approach to
 integrated modeling in the geosciences: The design of CSDMS. Comput.\ Geosci.\
@@ -1466,6 +1490,11 @@ early warning thresholds. Nat.\ Hazards Earth Syst.\ Sci.\ 18 (2), 633--646.
 Perrin, C., Michel, C., Andr\'eassian, V., 2003. Improvement of a parsimonious
 model for streamflow simulation. J.\ Hydrol.\ 279, 275--289.
 \url{https://doi.org/10.1016/S0022-1694(03)00225-7}.
+
+\bibitem[Piciullo et al.(2018)]{piciullo2018}
+Piciullo, L., Calvello, M., Cepeda, J.M., 2018. Territorial early warning systems
+for rainfall-induced landslides. Earth-Sci.\ Rev.\ 179, 228--247.
+\url{https://doi.org/10.1016/j.earscirev.2018.02.013}.
 
 \bibitem[Reichenbach et al.(2018)]{reichenbach2018}
 Reichenbach, P., Rossi, M., Malamud, B.D., Mihir, M., Guzzetti, F., 2018. A review
