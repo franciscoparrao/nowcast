@@ -637,6 +637,7 @@ distribuido y el experimento controlado.
 \centering
 \caption{Backtest agrupado del Maipo (contingencia mensual, emparejamiento $\pm1$ mes salvo indicación).}
 \label{tab:lumped}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}lccl@{}}
 \toprule
 Configuración & POD & FAR & nota \\
@@ -648,7 +649,8 @@ $a^\star=5.5$, tol. $\pm0/\pm1/\pm2/\pm3$\,meses & \multicolumn{2}{c}{POD 0.21/0
 Nulo por barajado de años, $\pm0/\pm1/\pm2/\pm3$\,meses & \multicolumn{2}{c}{POD 0.27/0.46/0.56/0.68 (media)} & 2\,000 perm.; $P(\mathrm{CSI}\geq0.077)=0.105$ a $\pm1$ \\
 Alertador de estación húmeda (may--sep), $\pm1$\,mes & 0.47 & 0.95 & 190 meses con alerta, sin lluvia \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
+
 \end{table}
 
 \begin{figure}[t]
@@ -828,6 +830,7 @@ presupuesto de área alertada del 5\,\%). El colapso mismo es esperable por el d
 \small
 \caption{Barrido uno a la vez del experimento controlado (cinco realizaciones por fila): POD con presupuesto de área alertada del 5\,\% sobre fallas por ráfaga a resolución semihoraria y diaria, la resolución más gruesa a la que sigue siendo al menos la mitad de su valor semihorario, y POD sobre fallas por acumulación. ``Techo'' es el total diario con el que una ráfaga repartida en 24\,h alcanza la curva, $a\cdot24^{1-b}$.}
 \label{tab:sweep}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 Configuración & Techo (mm) & POD ráfaga 0.5\,h $\to$ 24\,h & Resolución de medio POD & POD acum.\ 0.5\,h $\to$ 24\,h \\
@@ -843,7 +846,8 @@ $\theta_\mathrm{crit}$ 24\,mm & 38 & 0.50 $\to$ 0.00 & 12\,h & sin fallas por ac
 Caine, $a=14.82$ & 103 & 0.98 $\to$ 0.00 & 3\,h & 0.44 $\to$ 0.43 \\
 Ráfagas 60--120\,mm, $a=14.82$ & 103 & 0.96 $\to$ 0.96 & 24\,h & 0.10 $\to$ 0.22 \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
+
 \end{table} La tasa de gatillado cae del 27\,\% al
 9\,\% de las celdas-día en el mismo barrido.
 
@@ -1158,6 +1162,7 @@ El exponente $b$, la duración máxima I--D, la pendiente logística $k$ y el ni
 \small
 \caption{Sensibilidad uno a la vez del backtest agrupado del Maipo ($\pm1$ mes) y de las excedencias de los núcleos de tormenta. Izquierda: el intercepto de CSI máximo recalibrado bajo cada configuración, con POD/FAR/CSI en ese óptimo y en el $a^\star=5.5$ fijo del paper. Derecha: excedencia peak $E$ con $a^\star=5.5$ para la serie semihoraria y la diaria de cada núcleo (ventana máxima de 24\,h), que cruza la curva cuando $E\geq1$.}
 \label{tab:oat}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 Configuración & $a^\star$ & POD / FAR / CSI en $a^\star$ & POD / FAR / CSI en 5.5 & \\
@@ -1179,7 +1184,8 @@ $b=0.39$ (paper) & 8.88 / 2.82 & 1.23 / 0.43 & 3.47 / 1.72 & \\
 $b=0.565$ & 10.80 / 4.91 & 1.51 / 0.74 & 4.35 / 2.99 & \\
 $b=0.78$ & 14.14 / 9.73 & 2.00 / 1.47 & 7.46 / 5.93 & \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
+
 \end{table}
 
 \subsection{Vía de crecidas: un chequeo de caudal ruteado contra caudal observado}

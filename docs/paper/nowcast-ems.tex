@@ -535,6 +535,7 @@ the controlled experiment take up.
 \centering
 \caption{Lumped Maipo backtest (monthly contingency, $\pm1$-month match unless noted).}
 \label{tab:lumped}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}lccl@{}}
 \toprule
 Configuration & POD & FAR & note \\
@@ -546,7 +547,8 @@ $a^\star=5.5$, tol. $\pm0/\pm1/\pm2/\pm3$\,mo & \multicolumn{2}{c}{POD 0.21/0.53
 Year-shuffle null, $\pm0/\pm1/\pm2/\pm3$\,mo & \multicolumn{2}{c}{POD 0.27/0.46/0.56/0.68 (mean)} & 2\,000 perm.; $P(\mathrm{CSI}\geq0.077)=0.105$ at $\pm1$ \\
 Wet-season alerter (May--Sep), $\pm1$\,mo & 0.47 & 0.95 & 190 alert-months, no rainfall \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
+
 \end{table}
 
 \begin{figure}[t]
@@ -713,6 +715,7 @@ The collapse itself is expected from the design and we do not present it as a di
 \small
 \caption{One-at-a-time sweep of the controlled experiment (five realisations per row): POD at a 5\,\% alerted-area budget on burst-driven failures at half-hourly and daily resolution, the coarsest resolution at which it is still at least half its half-hourly value, and POD on accumulation-driven failures. ``Ceiling'' is the daily total at which a burst spread over 24\,h reaches the curve, $a\cdot24^{1-b}$.}
 \label{tab:sweep}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 Setting & Ceiling (mm) & Burst POD 0.5\,h $\to$ 24\,h & Half-POD resolution & Accum.\ POD 0.5\,h $\to$ 24\,h \\
@@ -728,7 +731,8 @@ $\theta_\mathrm{crit}$ 24\,mm & 38 & 0.50 $\to$ 0.00 & 12\,h & no accumulation f
 Caine, $a=14.82$ & 103 & 0.98 $\to$ 0.00 & 3\,h & 0.44 $\to$ 0.43 \\
 Bursts 60--120\,mm, $a=14.82$ & 103 & 0.96 $\to$ 0.96 & 24\,h & 0.10 $\to$ 0.22 \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
+
 \end{table}
 The trigger rate falls from 27\,\% to 9\,\% of cell-days over the same sweep.
 
@@ -1017,6 +1021,7 @@ The exponent $b$, the maximum I--D duration, the logistic steepness $k$ and the 
 \small
 \caption{One-at-a-time sensitivity of the lumped Maipo backtest ($\pm1$ month) and of the storm-core exceedances. Left: the max-CSI intercept re-calibrated under each setting, with POD/FAR/CSI at that optimum and at the paper's fixed $a^\star=5.5$. Right: peak exceedance $E$ at $a^\star=5.5$ for the half-hourly and the daily series of each core (24\,h maximum window), which crosses the curve when $E\geq1$.}
 \label{tab:oat}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 Setting & $a^\star$ & POD / FAR / CSI at $a^\star$ & POD / FAR / CSI at 5.5 & \\
@@ -1038,7 +1043,8 @@ $b=0.39$ (paper) & 8.88 / 2.82 & 1.23 / 0.43 & 3.47 / 1.72 & \\
 $b=0.565$ & 10.80 / 4.91 & 1.51 / 0.74 & 4.35 / 2.99 & \\
 $b=0.78$ & 14.14 / 9.73 & 2.00 / 1.47 & 7.46 / 5.93 & \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
+
 \end{table}
 
 \subsection{Flood path: a routed-discharge check against observed streamflow}
