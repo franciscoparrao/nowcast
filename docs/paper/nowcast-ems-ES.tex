@@ -508,6 +508,7 @@ bajo marzo aunque la lluvia extrema cayó entre el 24 y el 26 de marzo de 2015.
 \centering
 \caption{Conjuntos de datos.}
 \label{tab:data}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}llll@{}}
 \toprule
 Conjunto de datos & Variable & Resolución & Uso \\
@@ -518,7 +519,8 @@ GPM IMERG Final v07 & tasa de precipitación & $\sim$0.1$^\circ$, 30\,min & forz
 CAMELS-CL & precip, ETP, caudal & cuenca, diaria & vía de crecidas (GR4J/HBV) \\
 Inventario SERNAGEOMIN & eventos fechados & punto, $\sim$mes & objetivo de validación \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
+
 \end{table}
 
 Los sitios de estudio son la cuenca del Río Maipo (Andes centrales, backtest de
@@ -932,6 +934,7 @@ la correcta.
 \centering
 \caption{CR2MET diario vs.\ GPM IMERG semihorario en el núcleo de tormenta de Atacama (mismo motor I--D).}
 \label{tab:headtohead}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}lcc@{}}
 \toprule
  & CR2MET diario ($\sim$5\,km) & IMERG $\frac{1}{2}$-horario ($\sim$10\,km) \\
@@ -942,7 +945,8 @@ duración más fina resoluble & 24\,h & 0.5\,h \\
 máx. intensidad resoluble (paso más lluvioso$/$duración) & 0.66\,mm\,h$^{-1}$ & 40.0\,mm\,h$^{-1}$ \\
 I--D ($a^\star=5.5$) & sin alerta ($E\leq0.45$) & alerta 24-mar 04:30 ($E\approx9$) \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
+
 \end{table}
 
 \begin{figure}[t]
