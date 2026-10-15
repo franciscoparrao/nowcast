@@ -74,9 +74,9 @@ the curve is crossed at all, and in the first weeks of live operation both half-
 threshold chosen either: each event has a measurable band of intercepts, spanning a
 factor of 2--3, in which resolution alone decides detection, and the contrast
 persists across the published I--D curves of the literature. A complementary flood path,
-validated against observed daily streamflow on the R\'io Itata, discriminates
-observed floods out of sample (ROC-AUC 0.90), because discharge routing integrates
-the rainfall that a sub-daily landslide trigger must instead resolve directly. The
+checked against observed daily streamflow on the R\'io Itata, discriminates
+observed floods out of sample (ROC-AUC 0.90) but no better than a 3-day rainfall sum or persistence (0.94--0.95): discharge routing integrates
+the rainfall that a sub-daily landslide trigger must instead resolve directly, and the daily forcing is sufficient for it. The
 engine, its backtesting framework and the examples behind the core results are open and reproducible from an archived snapshot; the provider crates need the sibling engines.
 \end{abstract}
 
@@ -153,7 +153,7 @@ with metrics appropriate for sparse, month-dated inventories, and the resolution
 diagnosis that this instrument makes possible. The established components (the
 Caine I--D law, a logistic factor, prefix-sum windows) enter as building blocks
 and are not claimed as novel; the contribution is the architecture that makes
-them independently swappable and the diagnosis that architecture enables. On real Chilean data, distributing daily forcing and adding real susceptibility does not improve discrimination. That null is diagnosed rather than attributed; a sub-daily head-to-head and a one-factor decomposition then show that resolution governs intra-day timing in every event and detection only for a short burst, with the magnitude error of the rainfall product binding elsewhere. A flood path validated against observed streamflow shows the converse case: where routing integrates the forcing, daily resolution suffices (out-of-sample ROC-AUC 0.90).
+them independently swappable and the diagnosis that architecture enables. On real Chilean data, distributing daily forcing and adding real susceptibility does not improve discrimination. That null is diagnosed rather than attributed; a sub-daily head-to-head and a one-factor decomposition then show that resolution governs intra-day timing in every event and detection only for a short burst, with the magnitude error of the rainfall product binding elsewhere. A flood path checked against observed streamflow shows the converse case: where routing integrates the forcing, daily resolution suffices (out-of-sample ROC-AUC 0.90, no better than a 3-day rainfall sum).
 
 \section{The nowcast engine}
 
@@ -986,7 +986,7 @@ Villa Santa Luc\'ia & 19.1 & 9.4 & 2.0$\times$ & $9.4 < a \leq 19.1$ \\
 \end{tabular}
 \end{table}
 
-\subsection{Flood path: a validated discharge nowcast}
+\subsection{Flood path: a routed-discharge check against observed streamflow}
 
 To exercise the discharge trigger we run GR4J \citep{perrin2003} on the CAMELS-CL
 R\'io Itata catchment (gauge 8123001, 1979--2016) and validate it against
@@ -997,18 +997,27 @@ maximising Kling--Gupta efficiency \citep{gupta2009}) and evaluated out of sampl
 reproduces the observed hydrograph well (KGE 0.85 train, 0.74 test; NSE 0.70 / 0.60).
 Defining an observed flood as a day whose observed discharge exceeds its 98th
 training percentile (21.7\,mm\,day$^{-1}$), the engine's discharge-exceedance hazard,
-driven by the \emph{simulated} hydrograph, discriminates observed flood days out of
-sample with \textbf{ROC-AUC 0.896}; at a fixed alert level (simulated $Q$ above the
+driven by the \emph{simulated} hydrograph, discriminates the 60 observed flood days of the test period
+with ROC-AUC 0.896 [0.826, 0.972] (year-block bootstrap, 2\,000 resamples); at a fixed alert level (simulated $Q$ above the
 98th training percentile, 23.2\,mm\,day$^{-1}$) it scores POD 0.30, FAR 0.42 and
-CSI 0.25 against a 1.2\,\% flood base rate. The exact-attribution facility
-decomposes each alert into its exposure and discharge factors.
+CSI 0.25 against a 1.2\,\% flood base rate. Two things must be said about that
+number. First, it measures the wrapped model, not the engine: with one lumped
+catchment the exposure factor is a constant and the discharge trigger is monotone
+in $Q$, so by the invariance of Section~4.2 the hazard ranks days exactly as the
+simulated hydrograph does, and the run is driven by observed rainfall, so its lead
+time is zero. Second, it does not beat model-free baselines on the same days:
+yesterday's observed discharge (persistence) scores 0.946 [0.912, 0.966], the
+observed 3-day rainfall sum 0.942 [0.883, 0.987], and the observed 1-day rainfall
+0.824 [0.777, 0.884]. The exact-attribution facility
+decomposes each alert into its exposure and discharge factors, but the flood path as
+exercised here is a check that the routed-discharge trigger behaves, not a validated
+nowcast.
 
-This is the validated positive that the daily \emph{landslide} path lacks, and the
-contrast is the resolution argument seen from the other side. Discharge routing
+What the check does establish is the resolution argument seen from the other side. Discharge routing
 \emph{integrates} rainfall over the catchment, supplying the temporal accumulation
 that a sub-daily I--D trigger must otherwise resolve in the rainfall itself; a daily
 forcing that cannot trigger a convective-burst landslide
-(Section~\ref{sec:singlefactor}) is therefore adequate for a routed-discharge flood. Attainable skill
+(Section~\ref{sec:singlefactor}) is therefore adequate for a routed-discharge flood, so adequate that a 3-day rainfall sum already discriminates flood days. Attainable skill
 tracks the forcing resolution \emph{relative to the process}: daily suffices where
 routing integrates, and fails where triggering is sub-daily.
 
@@ -1026,8 +1035,8 @@ purpose here is to show that a new forcing, a new trigger family and a new
 physical-refinement model each plug in through the same \texttt{Forcing} and
 \texttt{Trigger} interfaces \emph{without touching the hazard logic}; their
 predictive skill rests on the wrapped models and their own validation, and is not
-claimed here. The validated results of this paper are the resolution diagnosis
-(Section~\ref{sec:synthetic}), the flood path (Section~5.8) and the on-demand
+claimed here. The results this paper stands on are the resolution diagnosis
+(Section~\ref{sec:synthetic}), the routed-discharge check (Section~5.8, which measures GR4J, not the engine) and the on-demand
 coupling's compute saving (Section~2.5).
 
 \section{Discussion}
@@ -1054,10 +1063,9 @@ terrain held fixed, aggregation drives the catch rate on burst-driven failures t
 zero while sparing accumulation-driven ones entirely, so the real-data null is consistent with a resolution limit on burst-driven failures, which it cannot establish on its own (Section~5.2), and the controlled experiment measures the mechanism rather than the field skill. It also shows why a pooled skill score can conceal this, by averaging
 the two populations. The practical corollary is that an I--D nowcast is only as good as its
 rainfall's temporal resolution; effort spent on susceptibility sophistication is
-wasted where the forcing is daily. The flood path makes the same point with a
-\emph{positive} result: where discharge routing integrates the rainfall, daily
-forcing is adequate and the engine discriminates observed floods out of sample
-(ROC-AUC 0.90, Section~5.8). Skill thus tracks forcing resolution \emph{relative to
+wasted where the forcing is daily. The flood path makes the same point from the other side: where discharge routing integrates the rainfall, daily
+forcing is adequate, and so adequate that the GR4J-driven hazard (ROC-AUC 0.90, Section~5.8) is matched by a
+3-day rainfall sum and by persistence (0.94--0.95), which is a statement about the process, not a validated nowcast. Skill thus tracks forcing resolution \emph{relative to
 the triggering process}, not resolution in the abstract, a daily product that is
 useless for convective-burst landslides is sufficient for routed floods.
 
@@ -1127,7 +1135,7 @@ probability with reliability diagnostics (Brier score and skill \citep{brier1950
 expected calibration error). Fitting it on the real distributed Maipo backtest
 (odd years $\to$ even) collapses the calibrated probability to climatology (Brier
 skill $-3.4$ for the raw index $\to -0.003$ calibrated; expected calibration error $0.080\to0.003$), which confirms that the daily index carries no skill to calibrate, consistent with the Section~5.2 null. Validating the calibration where
-skill is present (the flood path, sub-daily forcing) remains future work.
+skill is present (routed discharge, sub-daily forcing) remains future work.
 (ii) Trigger parameters are calibrated
 minimally; a formal calibration with uncertainty, for which the sibling
 rainfall--runoff engine already provides a DDS \citep{tolson2007} optimiser pattern, is future work.

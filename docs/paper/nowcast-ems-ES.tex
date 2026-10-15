@@ -103,10 +103,10 @@ la curva llega a cruzarse, y en las primeras semanas de operación en vivo los d
 cada evento tiene una banda medible de interceptos, de un factor 2--3, en la que
 la resolución por sí sola decide la detección, y el contraste persiste a lo largo
 de las curvas I--D publicadas en la literatura. Una vía complementaria de
-crecidas, validada contra caudal diario \emph{observado} en el Río Itata,
-discrimina crecidas observadas fuera de muestra (ROC-AUC 0.90), porque el ruteo
+crecidas, chequeada contra caudal diario \emph{observado} en el Río Itata,
+discrimina crecidas observadas fuera de muestra (ROC-AUC 0.90) pero no mejor que una suma de lluvia de 3 días o la persistencia (0.94--0.95): el ruteo
 de caudal integra la lluvia que un gatillo sub-diario de deslizamientos debe en
-cambio resolver directamente. El motor, su marco de backtesting y los
+cambio resolver directamente, y la forzante diaria le basta. El motor, su marco de backtesting y los
 ejemplos detrás de los resultados centrales son abiertos y reproducibles desde una instantánea archivada; los crates proveedores necesitan los motores hermanos.
 \end{abstract}
 
@@ -212,9 +212,9 @@ construcción y no se reclaman como novedosos; la contribución es la arquitectu
 que los hace intercambiables de forma independiente y el diagnóstico que esa
 arquitectura habilita. Sobre datos chilenos reales, distribuir la forzante diaria
 y agregar susceptibilidad real no mejora la discriminación; ese resultado nulo
-se diagnostica en vez de atribuirse; un head-to-head sub-diario y una descomposición de un factor muestran luego que la resolución gobierna el timing intra-diario en todos los eventos y la detección solo en una ráfaga breve, con el error de magnitud del producto de lluvia mandando en el resto; una vía de crecidas validada
+se diagnostica en vez de atribuirse; un head-to-head sub-diario y una descomposición de un factor muestran luego que la resolución gobierna el timing intra-diario en todos los eventos y la detección solo en una ráfaga breve, con el error de magnitud del producto de lluvia mandando en el resto; una vía de crecidas chequeada
 contra caudal observado muestra lo converso: donde el ruteo integra la forzante,
-la resolución diaria alcanza (ROC-AUC fuera de muestra 0.90).
+la resolución diaria alcanza (ROC-AUC fuera de muestra 0.90, no mejor que una suma de lluvia de 3 días).
 
 \section{El motor nowcast}
 
@@ -1127,7 +1127,7 @@ Villa Santa Lucía & 19.1 & 9.4 & 2.0$\times$ & $9.4 < a \leq 19.1$ \\
 \end{tabular}
 \end{table}
 
-\subsection{Vía de crecidas: un nowcast de caudal validado}
+\subsection{Vía de crecidas: un chequeo de caudal ruteado contra caudal observado}
 
 Para ejercitar el gatillo de caudal corremos GR4J \citep{perrin2003} sobre la
 cuenca del Río Itata de CAMELS-CL (estación 8123001, 1979--2016) y lo validamos
@@ -1140,19 +1140,28 @@ eficiencia de Kling--Gupta \citep{gupta2009}) y se evalúa fuera de muestra en
 en test; NSE 0.70 / 0.60). Definiendo una crecida observada como un día cuyo caudal
 observado excede su percentil 98 de entrenamiento (21.7\,mm\,día$^{-1}$), el peligro
 por excedencia de caudal del motor, impulsado por el hidrograma \emph{simulado},
-discrimina días de crecida observada fuera de muestra con \textbf{ROC-AUC 0.896}; a
+discrimina los 60 días de crecida observada del período de test con ROC-AUC 0.896 [0.826, 0.972] (bootstrap por bloques de año, 2\,000 remuestreos); a
 un nivel de alerta fijo ($Q$ simulado sobre el percentil 98 de entrenamiento,
 23.2\,mm\,día$^{-1}$) obtiene POD 0.30, FAR 0.42 y CSI 0.25 contra una tasa base de
-crecidas de 1.2\,\%. La facilidad de atribución exacta descompone cada alerta en
-sus factores de exposición y de caudal.
+crecidas de 1.2\,\%. Hay que decir dos cosas de ese número. Primero, mide al modelo
+envuelto, no al motor: con una sola cuenca agrupada el factor de exposición es una
+constante y el gatillo de caudal es monótono en $Q$, así que por la invarianza de la
+Sección~4.2 el peligro ordena los días exactamente como el hidrograma simulado, y la
+corrida va impulsada por lluvia observada, así que su anticipación es cero. Segundo,
+no supera a líneas base sin modelo sobre los mismos días: el caudal observado del
+día anterior (persistencia) obtiene 0.946 [0.912, 0.966], la suma de lluvia
+observada de 3 días 0.942 [0.883, 0.987], y la lluvia observada de 1 día
+0.824 [0.777, 0.884]. La facilidad de atribución exacta descompone cada alerta en
+sus factores de exposición y de caudal, pero la vía de crecidas tal como se ejercita
+aquí es un chequeo de que el gatillo de caudal ruteado se comporta, no un nowcast
+validado.
 
-Este es el positivo validado que la vía \emph{de deslizamientos} diaria no tiene, y
-el contraste es el argumento de resolución visto desde el otro lado. El ruteo de
+Lo que el chequeo sí establece es el argumento de resolución visto desde el otro lado. El ruteo de
 caudal \emph{integra} la lluvia sobre la cuenca, aportando la acumulación temporal
 que un gatillo I--D sub-diario debe, en cambio, resolver en la lluvia misma; una
 forzante diaria que no puede gatillar un deslizamiento por ráfaga convectiva
 (Sección~\ref{sec:singlefactor}) es por tanto adecuada para una crecida de caudal
-ruteado. El skill alcanzable sigue a la resolución de la forzante \emph{relativa al
+ruteado, tan adecuada que una suma de lluvia de 3 días ya discrimina los días de crecida. El skill alcanzable sigue a la resolución de la forzante \emph{relativa al
 proceso}: lo diario alcanza donde el ruteo integra, y falla donde el gatillado es
 sub-diario.
 
@@ -1179,9 +1188,9 @@ un ejemplo ejecutable. Su propósito aquí es mostrar que una forzante nueva, un
 familia de gatillos nueva y un modelo de refinamiento físico nuevo se enchufan cada
 uno por las mismas interfaces \texttt{Forcing} y \texttt{Trigger} \emph{sin tocar
 la lógica de peligro}; su skill predictivo descansa en los modelos envueltos y en
-su propia validación, y no se reclama aquí. Los resultados validados de este paper
-son el diagnóstico de resolución (Sección~\ref{sec:synthetic}), la vía de crecidas
-(Sección~5.8) y el ahorro de cómputo del acoplamiento bajo demanda (Sección~2.5).
+su propia validación, y no se reclama aquí. Los resultados sobre los que se sostiene este paper
+son el diagnóstico de resolución (Sección~\ref{sec:synthetic}), el chequeo de caudal ruteado
+(Sección~5.8, que mide a GR4J y no al motor) y el ahorro de cómputo del acoplamiento bajo demanda (Sección~2.5).
 
 \section{Discusión}
 
@@ -1211,9 +1220,9 @@ qué un puntaje agrupado de skill puede ocultar esto, al promediar las dos
 poblaciones. El corolario práctico es que un nowcast I--D es tan bueno como la
 resolución temporal de su lluvia; el esfuerzo puesto en sofisticar la
 susceptibilidad se desperdicia donde la forzante es diaria. La vía de crecidas hace
-el mismo punto con un resultado \emph{positivo}: donde el ruteo de caudal integra
-la lluvia, la forzante diaria es adecuada y el motor discrimina crecidas observadas
-fuera de muestra (ROC-AUC 0.90, Sección~5.8). El skill sigue así a la resolución de
+el mismo punto desde el otro lado: donde el ruteo de caudal integra
+la lluvia, la forzante diaria es adecuada, y tan adecuada que el peligro impulsado por GR4J (ROC-AUC 0.90, Sección~5.8) lo igualan una
+suma de lluvia de 3 días y la persistencia (0.94--0.95), lo que es una afirmación sobre el proceso, no un nowcast validado. El skill sigue así a la resolución de
 la forzante \emph{relativa al proceso gatillante}, no a la resolución en abstracto:
 un producto diario que es inútil para deslizamientos por ráfaga convectiva es
 suficiente para crecidas ruteadas.
@@ -1295,8 +1304,8 @@ distribuido real del Maipo (años impares $\to$ pares) colapsa la probabilidad
 calibrada a la climatología (skill de Brier $-3.4$ para el índice crudo $\to
 -0.003$ calibrado; error de calibración esperado $0.080\to0.003$): una confirmación
 honesta de que el índice diario no lleva skill que calibrar, consistente con el
-nulo de la Sección~5.2. Validar la calibración donde el skill sí está presente (la
-vía de crecidas, forzante sub-diaria) queda como trabajo futuro. (ii) Los
+nulo de la Sección~5.2. Validar la calibración donde el skill sí está presente (caudal
+ruteado, forzante sub-diaria) queda como trabajo futuro. (ii) Los
 parámetros de gatillo se calibran de forma mínima; una calibración formal con
 incertidumbre, para la cual el motor hermano de lluvia--escorrentía ya provee un
 patrón de optimizador DDS \citep{tolson2007}, es trabajo futuro. Comparamos la

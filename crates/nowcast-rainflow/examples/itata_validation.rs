@@ -25,7 +25,7 @@ const CAMELS: &str = "~/proyectos/rainflow/data/camels-cl/8123001.csv";
 const SPLIT_YEAR: i32 = 2003; // train < 2003, test >= 2003
 const WARMUP_DAYS: usize = 365; // GR4J spin-up excluded from metrics
 const FLOOD_Q: f64 = 0.98; // flood = 98th percentile of discharge
-const N_SEARCH: usize = 600; // random-search budget for GR4J calibration
+const N_SEARCH: usize = 600; // random-search budget for GR4J calibration (LCG seed 0x1234_5678_9ABC_DEF0)
 
 /// (year, precip, pet, qobs[NaN if missing])
 fn read_camels() -> (Vec<i32>, Vec<f64>, Vec<f64>, Vec<f64>) {
@@ -208,6 +208,58 @@ fn main() {
 
     println!("Flood discrimination on the TEST period (observed flood = qobs ≥ {qc_obs:.1} mm/day):");
     println!("  ROC-AUC of engine hazard vs observed floods : {a:.3}");
+
+    // --- What the AUC measures, and against what (EMS review, 2026-10-15) -------
+    // With one lumped catchment the exposure factor is a constant and the
+    // discharge trigger is monotone in Q, so the engine's hazard ranks days
+    // exactly as the simulated hydrograph does: the AUC above is GR4J's
+    // hydrograph as a classifier of observed flood days, with zero lead time
+    // (the run is driven by observed rainfall). Baselines that need no model
+    // say how much the routing adds, and a year-block bootstrap puts an
+    // interval on each AUC over the ~60 observed flood-days of the test period.
+    let n_days = qobs.len();
+    let rain1: Vec<f64> = p.clone();
+    let rain3: Vec<f64> = (0..n_days).map(|i| p[i.saturating_sub(2)..=i].iter().sum()).collect();
+    let persist: Vec<f64> = (0..n_days)
+        .map(|i| if i > 0 && qobs[i - 1].is_finite() { qobs[i - 1] } else { 0.0 })
+        .collect();
+    let baselines: [(&str, &Vec<f64>); 4] = [
+        ("engine hazard = GR4J simulated Q", &qsim),
+        ("observed 1-day rainfall", &rain1),
+        ("observed 3-day rainfall", &rain3),
+        ("persistence: yesterday's observed Q", &persist),
+    ];
+    // Year-block bootstrap: resample test years with replacement (B = 2000, seed fixed).
+    let test_years: Vec<i32> = {
+        let mut v: Vec<i32> = test_idx.iter().map(|&i| yr[i]).collect();
+        v.dedup();
+        v
+    };
+    let by_year: Vec<Vec<usize>> = test_years
+        .iter()
+        .map(|&y| test_idx.iter().copied().filter(|&i| yr[i] == y).collect())
+        .collect();
+    let mut brng = Lcg(20261015);
+    const B: usize = 2000;
+    println!("\n  Baselines on the same test days ({} flood-days; year-block bootstrap, B={B}, 95 % interval):", test_idx.iter().filter(|&&i| obs_flood[i]).count());
+    for (name, score) in baselines {
+        let point = auc(score, &obs_flood, &test_idx);
+        let mut aucs = Vec::with_capacity(B);
+        for _ in 0..B {
+            let mut idx = Vec::with_capacity(test_idx.len());
+            for _ in 0..by_year.len() {
+                let k = (brng.unit() * by_year.len() as f64) as usize;
+                idx.extend_from_slice(&by_year[k.min(by_year.len() - 1)]);
+            }
+            let v = auc(score, &obs_flood, &idx);
+            if v.is_finite() {
+                aucs.push(v);
+            }
+        }
+        aucs.sort_by(|x, y| x.partial_cmp(y).unwrap());
+        let q = |f: f64| aucs[((aucs.len() - 1) as f64 * f) as usize];
+        println!("    {name:<38} AUC {point:.3}  [{:.3}, {:.3}]", q(0.025), q(0.975));
+    }
     println!("  alert = sim Q ≥ Q_c(train) = {qc_sim:.1} mm/day");
     println!(
         "  POD {pod:.2}   FAR {far:.2}   CSI {csi:.2}   (base rate {:.1}%, {} obs flood-days / {} test days)",
