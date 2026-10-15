@@ -283,7 +283,7 @@ vista de solo lectura y acceso aleatorio de \emph{un} campo escalar, sin ciclo d
 vida, sin control del tiempo y sin intercambio bidireccional, que es lo que abarata
 el acceso aleatorio que necesitan tanto el kernel de ventanas I--D como el
 backtester. El intercambio es el habitual: una interfaz de propósito único es
-trivial de implementar para un proveedor --- cada uno de nuestros seis adaptadores
+trivial de implementar para un proveedor --- cada uno de nuestros adaptadores
 son unas pocas decenas de líneas --- pero no puede expresar acoplamiento de dos
 vías ni dejar que un componente maneje el reloj, que es precisamente para lo que
 existen BMI y OpenMI. Los dos niveles componen en vez de competir: un modelo
@@ -371,8 +371,8 @@ gruesa se reduce de escala sobre la huella física; el modelo costoso corre solo
 donde el nowcast barato ya alertó. El ahorro es el punto y es cuantificable: como
 el solver de aguas someras integra hasta un tiempo físico fijo con pasos limitados
 por CFL, su costo es ${\sim}O(\mathrm{celdas})$, de modo que confinarlo a un
-recuadro alertado que abarca el 31\,\% de un dominio grueso corre $3.9\times$ más
-rápido que resolver el dominio completo (de 1.19\,s a 0.31\,s) devolviendo
+recuadro alertado que abarca el 31\,\% de un dominio grueso corre $3.8\times$ más
+rápido que resolver el dominio completo (de 1.19\,s a 0.31\,s; un costo estrictamente lineal predeciría $3.2\times$) devolviendo
 profundidades \emph{bit-idénticas} en la región inundada, al estar la crecida
 contenida dentro del recuadro. La restricción bajo demanda es por tanto gratuita
 en exactitud, y el tamiz barato susceptibilidad$\times$gatillo es lo que mantiene
@@ -394,7 +394,7 @@ interpretable.
 
 \subsection{Implementación}
 
-El motor está escrito en Rust (edición 2024) como un workspace de Cargo de diez
+El motor está escrito en Rust (edición 2024) como un workspace de Cargo de doce
 crates. El núcleo depende solo de \texttt{std} y de un crate de manejo de errores,
 así que compila y testea sin conexión y sin dependencias de sistema; los
 proveedores nativos son crates separados que envuelven motores hermanos mediante
@@ -446,7 +446,7 @@ lo que topa la aceleración multi-hilo.
 \toprule
 celdas & pasos & celda-pasos & tiempo (s) & M\,celda-pasos\,s$^{-1}$ \\
 \midrule
-10\,000  & 60  & 0.6\,M   & 0.17  & 3.6 \\
+10\,000  & 60  & 0.6\,M   & 0.17  & 3.5 \\
 90\,000  & 200 & 18\,M    & 4.7   & 3.8 \\
 250\,000 & 200 & 50\,M    & 11.2  & 4.5 \\
 490\,000 & 365 & 179\,M   & 48.1  & 3.7 \\
@@ -457,7 +457,8 @@ celdas & pasos & celda-pasos & tiempo (s) & M\,celda-pasos\,s$^{-1}$ \\
 \begin{table}[ht]
 \centering
 \caption{Escalamiento paralelo de \texttt{Nowcast::run} (\texttt{--features parallel})
-sobre una grilla de 50~M celda-pasos, máquina de 16 núcleos, mejor de dos corridas.
+sobre una grilla de 50~M celda-pasos, máquina de 16 núcleos, mejor de dos corridas (una corrida distinta
+de la Tabla~\ref{tab:perf}: el tiempo mono-hilo difiere por variación entre corridas, 10.5 contra 11.2\,s).
 La salida se verifica bit-idéntica a la corrida mono-hilo.}
 \label{tab:scaling}
 \begin{tabular}{@{}rrrr@{}}
@@ -606,13 +607,14 @@ pares.
 
 Sobre 13\,880 pasos diarios (1979--2016) y 157 eventos fechados gatillados por
 lluvia, el umbral global de Caine ($a=14.82$) se cruza en solo \textbf{7 de
-13\,880 días} con forzante diaria CR2MET (POD $=0$): la intensidad media diaria
-incluso de los días más lluviosos queda bajo la curva a 24\,h de duración. Un
+13\,880 días} con forzante diaria CR2MET (POD $=0$): a 24\,h de duración la curva queda en $I_{\mathrm{crit}}=4.29$\,mm\,h$^{-1}$, un
+total diario de 103\,mm, que solo esos siete días alcanzan, y ninguno cae en un mes
+con evento. Un
 intercepto regional calibrado $a^\star\approx5.5$\,mm\,h$^{-1}$ es robusto, las
 calibraciones de período completo y de años impares coinciden, y transfiere por
 partición (POD de validación $\approx 0.50$; Fig.~\ref{fig:idsweep}). La razón de
 falsas alarmas es alta (FAR $\approx 0.92$) pero estructural: con una tasa base de
-eventos cercana al 4\,\% y un único pluviómetro representativo en un clima
+eventos cercana al 4\,\% de los meses y un único pluviómetro representativo en un clima
 mediterráneo de estación húmeda, un gatillo I--D por sí solo sobre-predice. El
 fechado a nivel de mes del inventario topa el POD alcanzable: ampliar la tolerancia
 de emparejamiento de $\pm0$ a $\pm3$ meses eleva el POD de 0.21 a 0.68
@@ -758,7 +760,9 @@ resolución el gatillo diario es peor que ninguno.
 \includegraphics[width=0.6\linewidth]{figs/fig4_hazard.pdf}
 \caption{Ejemplo de campo de peligro distribuido sobre la región de eventos del Río
 Maipo (grilla CR2MET 15$\times$18) en el paso más lluvioso, con susceptibilidad
-RandomForest real y el gatillo I--D regional ($a=5.5$). El campo está
+RandomForest real y el gatillo I--D regional ($a=5.5$); los puntos marcan las celdas
+de la huella del inventario, con tamaño según su número de celdas-mes con evento
+registrado (884 en 129 celdas). Ninguna celda alcanza el nivel de alerta 0.5 en este paso. El campo está
 espacialmente estructurado y, sin embargo, a resolución diaria de 5\,km no separa
 las celdas-mes con evento registrado (Sección~5.2); la Fig.~\ref{fig:synthetic}
 muestra, sobre datos controlados, cómo esa discriminación vuelve al aumentar la
@@ -892,9 +896,10 @@ la correcta.
 \toprule
  & CR2MET diario ($\sim$5\,km) & IMERG $\frac{1}{2}$-horario ($\sim$10\,km) \\
 \midrule
-total del evento & 30.1\,mm & 108.5\,mm \\
+total del evento (24--26 de marzo, celda núcleo) & 30.1\,mm & 108.5\,mm \\
+día / media hora más lluviosos & 15.9\,mm & 20.0\,mm \\
 duración más fina resoluble & 24\,h & 0.5\,h \\
-máx. intensidad resoluble & 0.66\,mm\,h$^{-1}$ & 40.0\,mm\,h$^{-1}$ \\
+máx. intensidad resoluble (paso más lluvioso$/$duración) & 0.66\,mm\,h$^{-1}$ & 40.0\,mm\,h$^{-1}$ \\
 I--D ($a^\star=5.5$) & sin alerta ($E\leq0.45$) & alerta 24-mar 04:30 ($E\approx9$) \\
 \bottomrule
 \end{tabular}
@@ -907,7 +912,7 @@ I--D ($a^\star=5.5$) & sin alerta ($E\leq0.45$) & alerta 24-mar 04:30 ($E\approx
 marzo de 2015). La intensidad semihoraria de GPM IMERG (azul) alcanza un peak de
 40\,mm\,h$^{-1}$ y cruza la curva I--D a las 04:30 UTC del 24 de marzo; la misma
 lluvia vista por un producto diario (CR2MET, naranjo: total$/24$\,h) es un valor
-plano de ${\sim}1$\,mm\,h$^{-1}$ que nunca alcanza la curva. El producto diario
+plano de 0.66\,mm\,h$^{-1}$ el día más lluvioso (y menor los demás) que nunca alcanza la curva. El producto diario
 estructuralmente no puede resolver la ráfaga gatillante.}
 \label{fig:leadtime}
 \end{figure}
@@ -1008,7 +1013,9 @@ detección a escala.
 \caption{Descomposición por factor único en cada núcleo de tormenta: el factor de
 producto (A$\to$B) y el factor de resolución (B$\to$C) sobre la excedencia I--D
 peak $E$ ($a^\star=5.5$). La negrita marca el paso que voltea la detección ($E$
-cruzando 1).}
+cruzando 1). La fila de CR2MET (A) es el máximo sobre las celdas CR2MET dentro del
+píxel IMERG en la ventana $D$ de la descomposición, así que su total (26.8\,mm en
+Atacama) no es el total de tres días de la celda núcleo de la Tabla~\ref{tab:headtohead} (30.1\,mm).}
 \label{tab:singlefactor}
 \small
 \begin{tabular}{@{}llccccc@{}}
@@ -1161,7 +1168,7 @@ uno por las mismas interfaces \texttt{Forcing} y \texttt{Trigger} \emph{sin toca
 la lógica de peligro}; su skill predictivo descansa en los modelos envueltos y en
 su propia validación, y no se reclama aquí. Los resultados validados de este paper
 son el diagnóstico de resolución (Sección~\ref{sec:synthetic}), la vía de crecidas
-(Sección~5.6) y el ahorro de cómputo del acoplamiento bajo demanda (Sección~2.5).
+(Sección~5.8) y el ahorro de cómputo del acoplamiento bajo demanda (Sección~2.5).
 
 \section{Discusión}
 
@@ -1195,7 +1202,7 @@ resolución temporal de su lluvia; el esfuerzo puesto en sofisticar la
 susceptibilidad se desperdicia donde la forzante es diaria. La vía de crecidas hace
 el mismo punto con un resultado \emph{positivo}: donde el ruteo de caudal integra
 la lluvia, la forzante diaria es adecuada y el motor discrimina crecidas observadas
-fuera de muestra (ROC-AUC 0.90, Sección~5.6). El skill sigue así a la resolución de
+fuera de muestra (ROC-AUC 0.90, Sección~5.8). El skill sigue así a la resolución de
 la forzante \emph{relativa al proceso gatillante}, no a la resolución en abstracto:
 un producto diario que es inútil para deslizamientos por ráfaga convectiva es
 suficiente para crecidas ruteadas.
@@ -1216,7 +1223,7 @@ intercambio que el diseño se construyó para abaratar.
 
 La misma aritmética muerde en una segunda superficie, menos obvia: la
 \emph{referencia climatológica} contra la cual se juzga anómalo un evento. Para el
-evento de 2026 de la limitación~(iii) comparamos la acumulación semihoraria
+evento fechado de 2026 reproducido en la limitación~(iii) (Coelemu, Ñuble, 31 de julio de 2026) comparamos la acumulación semihoraria
 observada en la comuna afectada contra la propia climatología invernal de esa
 comuna (CR2MET v2.5, mayo--septiembre 1991--2020;
 \citealp{boisier2018cr2met}). En una ventana de 24\,h el evento queda en el
@@ -1289,7 +1296,7 @@ como trabajo futuro. (iii) El motor incluye un nowcast por streaming que ingiere
 forzante paso a paso y emite alertas en línea (bit-idéntico al motor batch). Una
 cadena de ingesta multi-feed en vivo está conectada (GPM IMERG Early NRT
 semihorario, QPE de GOES-East y pluviómetros in situ, fusionados por noisy-OR), y
-reprodujimos un evento de deslizamiento fechado de 2026 a través de ella de punta a
+reprodujimos un evento de deslizamiento fechado de 2026 (Coelemu, Región de Ñuble, 31 de julio de 2026) a través de ella de punta a
 punta. El motor puso a la comuna afectada en alerta durante una ventana de diez
 horas el día de los flujos, cruzando el umbral a las 01:30 hora local. Pero la
 alerta cubrió aproximadamente el 40\,\% del dominio en su peak: a $0.1^{\circ}$ la
@@ -1322,12 +1329,12 @@ evidencia de cada alerta automáticamente. Tres eventos en cinco días, reportad
 por la prensa y no por un inventario, no constituyen una estimación de skill, y la
 tasa de falsas alarmas del intercepto regional todavía se está midiendo; la
 temporada en modo sombra sigue siendo el paso necesario, y la validación reportada
-en las Secciones~5.1--5.6 es hindcast en su totalidad. (iv) La
+en las Secciones~5.1--5.8 es hindcast en su totalidad. (iv) La
 humedad antecedente del suelo se captura solo implícitamente mediante ventanas
 móviles largas, no como un estado explícito. (v) Los pesos de combinación
 multi-gatillo y la tasa crítica de deformación aún no están calibrados. (vi) Los
 adaptadores de deshielo, deformación InSAR y runout de flujo de detritos
-(Sección~5.7) ejercitan la arquitectura pero no son predicciones validadas; solo el
+(Sección~5.9) ejercitan la arquitectura pero no son predicciones validadas; solo el
 ahorro de cómputo del acoplamiento bajo demanda está cuantificado (Sección~2.5).
 Abordar (i), (ii) y un inventario con resolución de día convertiría el presente
 diagnóstico en una afirmación operacional validada.
@@ -1404,7 +1411,7 @@ inventario SERNAGEOMIN.
 \emph{Año de primera disponibilidad}: 2026.
 \emph{Hardware requerido}: cualquier máquina de 64 bits; los experimentos de este
 paper corren en un notebook (la suite completa de ejemplos en minutos; ver la
-Sección~2.6 para los tiempos).
+Sección~2.8 para los tiempos).
 \emph{Software requerido}: Rust 1.85 o posterior (estable; edición 2024) para el motor central, y 1.91
 o posterior para el ejecutable de línea de comandos, porque así lo declara su dependencia geoespacial;
 Python 3.9 o posterior con \texttt{maturin} para los bindings opcionales; R con
@@ -1540,9 +1547,9 @@ Gariano, S.L., Guzzetti, F., 2016. Landslides in a changing climate.
 Earth-Sci.\ Rev.\ 162, 227--252.
 \url{https://doi.org/10.1016/j.earscirev.2016.08.011}.
 
-\bibitem[Garreaud et al.(2019)]{garreaud2019}
+\bibitem[Garreaud et al.(2020)]{garreaud2019}
 Garreaud, R.D., Boisier, J.P., Rondanelli, R., Montecinos, A., Sep\'ulveda, H.H.,
-Veloso-Aguila, D., 2019. The Central Chile Mega Drought (2010--2018): a climate
+Veloso-Aguila, D., 2020. The Central Chile Mega Drought (2010--2018): a climate
 dynamics perspective. Int.\ J.\ Climatol.\ 40 (1), 421--439.
 \url{https://doi.org/10.1002/joc.6219}.
 
@@ -1647,10 +1654,10 @@ Reichenbach, P., Rossi, M., Malamud, B.D., Mihir, M., Guzzetti, F., 2018. A revi
 of statistically-based landslide susceptibility models. Earth-Sci.\ Rev.\ 180,
 60--91. \url{https://doi.org/10.1016/j.earscirev.2018.03.001}.
 
-\bibitem[Roberts et al.(2016)]{roberts2016}
+\bibitem[Roberts et al.(2017)]{roberts2016}
 Roberts, D.R., Bahn, V., Ciuti, S., Boyce, M.S., Elith, J., Guillera-Arroita, G.,
 Hauenstein, S., Lahoz-Monfort, J.J., Schr\"oder, B., Thuiller, W., Warton, D.I.,
-Wintle, B.A., Hartig, F., Dormann, C.F., 2016. Cross-validation strategies for
+Wintle, B.A., Hartig, F., Dormann, C.F., 2017. Cross-validation strategies for
 data with temporal, spatial, hierarchical, or phylogenetic structure. Ecography
 40 (8), 913--929. \url{https://doi.org/10.1111/ecog.02881}.
 

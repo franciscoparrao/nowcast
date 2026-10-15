@@ -212,7 +212,7 @@ initialise/update/get--set functions that any model implements to become
 composable, and the Object Modeling System \citep{david2013} approaches the same
 problem from a software-engineering direction, using lightweight annotations
 instead of a prescriptive component API. We do not propose \texttt{Forcing} as an
-alternative to these. It is narrower: a read-only, random-access view of \emph{one} scalar field, with no lifecycle, no time control and no bidirectional exchange. That narrowness is what makes random access cheap, and both the I--D window kernel and the backtester depend on it. The trade is the usual one. A single-purpose interface is trivial for a provider to implement (each of our six adapters is a few dozen lines), but it cannot express two-way coupling or let a component drive the clock, and those are the jobs BMI and OpenMI exist to do. The two levels compose rather than compete: a BMI-exposed model is a
+alternative to these. It is narrower: a read-only, random-access view of \emph{one} scalar field, with no lifecycle, no time control and no bidirectional exchange. That narrowness is what makes random access cheap, and both the I--D window kernel and the backtester depend on it. The trade is the usual one. A single-purpose interface is trivial for a provider to implement (each of our adapters is a few dozen lines), but it cannot express two-way coupling or let a component drive the clock, and those are the jobs BMI and OpenMI exist to do. The two levels compose rather than compete: a BMI-exposed model is a
 legitimate source behind a \texttt{Forcing} implementation, and wrapping the
 engine itself in BMI so that it can be driven inside a CSDMS or OpenMI
 composition is the natural interoperability step, left as future work.
@@ -292,8 +292,8 @@ downscaled onto the physical footprint; the expensive model runs only where the
 cheap nowcast already alerted. The saving is the point and is quantifiable:
 because the shallow-water solver integrates to a fixed physical time with
 CFL-limited steps, its cost is ${\sim}O(\mathrm{cells})$, so confining it to an
-alerted tile spanning 31\,\% of a coarse domain runs $3.9\times$ faster than
-solving the full domain (1.19\,s to 0.31\,s) while returning \emph{bit-identical}
+alerted tile spanning 31\,\% of a coarse domain runs $3.8\times$ faster than
+solving the full domain (1.19\,s to 0.31\,s; a strictly linear cost would predict $3.2\times$) while returning \emph{bit-identical}
 depths in the inundated region, the flood being contained within the tile. The
 on-demand restriction is therefore free in accuracy, and the cheap
 susceptibility$\times$trigger screen is what keeps the alerted area, and hence the
@@ -314,7 +314,7 @@ already-interpretable input.
 
 \subsection{Implementation}
 
-The engine is written in Rust (edition 2024) as a Cargo workspace of ten
+The engine is written in Rust (edition 2024) as a Cargo workspace of twelve
 crates. The core depends only on \texttt{std} and an error-handling crate, so it builds and tests offline with no system dependencies. Native providers are separate crates that wrap sibling engines through path dependencies:
 rainfall--runoff (GR4J/HBV; \citealp{perrin2003,seibert2012}), distributed
 snowmelt, 2-D shallow water \citep{audusse2004,toro1994}, an agent-based
@@ -355,7 +355,7 @@ parallel work, is what caps the multi-thread speed-up.
 \toprule
 cells & steps & cell-steps & time (s) & M\,cell-steps\,s$^{-1}$ \\
 \midrule
-10\,000  & 60  & 0.6\,M   & 0.17  & 3.6 \\
+10\,000  & 60  & 0.6\,M   & 0.17  & 3.5 \\
 90\,000  & 200 & 18\,M    & 4.7   & 3.8 \\
 250\,000 & 200 & 50\,M    & 11.2  & 4.5 \\
 490\,000 & 365 & 179\,M   & 48.1  & 3.7 \\
@@ -366,7 +366,8 @@ cells & steps & cell-steps & time (s) & M\,cell-steps\,s$^{-1}$ \\
 \begin{table}[ht]
 \centering
 \caption{Parallel scaling of \texttt{Nowcast::run} (\texttt{--features parallel})
-over a 50~M cell-step grid, 16-core machine, best of two runs. Output is verified
+over a 50~M cell-step grid, 16-core machine, best of two runs (a separate run from
+Table~\ref{tab:perf}: the single-thread time differs by run-to-run variation, 10.5 against 11.2\,s). Output is verified
 bit-identical to the single-thread run.}
 \label{tab:scaling}
 \begin{tabular}{@{}rrrr@{}}
@@ -505,11 +506,12 @@ evaluated on even years.
 
 Over 13\,880 daily steps (1979--2016) and 157 dated rainfall-triggered events, the
 global Caine threshold ($a=14.82$) is crossed on only \textbf{7 of 13\,880 days} on CR2MET daily forcing
-(POD $=0$): the daily-mean intensity of even the wettest days sits below the curve
-at 24\,h duration. A calibrated regional intercept $a^\star\approx5.5$\,mm\,h$^{-1}$
+(POD $=0$): at 24\,h duration the curve sits at $I_{\mathrm{crit}}=4.29$\,mm\,h$^{-1}$, a daily
+total of 103\,mm, which only those seven days reach, and none of them falls in an
+event month. A calibrated regional intercept $a^\star\approx5.5$\,mm\,h$^{-1}$
 is robust, the full-period and odd-year calibrations agree, and transfers
 split-sample (validation POD $\approx 0.50$; Fig.~\ref{fig:idsweep}). The
-false-alarm ratio is high (FAR $\approx 0.92$) but structural: with an event base rate near 4\,\% and a
+false-alarm ratio is high (FAR $\approx 0.92$) but structural: with an event base rate near 4\,\% of months and a
 single representative gauge in a Mediterranean wet-season climate, an I--D trigger
 alone over-predicts. The inventory's month-level dating caps attainable POD:
 widening the match tolerance from $\pm0$ to $\pm3$ months raises POD from 0.21 to
@@ -644,7 +646,9 @@ trigger is worse than none.
 \includegraphics[width=0.6\linewidth]{figs/fig4_hazard.pdf}
 \caption{Example distributed hazard field over the R\'io Maipo event region
 (15$\times$18 CR2MET grid) at the wettest step, with real RandomForest
-susceptibility and the regional I--D trigger ($a=5.5$). The field is
+susceptibility and the regional I--D trigger ($a=5.5$); dots mark the cells of
+the inventory footprint, sized by their number of recorded event cell-months
+(884 over 129 cells). No cell reaches the 0.5 alert level at this step. The field is
 spatially structured, yet at 5\,km daily resolution it does not separate the
 recorded event cell-months (Section~5.2); Fig.~\ref{fig:synthetic} shows, on
 controlled data, how that discrimination returns as resolution increases.}
@@ -762,9 +766,10 @@ regardless of which magnitude is correct.
 \toprule
  & CR2MET daily ($\sim$5\,km) & IMERG $\frac{1}{2}$-hourly ($\sim$10\,km) \\
 \midrule
-event total & 30.1\,mm & 108.5\,mm \\
+event total (24--26 March, core cell) & 30.1\,mm & 108.5\,mm \\
+wettest day / half-hour & 15.9\,mm & 20.0\,mm \\
 finest resolvable duration & 24\,h & 0.5\,h \\
-max resolvable intensity & 0.66\,mm\,h$^{-1}$ & 40.0\,mm\,h$^{-1}$ \\
+max resolvable intensity (wettest step$/$duration) & 0.66\,mm\,h$^{-1}$ & 40.0\,mm\,h$^{-1}$ \\
 I--D ($a^\star=5.5$) & no alert ($E\leq0.45$) & alert 24-Mar 04:30 ($E\approx9$) \\
 \bottomrule
 \end{tabular}
@@ -776,7 +781,7 @@ I--D ($a^\star=5.5$) & no alert ($E\leq0.45$) & alert 24-Mar 04:30 ($E\approx9$)
 \caption{Forcing resolution at the Atacama storm core (24--26 March 2015). The
 GPM IMERG half-hourly intensity (blue) peaks at 40\,mm\,h$^{-1}$ and crosses the
 I--D curve at 04:30 UTC on 24 March; the same rainfall seen by a daily product
-(CR2MET, orange: total$/24$\,h) is a flat ${\sim}1$\,mm\,h$^{-1}$ that never
+(CR2MET, orange: total$/24$\,h) is a flat 0.66\,mm\,h$^{-1}$ on the wettest day (and lower on the others) that never
 reaches the curve. The daily product structurally cannot resolve the
 triggering burst.}
 \label{fig:leadtime}
@@ -872,7 +877,10 @@ resolution varies, is what isolates the detection effect at scale.
 \centering
 \caption{Single-factor decomposition at each storm core: the product factor
 (A$\to$B) and the resolution factor (B$\to$C) on the peak I--D exceedance $E$
-($a^\star=5.5$). Bold marks the step that flips detection ($E$ crossing 1).}
+($a^\star=5.5$). Bold marks the step that flips detection ($E$ crossing 1). The
+CR2MET row (A) is the maximum over the CR2MET cells inside the IMERG pixel over
+the window $D$ of the decomposition, so its total (26.8\,mm at Atacama) is not the
+three-day core-cell total of Table~\ref{tab:headtohead} (30.1\,mm).}
 \label{tab:singlefactor}
 \small
 \begin{tabular}{@{}llccccc@{}}
@@ -1003,7 +1011,7 @@ physical-refinement model each plug in through the same \texttt{Forcing} and
 \texttt{Trigger} interfaces \emph{without touching the hazard logic}; their
 predictive skill rests on the wrapped models and their own validation, and is not
 claimed here. The validated results of this paper are the resolution diagnosis
-(Section~\ref{sec:synthetic}), the flood path (Section~5.6) and the on-demand
+(Section~\ref{sec:synthetic}), the flood path (Section~5.8) and the on-demand
 coupling's compute saving (Section~2.5).
 
 \section{Discussion}
@@ -1036,7 +1044,7 @@ rainfall's temporal resolution; effort spent on susceptibility sophistication is
 wasted where the forcing is daily. The flood path makes the same point with a
 \emph{positive} result: where discharge routing integrates the rainfall, daily
 forcing is adequate and the engine discriminates observed floods out of sample
-(ROC-AUC 0.90, Section~5.6). Skill thus tracks forcing resolution \emph{relative to
+(ROC-AUC 0.90, Section~5.8). Skill thus tracks forcing resolution \emph{relative to
 the triggering process}, not resolution in the abstract, a daily product that is
 useless for convective-burst landslides is sufficient for routed floods.
 
@@ -1055,7 +1063,7 @@ exactly the swap the design was built to make cheap.
 
 The same arithmetic bites on a second, less obvious surface: the
 \emph{climatological reference} against which an event is judged anomalous. For
-the 2026 event of limitation~(iii) we compared the observed half-hourly
+the dated 2026 event replayed in limitation~(iii) (Coelemu, \~Nuble, 31 July 2026) we compared the observed half-hourly
 accumulation at the affected commune against that commune's own winter
 climatology (CR2MET v2.5, May--September 1991--2020; \citealp{boisier2018cr2met}). At a 24\,h window the event sits
 at the 99.96th percentile, equalled twice in thirty winters ($\approx$1-in-15).
@@ -1117,7 +1125,7 @@ remains future work. (iii) The engine includes a streaming nowcast that ingests
 forcing step by step and emits alerts online (bit-identical to the batch engine).
 A live multi-feed ingestion chain is wired (half-hourly GPM IMERG Early NRT,
 GOES-East QPE and in-situ rain gauges, fused by noisy-OR), and we replayed one dated
-2026 landslide event through it end to end. The engine placed the affected
+2026 landslide event (Coelemu, \~Nuble Region, 31 July 2026) through it end to end. The engine placed the affected
 commune in alert for a ten-hour window on the day of the flows, crossing the
 threshold at 01:30 local time. But the alert covered roughly 40\,\% of the domain at
 its peak: at $0.1^{\circ}$ the run identifies the region and the timing, not the
@@ -1147,12 +1155,12 @@ crossing by which feed sustains it, and freezes the evidence of every alert
 automatically. Three events in five days, reported by the press rather than by an
 inventory, do not constitute a skill estimate, and the false-alarm rate of the
 regional intercept is still being measured; the shadow season remains the
-necessary step, and the validation reported in Sections~5.1--5.6 is hindcast
+necessary step, and the validation reported in Sections~5.1--5.8 is hindcast
 throughout.
 (iv) Antecedent soil moisture is captured only implicitly through long rolling
 windows, not as an explicit state. (v) The multi-trigger combination weights and
 the deformation critical rate are not yet calibrated. (vi) The snowmelt, InSAR-deformation
-and debris-flow-runout adapters (Section~5.7) exercise the architecture but are not
+and debris-flow-runout adapters (Section~5.9) exercise the architecture but are not
 validated predictions; only the on-demand coupling's compute saving is quantified
 (Section~2.5).
 Addressing (i), (ii) and a day-resolution inventory would convert the present
@@ -1221,7 +1229,7 @@ SERNAGEOMIN inventory.
 \emph{Contact}: see corresponding author.
 \emph{Year first available}: 2026.
 \emph{Hardware required}: any 64-bit machine; the experiments in this paper run on
-a laptop (the full example suite in minutes; see Section~2.6 for timings).
+a laptop (the full example suite in minutes; see Section~2.8 for timings).
 \emph{Software required}: Rust 1.85 or later (stable; the 2024 edition) for the core engine, and 1.91
 or later for the command-line runner, whose geospatial dependency declares it;
 Python 3.9 or later with \texttt{maturin} for the optional bindings; R with
@@ -1357,9 +1365,9 @@ Gariano, S.L., Guzzetti, F., 2016. Landslides in a changing climate.
 Earth-Sci.\ Rev.\ 162, 227--252.
 \url{https://doi.org/10.1016/j.earscirev.2016.08.011}.
 
-\bibitem[Garreaud et al.(2019)]{garreaud2019}
+\bibitem[Garreaud et al.(2020)]{garreaud2019}
 Garreaud, R.D., Boisier, J.P., Rondanelli, R., Montecinos, A., Sep\'ulveda, H.H.,
-Veloso-Aguila, D., 2019. The Central Chile Mega Drought (2010--2018): a climate
+Veloso-Aguila, D., 2020. The Central Chile Mega Drought (2010--2018): a climate
 dynamics perspective. Int.\ J.\ Climatol.\ 40 (1), 421--439.
 \url{https://doi.org/10.1002/joc.6219}.
 
@@ -1464,10 +1472,10 @@ Reichenbach, P., Rossi, M., Malamud, B.D., Mihir, M., Guzzetti, F., 2018. A revi
 of statistically-based landslide susceptibility models. Earth-Sci.\ Rev.\ 180,
 60--91. \url{https://doi.org/10.1016/j.earscirev.2018.03.001}.
 
-\bibitem[Roberts et al.(2016)]{roberts2016}
+\bibitem[Roberts et al.(2017)]{roberts2016}
 Roberts, D.R., Bahn, V., Ciuti, S., Boyce, M.S., Elith, J., Guillera-Arroita, G.,
 Hauenstein, S., Lahoz-Monfort, J.J., Schr\"oder, B., Thuiller, W., Warton, D.I.,
-Wintle, B.A., Hartig, F., Dormann, C.F., 2016. Cross-validation strategies for
+Wintle, B.A., Hartig, F., Dormann, C.F., 2017. Cross-validation strategies for
 data with temporal, spatial, hierarchical, or phylogenetic structure. Ecography
 40 (8), 913--929. \url{https://doi.org/10.1111/ecog.02881}.
 

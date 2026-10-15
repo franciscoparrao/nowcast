@@ -108,7 +108,7 @@ srl <- data.frame(
 )
 psyn <- ggplot(srl, aes(dt, value, colour = metric, fill = metric, shape = metric)) +
   geom_hline(yintercept = 0.5, linetype = 3, colour = "grey60", linewidth = 0.35) +
-  annotate("text", x = 0.5, y = 0.52, label = "AUC = 0.5 (random)", hjust = 0, vjust = 0,
+  annotate("text", x = 0.5, y = 0.52, label = "AUC = 0.5 (random; random POD @ 5% = 0.05)", hjust = 0, vjust = 0,
            size = 2.3, colour = "grey45") +
   geom_ribbon(aes(ymin = pmax(0, value - sd), ymax = pmin(1, value + sd)), colour = NA, alpha = 0.15) +
   geom_line(linewidth = 0.6) + geom_point(size = 1.4) +
@@ -129,12 +129,22 @@ ggsave(file.path(outdir, "fig_synthetic.pdf"), psyn, width = 3.4, height = 2.5, 
 
 ## ── Fig 4 — distributed hazard map (Maipo, wettest step) ─────────────────────
 hz <- read.csv("data/fig_hazard.csv")
-p4 <- ggplot(hz, aes(lon, lat, fill = hazard)) +
-  geom_raster() +
+## inventory footprint: event cell-months per cell (cell = row * ncols + col, row-major)
+cm <- read.csv("data/cellmonths.csv")
+ncols <- max(hz$col) + 1
+ev <- aggregate(label ~ cell, data = cm[cm$label == 1, ], FUN = length)
+ev$row <- ev$cell %/% ncols; ev$col <- ev$cell %% ncols
+ev <- merge(ev, hz[, c("row", "col", "lon", "lat")], by = c("row", "col"))
+p4 <- ggplot(hz, aes(lon, lat)) +
+  geom_raster(aes(fill = hazard)) +
   scale_fill_viridis_c(option = "magma", name = "hazard", limits = c(0, max(hz$hazard))) +
+  geom_point(data = ev, aes(size = label), shape = 21, colour = "white", fill = "black",
+             stroke = 0.4, alpha = 0.85) +
+  scale_size_continuous(name = "event\ncell-months", range = c(0.6, 2.6), breaks = c(1, 5, 10, 20)) +
   coord_quickmap(expand = FALSE) +
   labs(x = "lon (°)", y = "lat (°)") +
-  theme_pub + theme(legend.position = "right", panel.grid.major = element_blank())
+  theme_pub + theme(legend.position = "right", panel.grid.major = element_blank(),
+                    legend.key.size = unit(0.35, "cm"))
 ggsave(file.path(outdir, "fig4_hazard.pdf"), p4, width = 3.4, height = 2.7, device = cairo_pdf)
 
 cat("figures written to", outdir, "\n")
