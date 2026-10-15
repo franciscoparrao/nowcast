@@ -997,6 +997,7 @@ clave que queda pendiente.
 \caption{Cruce I--D sub-diario en tres eventos (GPM IMERG semihorario, núcleo de
 tormenta, regional calibrado $a^\star=5.5$).}
 \label{tab:multievent}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}llcccc@{}}
 \toprule
 Evento & Clima & Total & Peak 1\,h & Cruce (UTC) & ¿Dispara el diario? \\
@@ -1005,7 +1006,8 @@ Atacama/Copiapó & árido, convectivo & 108\,mm & 40\,mm\,h$^{-1}$ & 24-mar 04:3
 Cajón del Maipo & Andes, verano & 28\,mm & 5\,mm\,h$^{-1}$ & 25-feb 17:30 & \textbf{no} \\
 Villa Santa Lucía & húmedo, frontal & 83\,mm & 17\,mm\,h$^{-1}$ & 15-dic 15:30 & sí \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
+
 \end{table}
 
 \subsection{Separando el producto de su resolución}
@@ -1062,6 +1064,7 @@ píxel IMERG en la ventana $D$ de la descomposición, así que su total (26.8\,m
 Atacama) no es el total de tres días de la celda núcleo de la Tabla~\ref{tab:headtohead} (30.1\,mm).}
 \label{tab:singlefactor}
 \small
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}llccccc@{}}
 \toprule
 Evento & Configuración & Total & $I_{\max}$ & $D$ & $E$ & ¿Dispara? \\
@@ -1085,7 +1088,8 @@ Evento & Configuración & Total & $I_{\max}$ & $D$ & $E$ & ¿Dispara? \\
  & C. IMERG semihorario    & 83.1 & 12.43 & 3 & 3.47 & sí \\
 \multicolumn{7}{@{}l}{\quad\emph{producto} $\times1.1$ $\cdot$ \emph{resolución} $\times2.0$ --- \emph{ninguno voltea la detección; la resolución agrega timing}} \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
+
 \end{table}
 
 \subsection{El resultado sub-diario no descansa en el intercepto elegido}
@@ -1146,6 +1150,7 @@ $b$ de 0.19 a 1.50, es lo que cubre esa dimensión.
 por evento y resolución de la forzante, y la banda de interceptos en la que la
 resolución por sí sola decide la detección.}
 \label{tab:intercept}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 Evento & $a_\mathrm{crit}$ semihorario & $a_\mathrm{crit}$ diario & razón & la resolución decide para \\
@@ -1155,7 +1160,8 @@ Atacama/Copiapó & 48.8 & 15.5 & 3.2$\times$ & $15.5 < a \leq 48.8$ \\
 Cajón del Maipo & 6.8 & 2.5 & 2.8$\times$ & $2.5 < a \leq 6.8$ \hfill ($\ni a^\star$) \\
 Villa Santa Lucía & 19.1 & 9.4 & 2.0$\times$ & $9.4 < a \leq 19.1$ \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
+
 \end{table}
 
 \paragraph{Sensibilidad a los demás hiperparámetros}
