@@ -271,8 +271,16 @@ triggers through a combination rule before modulating susceptibility:
 \quad\mathrm{combine}\in\{\max,\ \mathrm{noisy\text{-}OR},\ \mathrm{product}\}.
 \label{eq:multi}
 \end{equation}
-Noisy-OR ($1-\prod(1-f_i)$) is the natural rule for independent triggers where
-any one may fire, for example \emph{rain I--D} OR \emph{deformation rate}. The
+Noisy-OR ($1-\prod(1-f_i)$) is the rule for triggers that may each fire on their
+own, for example \emph{rain I--D} OR \emph{deformation rate}. It assumes the factors
+are independent, which rain and creep on the same slope are not, so the fused factor
+is an upper bound. For several estimates of the \emph{same} rainfall (satellite
+products and gauges) the assumption fails outright and Max is the consistent rule:
+re-running eight days of live operation over Santiago (8--16 October 2026, limitation~(iii)) with
+the same engine, Max kept every alert episode that noisy-OR produced, while
+noisy-OR added 40\,\% more alerted cell-steps (186 against 133) and stretched a
+satellite-only false alarm from one step to three. The live chain still fuses its
+feeds by noisy-OR, which we therefore read as a conservative upper bound. The
 per-trigger factors are exposed for traceability.
 
 \subsection{Physical refinement on demand}
@@ -317,7 +325,7 @@ The engine is written in Rust (edition 2024) as a Cargo workspace of twelve
 crates. The core depends only on \texttt{std} and an error-handling crate, so it builds and tests offline with no system dependencies. Native providers are separate crates that wrap sibling engines through path dependencies:
 rainfall--runoff (GR4J/HBV; \citealp{perrin2003,seibert2012}), distributed
 snowmelt, 2-D shallow water \citep{audusse2004,toro1994}, an agent-based
-debris-flow model in the cellular-automata tradition \citep{dambrosio2003}, the SurtGIS geospatial raster substrate \citep{parra2026surtgis} (native GeoTIFF I/O, no GDAL dependency), PS-InSAR/SBAS deformation \citep{ferretti2001,berardino2002}, and a wildfire-spread model (Rothermel surface-fire spread \citep{andrews2018} with a minimum-travel-time perimeter algorithm \citep{finney1998}) with a post-fire susceptibility cascade. A command-line runner exposes the engine (run, backtest, explain, watch, calibrate), and PyO3 bindings expose it to Python. The codebase is covered by $\sim$150 unit, integration and documentation tests, the linter runs clean under \texttt{-D warnings}, and thirty-six runnable examples reproduce every result below.
+debris-flow model in the cellular-automata tradition \citep{dambrosio2003}, the SurtGIS geospatial raster substrate \citep{parra2026surtgis} (native GeoTIFF I/O, no GDAL dependency), PS-InSAR/SBAS deformation \citep{ferretti2001,berardino2002}, and a wildfire-spread model (Rothermel surface-fire spread \citep{andrews2018} with a minimum-travel-time perimeter algorithm \citep{finney1998}) with a post-fire susceptibility cascade. A command-line runner exposes the engine (run, backtest, explain, watch, calibrate), and PyO3 bindings expose it to Python. The core is covered by 67 unit, integration and documentation tests (150 across the workspace) with 94\,\% line coverage (\texttt{cargo llvm-cov}), the linter runs clean under \texttt{-D warnings}, a continuous-integration workflow in the repository runs both on the core, and thirty-eight runnable examples reproduce every result below.
 Each provider is a dependency-isolated crate implementing the same \texttt{Forcing}
 trait, so the design is reusable and extensible by construction: adding a hazard
 forcing is a new crate, not an edit to the core. That separation, not any single
@@ -337,7 +345,7 @@ seasonal continental-scale run (490\,k cells $\times$ 365 steps $\approx$
 (\texttt{--features parallel}) parallelises the independent per-step loop; the
 closure captures only the read-only prefix buffer, so the output is bit-identical
 to the serial run. The speed-up is, however, modest and bandwidth-bound: on a
-16-core machine over a 50~M cell-step grid it reaches $1.8\times$ on 2 threads
+12-core, 16-thread laptop (Intel Core i7-1270P, 38\,GB) over a 50~M cell-step grid it reaches $1.8\times$ on 2 threads
 (88\,\% efficiency) but saturates at $2.8\times$ on 16 threads
 (Table~\ref{tab:scaling}), because each step does little arithmetic per byte read
 and the shared prefix buffer makes the loop memory-bandwidth-bound rather than
@@ -365,7 +373,7 @@ cells & steps & cell-steps & time (s) & M\,cell-steps\,s$^{-1}$ \\
 \begin{table}[ht]
 \centering
 \caption{Parallel scaling of \texttt{Nowcast::run} (\texttt{--features parallel})
-over a 50~M cell-step grid, 16-core machine, best of two runs (a separate run from
+over a 50~M cell-step grid, Intel Core i7-1270P (12 cores, 16 threads), best of two runs (a separate run from
 Table~\ref{tab:perf}: the single-thread time differs by run-to-run variation, 10.5 against 11.2\,s). Output is verified
 bit-identical to the single-thread run.}
 \label{tab:scaling}
@@ -387,7 +395,7 @@ threads & time (s) & speed-up & efficiency \\
 All experiments use openly documented Chilean datasets (Table~\ref{tab:data}).
 Susceptibility is a RandomForest probability raster at 30\,m resolution (values
 0.001--0.965 over the R\'io Maipo basin, $5149\times5855$ cells), taken from a
-companion susceptibility study: the model is trained on landslide presence points
+companion susceptibility study \citep{parra2026transfer}: the model is trained on landslide presence points
 from the SERNAGEOMIN catalogue (augmented with the Patagonian-Andes and 2010 Maule
 co-seismic inventories) against spatially-interspersed absence points and terrain,
 geology and climate predictors, under spatial cross-validation. This raster is
@@ -396,10 +404,12 @@ superset of the same dated events the backtest scores against. The dependence is
 however, \emph{conservative} for our purpose. Leakage can only \emph{inflate} the
 susceptibility's apparent agreement with event locations, so an inventory-informed
 susceptibility that still fails to discriminate at 5\,km daily resolution
-(Section~5.2) strengthens the resolution-ceiling conclusion rather than weakening
-it; we flag the single place the dependence could matter (the weak single-feature
+(Section~5.2) strengthens the diagnosis that the daily forcing, not the terrain
+layer, limits discrimination there; measured, the leaked raster adds 0.008 to the
+distributed AUC (0.477 with uniform susceptibility, 0.485 with the RandomForest),
+and a susceptibility trained outside the Maipo was not tested; we flag the single place the dependence could matter (the weak single-feature
 susceptibility signal in the baseline) where it arises. Daily
-precipitation is CR2MET v2.5 (0.05$^\circ$, $\sim$5\,km; \citealp{boisier2018cr2met}), produced over a basin
+precipitation is CR2MET v2.5 (0.05$^\circ$, $\sim$5\,km; \citealp{boisier2018cr2met,boisier2023cr2met}), produced over a basin
 region that has experienced a sustained decline in rainfall since 2010, the
 Central Chile Mega Drought \citep{garreaud2019,boisier2018}.
 Sub-daily precipitation is GPM IMERG Final v07 half-hourly ($\sim$0.1$^\circ$;
@@ -586,8 +596,10 @@ results do not hinge on the choice of curve either.
 \subsection{Distributed daily backtest: a null result}
 
 Repeating the backtest with \emph{distributed} CR2MET rainfall over a
-$15\times18$ grid (270 cells, 123\,120 cell-months, 884 in the event footprint),
-the \emph{real} RandomForest susceptibility resampled to that grid, and spatial
+$15\times18$ grid (270 cells, 123\,120 cell-months, 884 in the event footprint: the
+cell of each event and the eight around it, in the event month and the two adjacent
+ones, which places the 157 events in 129 cells),
+the \emph{real} RandomForest susceptibility aggregated to that grid by area average, and spatial
 verification, yields essentially \textbf{no discrimination}
 (Table~\ref{tab:auc}): ROC-AUC is 0.463 for a lumped basin-mean baseline
 weighted by susceptibility, 0.477 for distributed rainfall with uniform
@@ -880,6 +892,23 @@ Villa Santa Luc\'ia & humid, frontal & 83\,mm & 17\,mm\,h$^{-1}$ & 15-Dec 15:30 
 
 \end{table}
 
+\paragraph{Against an operational nowcast}
+The daily LHASA version 2 nowcast \citep{stanley2021,lhasa2023data}, the operational
+chain the engine is most often compared with, is archived from 3 April 2015 to
+10 February 2021, so it covers the Caj\'on del Maipo and Villa Santa Luc\'ia events
+but not Atacama. We read its probability over each event box for the seven days
+around the event. In the Caj\'on del Maipo box the 99th percentile rises from 0.25
+on 20 February to 0.65, 0.91 and 0.93 on 23--25 February, with 13\,\% of the box at
+0.3 or more on the 25th, the day the engine crosses at 17:30 UTC; at the IMERG core
+cell itself, however, LHASA already gives 0.95 on the dry days of 20--21 February, so
+its cell-level value does not single out the event day. At Villa Santa Luc\'ia the
+probability at the village reaches 0.59 in the nowcast dated 15 December (62\,\% of the
+box at 0.1 or more) and falls to 0.07 on the 16th; the engine crosses on 15 December
+at 15:30 UTC, and the flow is dated 16 December. Both systems mark the same day; the
+engine adds the hour, LHASA adds the antecedent state and susceptibility it was
+trained with. Two events and no off-event rate make this a consistency check, not a
+skill comparison.
+
 \subsection{Separating the product from its resolution}
 \label{sec:singlefactor}
 
@@ -1024,7 +1053,7 @@ Villa Santa Luc\'ia & 19.1 & 9.4 & 2.0$\times$ & $9.4 < a \leq 19.1$ \\
 \end{table}
 
 \paragraph{Sensitivity to the remaining hyperparameters}
-The exponent $b$, the maximum I--D duration, the logistic steepness $k$ and the alert level are held fixed elsewhere in the paper. Moving each one at a time on the lumped backtest (Table~\ref{tab:oat}) shows that the \emph{optimum} moves and the \emph{skill at the optimum} does not: re-calibrating $a^\star$ by maximum CSI under $b=0.19$, $0.565$ (the median of the 35 published curves) and $0.78$ gives $a^\star$ of 2.5, 13.5 and 13.0\,mm\,h$^{-1}$ with CSI 0.080, 0.082 and 0.066 against 0.077 at the paper's setting, and every (steepness, level) pair, which enters only through the exceedance at which the hazard crosses the level, $E_\mathrm{thr}=1+\ln[L/(1-L)]/k$, leaves CSI within 0.071--0.079. At the paper's fixed $a^\star=5.5$ the scores do move with $b$ (POD 0.11 at $b=0.19$, 0.89 at $b=0.78$), which is the statement that $a$ and $b$ are not separately identified by a monthly contingency. At the three storm cores the half-hourly exceedance changes little with $b$ but the daily one changes a lot, because the daily window is 24\,h and $D^b$ grows with $b$: at $b=0.78$ the daily series at Atacama and Villa Santa Luc\'ia crosses comfortably and the Caj\'on del Maipo daily value reaches 1.47, so the ``daily does not fire'' column of Table~\ref{tab:singlefactor} is the $b$-sensitive one and holds for exponents up to about 0.6. Rank-based scores are invariant to $k$ by construction (Section~4.2) and were not re-run; the 30\,m-to-5\,km aggregation operator of Section~5.2 (the 90th percentile per cell) was not varied, which remains a gap.
+The exponent $b$, the maximum I--D duration, the logistic steepness $k$ and the alert level are held fixed elsewhere in the paper. Moving each one at a time on the lumped backtest (Table~\ref{tab:oat}) shows that the \emph{optimum} moves and the \emph{skill at the optimum} does not: re-calibrating $a^\star$ by maximum CSI under $b=0.19$, $0.565$ (the median of the 35 published curves) and $0.78$ gives $a^\star$ of 2.5, 13.5 and 13.0\,mm\,h$^{-1}$ with CSI 0.080, 0.082 and 0.066 against 0.077 at the paper's setting, and every (steepness, level) pair, which enters only through the exceedance at which the hazard crosses the level, $E_\mathrm{thr}=1+\ln[L/(1-L)]/k$, leaves CSI within 0.071--0.079. At the paper's fixed $a^\star=5.5$ the scores do move with $b$ (POD 0.11 at $b=0.19$, 0.89 at $b=0.78$), which is the statement that $a$ and $b$ are not separately identified by a monthly contingency. At the three storm cores the half-hourly exceedance changes little with $b$ but the daily one changes a lot, because the daily window is 24\,h and $D^b$ grows with $b$: at $b=0.78$ the daily series at Atacama and Villa Santa Luc\'ia crosses comfortably and the Caj\'on del Maipo daily value reaches 1.47, so the ``daily does not fire'' column of Table~\ref{tab:singlefactor} is the $b$-sensitive one and holds for exponents up to about 0.6. Rank-based scores are invariant to $k$ by construction (Section~4.2) and were not re-run; the 30\,m-to-5\,km aggregation operator of Section~5.2 (the area average) was not varied, which remains a gap.
 
 \begin{table}[ht]
 \centering
@@ -1055,6 +1084,62 @@ $b=0.78$ & 14.14 / 9.73 & 2.00 / 1.47 & 7.46 / 5.93 & \\
 \bottomrule
 \end{tabular}}
 
+\end{table}
+
+\paragraph{An alternative model on the same forcing}
+The engine ships an antecedent-precipitation trigger (API$_t=\sum_k \delta^k P_{t-k}$,
+excluding the current day, factor $T(\mathrm{API}/\mathrm{API}_\mathrm{crit})$), so ``not the model'' can be tested on the
+Maipo data rather than asserted. We ran it alone and composed with the I--D trigger
+as a dual cause--trigger rule \citep{bogaard2018}, alerting only when both factors
+reach 0.5, for daily retentions $\delta$ of 0.85, 0.90 and 0.95 (half-lives of 4.3,
+6.6 and 13.5 days), with the critical depth calibrated by maximum CSI like $a^\star$
+(Table~\ref{tab:antecedent}). The antecedent state alone does not do better than the
+I--D curve, and composing the two with OR changes nothing. The cause--trigger rule
+keeps every hit of the I--D curve with 10\,\% fewer alert-months, and it is the only
+configuration below 0.05 against the year-shuffle null in sample ($P=0.032$); but it
+was selected among nine in-sample calibrations, and calibrating its critical depth on
+the odd years and scoring the even years gives $P=0.136$ (against 0.283 for the I--D
+curve alone on the same years). On the distributed backtest no combination moves the
+AUC off chance (0.485--0.506, every interval spanning 0.5). At 5\,km daily resolution,
+then, replacing the intensity trigger by an antecedent one, or gating one with the
+other, does not change discrimination, which is what a forcing- and target-limited
+problem predicts; the controlled experiment (Table~\ref{tab:sweep}) shows the
+opposite regime, antecedent-controlled failures, where the trigger family and not
+the forcing is the ceiling.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Antecedent-precipitation trigger on the Maipo backtests. Lumped ($\pm1$ month):
+critical depth calibrated by maximum CSI per rule and retention; POD with Wilson 95\,\%
+interval over 19 event-months; $P$ is the fraction of 2\,000 year-shuffle permutations
+with CSI at least the observed (this permutation stream gives 0.108 for the I--D row, 0.105
+in Table~\ref{tab:lumped}). Distributed: ROC-AUC of the susceptibility-weighted hazard
+against the $\pm1$ cell / $\pm1$ month footprint, month-block bootstrap 95\,\% interval,
+API retention 0.95 and critical depth 300\,mm.}
+\label{tab:antecedent}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Lumped rule & $\mathrm{API}_\mathrm{crit}$ (mm) & POD [95\,\%] & FAR & CSI & $P$ \\
+\midrule
+I--D alone ($a^\star=5.5$) & -- & 0.53 [0.32, 0.73] & 0.92 & 0.077 & 0.108 \\
+API alone, $\delta=0.85$ & 80 & 0.42 [0.23, 0.64] & 0.92 & 0.073 & 0.269 \\
+API alone, $\delta=0.95$ & 300 & 0.16 [0.06, 0.38] & 0.82 & 0.091 & 0.247 \\
+I--D AND API, $\delta=0.85$ & 30 & 0.53 [0.32, 0.73] & 0.91 & 0.085 & 0.032 \\
+I--D AND API, $\delta=0.90$ & 30 & 0.53 [0.32, 0.73] & 0.91 & 0.083 & 0.040 \\
+I--D OR API, any $\delta$ & 80--250 & 0.53 [0.32, 0.73] & 0.92 & 0.077 & 0.105--0.126 \\
+I--D AND API, $\delta=0.85$, odd$\to$even years & 30 & 0.50 & 0.92 & 0.071 & 0.136 \\
+I--D alone, even years & -- & 0.50 & 0.93 & 0.063 & 0.283 \\
+\midrule
+Distributed configuration & & \multicolumn{2}{c}{ROC-AUC [95\,\%]} & & \\
+I--D $\times$ RandomForest susceptibility & & \multicolumn{2}{c}{0.485 [0.404, 0.567]} & & \\
+API alone, susceptibility $=1$ & & \multicolumn{2}{c}{0.493 [0.417, 0.563]} & & \\
+API $\times$ RandomForest susceptibility & & \multicolumn{2}{c}{0.506 [0.427, 0.570]} & & \\
+I--D $\times$ API (product) $\times$ susceptibility & & \multicolumn{2}{c}{0.487 [0.399, 0.566]} & & \\
+I--D $\oplus$ API (noisy-OR) $\times$ susceptibility & & \multicolumn{2}{c}{0.488 [0.404, 0.558]} & & \\
+\bottomrule
+\end{tabular}}
 \end{table}
 
 \subsection{Flood path: a routed-discharge check against observed streamflow}
@@ -1141,17 +1226,11 @@ the triggering process}, not resolution in the abstract, a daily product that is
 useless for convective-burst landslides is sufficient for routed floods.
 
 \textbf{The product ceiling, observed live.} The first weeks of shadow operation
-(limitation~(iii)) add a case the hindcasts could not: two convective bursts of
-twenty to sixty minutes, one of which caused a debris flow, that both half-hourly
-satellite products under-recorded by an order of magnitude at Las Condes and by
-enough to stay below any I--D curve at Curacaut\'in, while a rain gauge 7\,km
-away and the geostationary lightning mapper did not. Half-hourly resolution is
-necessary but not sufficient: at the scale of a single convective cell the
-satellite rainfall estimate, not the time step, is the binding constraint, and
-the low-latency sensor that resolves the burst is the one that does not measure
-rain. For burst-driven landslides the forcing interface therefore has to admit
-dense in-situ networks and convective proxies alongside satellite QPE, which is
-exactly the swap the design was built to make cheap.
+(limitation~(iii)) add one observation the hindcasts could not: at the scale of a single
+convective cell, the half-hourly satellite estimate rather than the time step was the
+binding constraint, and the sensors that resolved the bursts were a rain gauge and
+the lightning mapper, which is why the forcing interface has to admit dense in-situ
+networks and convective proxies alongside satellite QPE.
 
 The same arithmetic bites on a second, less obvious surface: the
 \emph{climatological reference} against which an event is judged anomalous. For
@@ -1195,7 +1274,11 @@ nowcast is complementary: it makes the forcing, the trigger and the
 physical-refinement model \emph{independently swappable} behind one interface, and that is what let us hold the model fixed and vary the forcing resolution. It is
 an experimental and integrating substrate, not a calibrated operational product, and
 an operational chain like LHASA is the kind of system its outputs would feed or be
-benchmarked against.
+benchmarked against (Section~\ref{sec:multievent}). No agency consumes its alerts today:
+in Chile preventive early alerts are declared per commune by the national disaster
+service (SENAPRED), and the engine's $0.1^{\circ}$ output reaches communes only in the
+author's shadow chain, so turning it into an input to that decision is a question of
+calibration and governance that this paper does not settle.
 
 \section{Limitations and future work}
 \label{sec:limits}
@@ -1242,15 +1325,23 @@ hours late. In both convective cases the geostationary lightning mapper on the
 same satellite \citep{goodman2013} registered the cell first: 233 flashes over
 the piedmont with the peak thirty minutes before the Las Condes flow, and 118
 flashes within 5\,km of Curacaut\'in from an hour before the flooding. The chain
-now carries lightning as a diagnostic rather than a forcing, weighs a single-feed
-crossing by which feed sustains it, and freezes the evidence of every alert
-automatically. Three events in five days, reported by the press rather than by an
+now carries lightning as a diagnostic rather than a forcing, freezes the evidence of
+every alert automatically, and weighs a single-feed crossing by which feed sustains
+it: over the last three hours of the alert streak and in the cells above the alert
+level, a feed sustains the crossing if it accumulates at least 1\,mm and, unless it
+is the gauge feed, at least half as much as the wettest feed; the alert is
+corroborated if the gauges or IMERG sustain it, or GOES does with at least three GLM
+flashes in the domain, and is issued at low priority otherwise. The rule is covered
+by eleven synthetic cases and four end-to-end cycles; it confirmed the gauge-only
+crossing of 12 October and has kept a GOES-only crossing in Atacama at low priority
+since 11 October. Three events in five days, reported by the press rather than by an
 inventory, do not constitute a skill estimate, and the false-alarm rate of the
 regional intercept is still being measured; the shadow season remains the
 necessary step, and the validation reported in Sections~5.1--5.8 is hindcast
 throughout.
-(iv) Antecedent soil moisture is captured only implicitly through long rolling
-windows, not as an explicit state, and the controlled experiment measures what that costs: when failures are controlled by a store that drains over days rather than hours, the I--D trigger catches under 10\,\% of them at any resolution (Table~\ref{tab:sweep}), so for antecedent-controlled landslides the model, not the forcing, is the ceiling, and a state trigger fed by the sibling rainfall--runoff store is the one-adapter change the architecture was built for. (v) The multi-trigger combination weights and
+(iv) The engine ships an antecedent-precipitation trigger, but soil moisture is not an
+explicit state, and on the Maipo data the antecedent index does not improve
+discrimination (Table~\ref{tab:antecedent}); the controlled experiment measures what that costs: when failures are controlled by a store that drains over days rather than hours, the I--D trigger catches under 10\,\% of them at any resolution (Table~\ref{tab:sweep}), so for antecedent-controlled landslides the model, not the forcing, is the ceiling, and a state trigger fed by the sibling rainfall--runoff store is the one-adapter change the architecture was built for. (v) The multi-trigger combination weights and
 the deformation critical rate are not yet calibrated. (vi) The snowmelt, InSAR-deformation
 and debris-flow-runout adapters (Section~5.9) exercise the architecture but are not
 validated predictions; only the on-demand coupling's compute saving is quantified
@@ -1277,7 +1368,7 @@ without touching the hazard logic.
 \section*{Code and data availability}
 
 The \texttt{nowcast} source (twelve Rust crates, including a command-line runner and
-PyO3 Python bindings, plus thirty-six examples) and all data-extraction scripts
+PyO3 Python bindings, plus thirty-eight examples) and all data-extraction scripts
 are openly available at \url{https://github.com/franciscoparrao/nowcast} under the
 MIT or Apache-2.0 licence; a citable snapshot of the version used here (v0.2.0) is archived on
 Zenodo at \url{https://doi.org/10.5281/zenodo.23198956} (concept DOI
@@ -1287,7 +1378,7 @@ latest version).
 \paragraph{What the archived snapshot reproduces, and what it does not}
 Reproducibility here is not uniform across the paper, and it would be misleading to
 claim otherwise. \texttt{nowcast-core} has \emph{no} path dependencies: it builds
-and tests offline with no system dependencies, and its 22 examples regenerate every
+and tests offline with no system dependencies, and its 24 examples regenerate every
 result in Sections~\ref{sec:lumped}--\ref{sec:intercept} --- the lumped and
 distributed backtests and their null diagnostics, the published-threshold ensemble,
 the controlled resolution experiment, the head-to-head, the multi-event lead times,
@@ -1330,6 +1421,22 @@ Python 3.9 or later with \texttt{maturin} for the optional bindings; R with
 \emph{Program size}: approximately 17\,000 lines of Rust across twelve crates.
 \emph{Availability and cost}: free and open source, MIT or Apache-2.0, at the
 repository and Zenodo DOIs above.
+
+\paragraph{Verification and derived inputs}
+A continuous-integration workflow in the repository
+(\texttt{.github/workflows/ci.yml}) runs \texttt{scripts/reproduce\_core.sh --lint}: the
+core test suite and the linter over library, tests and examples, in the core-only
+workspace that the snapshot reproduces. Timings were taken on an Intel Core i7-1270P
+laptop (12 cores, 16 threads, 38\,GB RAM). Every stochastic step is seeded and printed:
+the month-block bootstrap of Section~5.2 (NumPy seed 42), the synthetic realisations
+of Section~5.3 (a deterministic golden-ratio stride), the GR4J random search of
+Section~5.8 and the permutation and year-block nulls (fixed linear-congruential
+seeds in each example). The derived Maipo inputs (the 157-event table with its
+SERNAGEOMIN record identifiers, the cell assignment, the aggregated susceptibility and
+the 123\,120 cell-month labels, with SHA-256 checksums) are prepared for deposit with
+the snapshot once the redistribution terms of the inventory are confirmed; until then
+they are regenerated by the extraction scripts from the inventory compiled in the
+companion susceptibility study \citep{parra2026transfer}.
 
 \section*{Funding}
 
@@ -1413,6 +1520,11 @@ dataset for hydroclimatic research in Chile. EGU General Assembly 2018.
 Brunetti, M.T., Melillo, M., Peruccacci, S., Ciabatta, L., Brocca, L., 2018. How
 far are we from the use of satellite rainfall products in landslide forecasting?
 Remote Sens.\ Environ.\ 210, 65--75. \url{https://doi.org/10.1016/j.rse.2018.03.016}.
+
+\bibitem[Boisier(2023)]{boisier2023cr2met}
+Boisier, J.P., 2023. CR2MET: A high-resolution precipitation and temperature dataset
+for the period 1960--2021 in continental Chile (v2.5) [data set]. Zenodo.
+\url{https://doi.org/10.5281/zenodo.7529682}.
 
 \bibitem[Brier(1950)]{brier1950}
 Brier, G.W., 1950. Verification of forecasts expressed in terms of probability.
@@ -1575,6 +1687,12 @@ Parra, F., 2026. SurtGIS: A high-performance raster geospatial analysis library
 in Rust with WebAssembly and Python support. Environ.\ Model.\ Softw.\ 204,
 107102. \url{https://doi.org/10.1016/j.envsoft.2026.107102}.
 
+\bibitem[Parra et al.(2026)]{parra2026transfer}
+Parra, F., Gil-Costa, V., Bonacic, C., Mar\'in, M., 2026. When are landslide
+susceptibility models transferable across hydrological basins? A data-driven
+benchmark for engineering-geological hazard zoning along the climatic gradient of
+Chile (18\textdegree\,S--54\textdegree\,S). Unpublished manuscript.
+
 \bibitem[Peres et al.(2018)]{peres2018}
 Peres, D.J., Cancelliere, A., Greco, R., Bogaard, T., 2018. Influence of
 uncertain identification of triggering rainfall on the assessment of landslide
@@ -1622,6 +1740,12 @@ Sci.\ 15, 1821--1833. \url{https://doi.org/10.5194/nhess-15-1821-2015}.
 Stanley, T.A., Kirschbaum, D.B., Benz, G., et al., 2021. Data-driven landslide
 nowcasting at the global scale. Front.\ Earth Sci.\ 9, 640043.
 \url{https://doi.org/10.3389/feart.2021.640043}.
+
+\bibitem[Stanley et al.(2023)]{lhasa2023data}
+Stanley, T.A., Kirschbaum, D.B., Benz, G., Emberson, R.A., Amatya, P.M., Medwedeff,
+W., Clark, M.K., 2023. Global Landslide Nowcasts from LHASA L4 1 day 1 km x 1 km,
+version 2.0.0 [data set]. Goddard Earth Sciences Data and Information Services Center
+(GES DISC). \url{https://doi.org/10.5067/8VKQDQFFOTS3}.
 
 \bibitem[Tan et al.(2019)]{tan2019}
 Tan, J., Huffman, G.J., Bolvin, D.T., Nelkin, E.J., 2019. IMERG V06: changes to

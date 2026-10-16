@@ -348,9 +348,18 @@ mediante una regla de combinación antes de modular la susceptibilidad:
 \quad\mathrm{combinar}\in\{\max,\ \mathrm{noisy\text{-}OR},\ \mathrm{producto}\}.
 \label{eq:multi}
 \end{equation}
-Noisy-OR ($1-\prod(1-f_i)$) es la regla natural para gatillos independientes donde
-cualquiera puede disparar, por ejemplo \emph{I--D de lluvia} O \emph{tasa de
-deformación}. Los factores por gatillo quedan expuestos para trazabilidad.
+Noisy-OR ($1-\prod(1-f_i)$) es la regla para gatillos que pueden disparar cada uno
+por sí solo, por ejemplo \emph{I--D de lluvia} O \emph{tasa de deformación}. Supone
+que los factores son independientes, y la lluvia y la reptación en una misma ladera
+no lo son, así que el factor fusionado es una cota superior. Para varias estimaciones
+de la \emph{misma} lluvia (productos satelitales y pluviómetros) el supuesto falla de
+lleno y Max es la regla coherente: al volver a correr ocho días de operación en vivo
+sobre Santiago (8--16 de octubre de 2026, limitación~(iii)) con el mismo motor, Max
+conservó todos los episodios de alerta que produjo noisy-OR, mientras noisy-OR agregó
+un 40\,\% más de celdas-paso en alerta (186 contra 133) y estiró una falsa alarma solo
+satelital de un paso a tres. La cadena en vivo sigue fusionando sus feeds por
+noisy-OR, que por tanto leemos como una cota superior conservadora. Los factores por
+gatillo quedan expuestos para trazabilidad.
 
 \subsection{Refinamiento físico bajo demanda}
 
@@ -405,7 +414,7 @@ incendios (propagación superficial de Rothermel \citep{andrews2018} con un
 algoritmo de perímetro de tiempo mínimo de viaje \citep{finney1998}) con una
 cascada de susceptibilidad post-incendio; un ejecutable de línea de comandos expone
 el motor (run, backtest, explain, watch, calibrate) y los bindings PyO3 lo exponen
-a Python. La base de código está cubierta por $\sim$150 tests unitarios, de integración y de documentación, el linter corre limpio bajo \texttt{-D warnings}, y treinta y seis ejemplos ejecutables reproducen cada resultado de abajo. Cada proveedor es un
+a Python. El núcleo está cubierto por 67 tests unitarios, de integración y de documentación (150 en todo el workspace) con 94\,\% de cobertura de líneas (\texttt{cargo llvm-cov}), el linter corre limpio bajo \texttt{-D warnings}, un flujo de integración continua en el repositorio corre ambos sobre el núcleo, y treinta y ocho ejemplos ejecutables reproducen cada resultado de abajo. Cada proveedor es un
 crate con dependencias aisladas que implementa el mismo trait \texttt{Forcing}, de
 modo que el diseño es reutilizable y extensible por construcción: agregar una
 forzante de amenaza es un crate nuevo, no una edición al núcleo. Esa separación, y
@@ -426,7 +435,7 @@ $\times$ 365 pasos $\approx$ 179~M celda-pasos) en menos de un minuto. Un backen
 opcional de Rayon (\texttt{--features parallel}) paraleliza el bucle independiente
 por paso; la clausura captura solo el buffer de prefijos de solo lectura, así que
 la salida es bit-idéntica a la corrida serial. La aceleración es, sin embargo,
-modesta y limitada por ancho de banda: en una máquina de 16 núcleos sobre una
+modesta y limitada por ancho de banda: en un portátil de 12 núcleos y 16 hilos (Intel Core i7-1270P, 38\,GB) sobre una
 grilla de 50~M celda-pasos alcanza $1.8\times$ con 2 hilos (88\,\% de eficiencia)
 pero satura en $2.8\times$ con 16 hilos (Tabla~\ref{tab:scaling}), porque cada paso
 hace poca aritmética por byte leído y el buffer de prefijos compartido vuelve el
@@ -455,7 +464,7 @@ celdas & pasos & celda-pasos & tiempo (s) & M\,celda-pasos\,s$^{-1}$ \\
 \begin{table}[ht]
 \centering
 \caption{Escalamiento paralelo de \texttt{Nowcast::run} (\texttt{--features parallel})
-sobre una grilla de 50~M celda-pasos, máquina de 16 núcleos, mejor de dos corridas (una corrida distinta
+sobre una grilla de 50~M celda-pasos, Intel Core i7-1270P (12 núcleos, 16 hilos), mejor de dos corridas (una corrida distinta
 de la Tabla~\ref{tab:perf}: el tiempo mono-hilo difiere por variación entre corridas, 10.5 contra 11.2\,s).
 La salida se verifica bit-idéntica a la corrida mono-hilo.}
 \label{tab:scaling}
@@ -478,7 +487,7 @@ Todos los experimentos usan conjuntos de datos chilenos documentados abiertament
 (Tabla~\ref{tab:data}). La susceptibilidad es un ráster de probabilidad
 RandomForest a 30\,m de resolución (valores 0.001--0.965 sobre la cuenca del Río
 Maipo, $5149\times5855$ celdas), tomado de un estudio de susceptibilidad
-acompañante: el modelo se entrena con puntos de presencia de deslizamientos del
+acompañante \citep{parra2026transfer}: el modelo se entrena con puntos de presencia de deslizamientos del
 catálogo SERNAGEOMIN (aumentado con los inventarios de los Andes patagónicos y
 co-sísmico del Maule 2010) contra puntos de ausencia espacialmente intercalados y
 predictores de terreno, geología y clima, bajo validación cruzada espacial. Este
@@ -488,11 +497,13 @@ puntúa. La dependencia es, sin embargo, \emph{conservadora} para nuestro
 propósito. La filtración solo puede \emph{inflar} el acuerdo aparente de la
 susceptibilidad con las ubicaciones de eventos, de modo que una susceptibilidad
 informada por el inventario que aun así falla en discriminar a resolución diaria
-de 5\,km (Sección~5.2) fortalece la conclusión del techo de resolución en vez de
-debilitarla; señalamos el único lugar donde la dependencia podría importar (la
+de 5\,km (Sección~5.2) fortalece el diagnóstico de que ahí limita la discriminación la
+forzante diaria y no la capa de terreno; medido, el ráster filtrado le agrega 0.008 al
+AUC distribuido (0.477 con susceptibilidad uniforme, 0.485 con el RandomForest), y no
+se probó una susceptibilidad entrenada fuera del Maipo; señalamos el único lugar donde la dependencia podría importar (la
 débil señal de susceptibilidad como atributo único en la línea base) allí donde
 surge. La precipitación diaria es CR2MET v2.5 (0.05$^\circ$, $\sim$5\,km;
-\citealp{boisier2018cr2met}), producida sobre una región de cuenca que ha
+\citealp{boisier2018cr2met,boisier2023cr2met}), producida sobre una región de cuenca que ha
 experimentado un descenso sostenido de la lluvia desde 2010, la Megasequía de
 Chile central \citep{garreaud2019,boisier2018}. La precipitación sub-diaria es GPM
 IMERG Final v07 semihoraria ($\sim$0.1$^\circ$; \citealp{huffman2023,tan2019}). La
@@ -690,8 +701,10 @@ dependen de la elección de curva.
 \subsection{Backtest distribuido diario, un resultado nulo honesto}
 
 Repitiendo el backtest con lluvia CR2MET \emph{distribuida} sobre una grilla
-$15\times18$ (270 celdas, 123\,120 celdas-mes, 884 en la huella de eventos), la
-susceptibilidad RandomForest \emph{real} remuestreada a esa grilla, y verificación
+$15\times18$ (270 celdas, 123\,120 celdas-mes, 884 en la huella de eventos: la celda
+de cada evento y las ocho que la rodean, en el mes del evento y los dos adyacentes, lo
+que ubica los 157 eventos en 129 celdas), la
+susceptibilidad RandomForest \emph{real} agregada a esa grilla por promedio de área, y verificación
 espacial, se obtiene esencialmente \textbf{ninguna discriminación}
 (Tabla~\ref{tab:auc}): el ROC-AUC es 0.463 para una línea base agrupada de media de
 cuenca ponderada por susceptibilidad, 0.477 para lluvia distribuida con
@@ -1010,6 +1023,23 @@ Villa Santa Lucía & húmedo, frontal & 83\,mm & 17\,mm\,h$^{-1}$ & 15-dic 15:30
 
 \end{table}
 
+\paragraph{Frente a un nowcast operacional}
+El nowcast diario de LHASA versión 2 \citep{stanley2021,lhasa2023data}, la cadena
+operacional con que más a menudo se compara el motor, está archivado del 3 de abril de
+2015 al 10 de febrero de 2021, así que cubre los eventos del Cajón del Maipo y de Villa
+Santa Lucía pero no el de Atacama. Leímos su probabilidad sobre el recuadro de cada
+evento en los siete días alrededor del evento. En el recuadro del Cajón del Maipo el
+percentil 99 sube de 0.25 el 20 de febrero a 0.65, 0.91 y 0.93 el 23--25 de febrero,
+con un 13\,\% del recuadro en 0.3 o más el 25, el día en que el motor cruza a las 17:30
+UTC; en la propia celda núcleo de IMERG, sin embargo, LHASA ya da 0.95 en los días
+secos del 20--21 de febrero, así que su valor a nivel de celda no singulariza el día
+del evento. En Villa Santa Lucía la probabilidad en el pueblo llega a 0.59 en el nowcast
+fechado el 15 de diciembre (62\,\% del recuadro en 0.1 o más) y cae a 0.07 el 16; el motor
+cruza el 15 de diciembre a las 15:30 UTC, y el flujo está fechado el 16 de diciembre.
+Ambos sistemas marcan el mismo día; el motor agrega la hora, LHASA agrega el estado
+antecedente y la susceptibilidad con que fue entrenado. Dos eventos y ninguna tasa
+fuera de evento hacen de esto un chequeo de consistencia, no una comparación de skill.
+
 \subsection{Separando el producto de su resolución}
 \label{sec:singlefactor}
 
@@ -1165,7 +1195,7 @@ Villa Santa Lucía & 19.1 & 9.4 & 2.0$\times$ & $9.4 < a \leq 19.1$ \\
 \end{table}
 
 \paragraph{Sensibilidad a los demás hiperparámetros}
-El exponente $b$, la duración máxima I--D, la pendiente logística $k$ y el nivel de alerta se mantienen fijos en el resto del paper. Mover cada uno a la vez sobre el backtest agrupado (Tabla~\ref{tab:oat}) muestra que el \emph{óptimo} se mueve y el \emph{skill en el óptimo} no: recalibrar $a^\star$ por CSI máximo con $b=0.19$, $0.565$ (la mediana de las 35 curvas publicadas) y $0.78$ da $a^\star$ de 2.5, 13.5 y 13.0\,mm\,h$^{-1}$ con CSI 0.080, 0.082 y 0.066 contra 0.077 en la configuración del paper, y cada par (pendiente, nivel), que entra solo por la excedencia a la que el peligro cruza el nivel, $E_\mathrm{thr}=1+\ln[L/(1-L)]/k$, deja el CSI entre 0.071 y 0.079. Con el $a^\star=5.5$ fijo del paper los puntajes sí se mueven con $b$ (POD 0.11 con $b=0.19$, 0.89 con $b=0.78$), que es la afirmación de que $a$ y $b$ no están identificados por separado por una contingencia mensual. En los tres núcleos de tormenta la excedencia semihoraria cambia poco con $b$ pero la diaria cambia mucho, porque la ventana diaria es de 24\,h y $D^b$ crece con $b$: con $b=0.78$ la serie diaria de Atacama y de Villa Santa Lucía cruza con holgura y el valor diario del Cajón del Maipo llega a 1.47, así que la columna ``lo diario no dispara'' de la Tabla~\ref{tab:singlefactor} es la sensible a $b$ y se sostiene para exponentes hasta cerca de 0.6. Los puntajes por rango son invariantes a $k$ por construcción (Sección~4.2) y no se volvieron a correr; el operador de agregación de 30\,m a 5\,km de la Sección~5.2 (el percentil 90 por celda) no se varió, lo que sigue siendo un vacío.
+El exponente $b$, la duración máxima I--D, la pendiente logística $k$ y el nivel de alerta se mantienen fijos en el resto del paper. Mover cada uno a la vez sobre el backtest agrupado (Tabla~\ref{tab:oat}) muestra que el \emph{óptimo} se mueve y el \emph{skill en el óptimo} no: recalibrar $a^\star$ por CSI máximo con $b=0.19$, $0.565$ (la mediana de las 35 curvas publicadas) y $0.78$ da $a^\star$ de 2.5, 13.5 y 13.0\,mm\,h$^{-1}$ con CSI 0.080, 0.082 y 0.066 contra 0.077 en la configuración del paper, y cada par (pendiente, nivel), que entra solo por la excedencia a la que el peligro cruza el nivel, $E_\mathrm{thr}=1+\ln[L/(1-L)]/k$, deja el CSI entre 0.071 y 0.079. Con el $a^\star=5.5$ fijo del paper los puntajes sí se mueven con $b$ (POD 0.11 con $b=0.19$, 0.89 con $b=0.78$), que es la afirmación de que $a$ y $b$ no están identificados por separado por una contingencia mensual. En los tres núcleos de tormenta la excedencia semihoraria cambia poco con $b$ pero la diaria cambia mucho, porque la ventana diaria es de 24\,h y $D^b$ crece con $b$: con $b=0.78$ la serie diaria de Atacama y de Villa Santa Lucía cruza con holgura y el valor diario del Cajón del Maipo llega a 1.47, así que la columna ``lo diario no dispara'' de la Tabla~\ref{tab:singlefactor} es la sensible a $b$ y se sostiene para exponentes hasta cerca de 0.6. Los puntajes por rango son invariantes a $k$ por construcción (Sección~4.2) y no se volvieron a correr; el operador de agregación de 30\,m a 5\,km de la Sección~5.2 (el promedio de área) no se varió, lo que sigue siendo un vacío.
 
 \begin{table}[ht]
 \centering
@@ -1196,6 +1226,63 @@ $b=0.78$ & 14.14 / 9.73 & 2.00 / 1.47 & 7.46 / 5.93 & \\
 \bottomrule
 \end{tabular}}
 
+\end{table}
+
+\paragraph{Un modelo alternativo sobre la misma forzante}
+El motor incluye un gatillo de precipitación antecedente (API$_t=\sum_k \delta^k P_{t-k}$,
+excluyendo el día en curso, factor $T(\mathrm{API}/\mathrm{API}_\mathrm{crit})$), así que ``no el modelo'' puede probarse sobre los
+datos del Maipo en vez de afirmarse. Lo corrimos solo y compuesto con el gatillo I--D
+como regla doble causa--gatillo \citep{bogaard2018}, alertando solo cuando ambos
+factores llegan a 0.5, para retenciones diarias $\delta$ de 0.85, 0.90 y 0.95 (vidas
+medias de 4.3, 6.6 y 13.5 días), con la profundidad crítica calibrada por CSI máximo
+igual que $a^\star$ (Tabla~\ref{tab:antecedent}). El estado antecedente solo no lo hace
+mejor que la curva I--D, y componer ambos con O no cambia nada. La regla causa--gatillo
+conserva todos los aciertos de la curva I--D con un 10\,\% menos de meses en alerta, y es
+la única configuración bajo 0.05 contra el nulo por barajado de años dentro de muestra
+($P=0.032$); pero se eligió entre nueve calibraciones dentro de muestra, y calibrar su
+profundidad crítica en los años impares y puntuar los pares da $P=0.136$ (contra 0.283
+de la curva I--D sola en los mismos años). En el backtest distribuido ninguna
+combinación saca el AUC del azar (0.485--0.506, todos los intervalos cruzan 0.5). A
+resolución diaria de 5\,km, entonces, reemplazar el gatillo de intensidad por uno
+antecedente, o condicionar uno con el otro, no cambia la discriminación, que es lo que
+predice un problema limitado por la forzante y el objetivo; el experimento controlado
+(Tabla~\ref{tab:sweep}) muestra el régimen opuesto, fallas controladas por la humedad
+antecedente, donde el techo es la familia de gatillo y no la forzante.
+
+\begin{table}[ht]
+\centering
+\small
+\caption{Gatillo de precipitación antecedente sobre los backtests del Maipo. Agrupado ($\pm1$ mes):
+profundidad crítica calibrada por CSI máximo por regla y retención; POD con intervalo de
+Wilson al 95\,\% sobre 19 meses con evento; $P$ es la fracción de 2\,000 permutaciones por
+barajado de años con CSI al menos igual al observado (esta secuencia de permutaciones da
+0.108 para la fila I--D, 0.105 en la Tabla~\ref{tab:lumped}). Distribuido: ROC-AUC del
+peligro ponderado por susceptibilidad contra la huella de $\pm1$ celda / $\pm1$ mes,
+intervalo al 95\,\% por bootstrap de bloques mensuales, retención API 0.95 y profundidad
+crítica 300\,mm.}
+\label{tab:antecedent}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Regla agrupada & $\mathrm{API}_\mathrm{crit}$ (mm) & POD [95\,\%] & FAR & CSI & $P$ \\
+\midrule
+I--D sola ($a^\star=5.5$) & -- & 0.53 [0.32, 0.73] & 0.92 & 0.077 & 0.108 \\
+API sola, $\delta=0.85$ & 80 & 0.42 [0.23, 0.64] & 0.92 & 0.073 & 0.269 \\
+API sola, $\delta=0.95$ & 300 & 0.16 [0.06, 0.38] & 0.82 & 0.091 & 0.247 \\
+I--D Y API, $\delta=0.85$ & 30 & 0.53 [0.32, 0.73] & 0.91 & 0.085 & 0.032 \\
+I--D Y API, $\delta=0.90$ & 30 & 0.53 [0.32, 0.73] & 0.91 & 0.083 & 0.040 \\
+I--D O API, cualquier $\delta$ & 80--250 & 0.53 [0.32, 0.73] & 0.92 & 0.077 & 0.105--0.126 \\
+I--D Y API, $\delta=0.85$, años impares$\to$pares & 30 & 0.50 & 0.92 & 0.071 & 0.136 \\
+I--D sola, años pares & -- & 0.50 & 0.93 & 0.063 & 0.283 \\
+\midrule
+Configuración distribuida & & \multicolumn{2}{c}{ROC-AUC [95\,\%]} & & \\
+I--D $\times$ susceptibilidad RandomForest & & \multicolumn{2}{c}{0.485 [0.404, 0.567]} & & \\
+API sola, susceptibilidad $=1$ & & \multicolumn{2}{c}{0.493 [0.417, 0.563]} & & \\
+API $\times$ susceptibilidad RandomForest & & \multicolumn{2}{c}{0.506 [0.427, 0.570]} & & \\
+I--D $\times$ API (producto) $\times$ susceptibilidad & & \multicolumn{2}{c}{0.487 [0.399, 0.566]} & & \\
+I--D $\oplus$ API (noisy-OR) $\times$ susceptibilidad & & \multicolumn{2}{c}{0.488 [0.404, 0.558]} & & \\
+\bottomrule
+\end{tabular}}
 \end{table}
 
 \subsection{Vía de crecidas: un chequeo de caudal ruteado contra caudal observado}
@@ -1298,19 +1385,13 @@ la forzante \emph{relativa al proceso gatillante}, no a la resolución en abstra
 un producto diario que es inútil para deslizamientos por ráfaga convectiva es
 suficiente para crecidas ruteadas.
 
-\textbf{El techo del producto, observado en vivo.} Las primeras semanas de
-operación en sombra (limitación~(iii)) agregan un caso que los hindcasts no
-podían: dos ráfagas convectivas de veinte a sesenta minutos, una de las cuales
-causó un flujo de detritos, que los dos productos satelitales semihorarios
-subregistraron en un orden de magnitud en Las Condes y lo bastante para quedar
-bajo cualquier curva I--D en Curacautín, mientras un pluviómetro a 7\,km y el
-mapeador geoestacionario de rayos no. La resolución semihoraria es necesaria pero
-no suficiente: a la escala de una sola celda convectiva la restricción que manda es
-la estimación satelital de lluvia, no el paso de tiempo, y el sensor de baja
-latencia que resuelve la ráfaga es el que no mide lluvia. Para deslizamientos
-gatillados por ráfagas la interfaz de forzante tiene entonces que admitir redes in
-situ densas y proxies convectivos junto al QPE satelital, que es exactamente el
-intercambio que el diseño se construyó para abaratar.
+\textbf{El techo del producto, observado en vivo.} Las primeras semanas de operación
+en sombra (limitación~(iii)) agregan una observación que los hindcasts no podían: a la
+escala de una sola celda convectiva, la restricción que mandó fue la estimación
+satelital semihoraria y no el paso de tiempo, y los sensores que resolvieron las
+ráfagas fueron un pluviómetro y el mapeador de rayos, por lo que la interfaz de
+forzante tiene que admitir redes in situ densas y proxies convectivos junto al QPE
+satelital.
 
 La misma aritmética muerde en una segunda superficie, menos obvia: la
 \emph{referencia climatológica} contra la cual se juzga anómalo un evento. Para el
@@ -1361,7 +1442,12 @@ sean \emph{intercambiables de forma independiente} detrás de una sola interfaz,
 es precisamente lo que nos permitió mantener fijo el modelo y variar la resolución
 de la forzante. Es un sustrato experimental e integrador, no un producto
 operacional calibrado, y una cadena operacional como LHASA es el tipo de sistema al
-que sus salidas alimentarían o contra el que serían comparadas.
+que sus salidas alimentarían o contra el que serían comparadas (Sección~\ref{sec:multievent}).
+Ninguna agencia consume hoy sus alertas: en Chile las alertas tempranas preventivas
+las declara por comuna el servicio nacional de desastres (SENAPRED), y la salida de
+$0.1^{\circ}$ del motor llega a comunas solo en la cadena en sombra del autor, así que
+convertirla en un insumo de esa decisión es una cuestión de calibración y de
+gobernanza que este paper no resuelve.
 
 \section{Limitaciones y trabajo futuro}
 \label{sec:limits}
@@ -1415,14 +1501,21 @@ de rayos del mismo satélite \citep{goodman2013} registró la celda primero: 233
 descargas sobre el piedemonte con el peak treinta minutos antes del flujo de Las
 Condes, y 118 descargas a menos de 5\,km de Curacautín desde una hora antes de la
 inundación. La cadena ahora lleva los rayos como diagnóstico y no como forzante,
-pondera un cruce de un solo feed según cuál feed lo sostiene y congela la
-evidencia de cada alerta automáticamente. Tres eventos en cinco días, reportados
+congela la evidencia de cada alerta automáticamente y pondera un cruce de un solo feed
+según cuál feed lo sostiene: en las últimas tres horas de la racha de alerta y en las
+celdas sobre el nivel de alerta, un feed sostiene el cruce si acumula al menos 1\,mm y,
+salvo que sea el de pluviómetros, al menos la mitad que el feed más lluvioso; la alerta
+queda corroborada si la sostienen los pluviómetros o IMERG, o GOES con al menos tres
+descargas GLM en el dominio, y en caso contrario sale con prioridad baja. La regla está
+cubierta por once casos sintéticos y cuatro ciclos de punta a punta; confirmó el cruce
+solo de pluviómetros del 12 de octubre y mantiene en prioridad baja un cruce solo de
+GOES en Atacama desde el 11 de octubre. Tres eventos en cinco días, reportados
 por la prensa y no por un inventario, no constituyen una estimación de skill, y la
 tasa de falsas alarmas del intercepto regional todavía se está midiendo; la
 temporada en modo sombra sigue siendo el paso necesario, y la validación reportada
-en las Secciones~5.1--5.8 es hindcast en su totalidad. (iv) La
-humedad antecedente del suelo se captura solo implícitamente mediante ventanas
-móviles largas, no como un estado explícito, y el experimento controlado mide lo que eso cuesta: cuando las fallas las controla un almacén que drena en días y no en horas, el gatillo I--D captura menos del 10\,\% de ellas a cualquier resolución (Tabla~\ref{tab:sweep}), así que para deslizamientos controlados por la humedad antecedente el techo es el modelo y no la forzante, y un gatillo de estado alimentado por el almacén del motor hermano de lluvia--escorrentía es el cambio de un adaptador para el que la arquitectura se construyó. (v) Los pesos de combinación
+en las Secciones~5.1--5.8 es hindcast en su totalidad. (iv) El motor incluye un gatillo de precipitación antecedente, pero la humedad del
+suelo no es un estado explícito, y sobre los datos del Maipo el índice antecedente no
+mejora la discriminación (Tabla~\ref{tab:antecedent}); el experimento controlado mide lo que eso cuesta: cuando las fallas las controla un almacén que drena en días y no en horas, el gatillo I--D captura menos del 10\,\% de ellas a cualquier resolución (Tabla~\ref{tab:sweep}), así que para deslizamientos controlados por la humedad antecedente el techo es el modelo y no la forzante, y un gatillo de estado alimentado por el almacén del motor hermano de lluvia--escorrentía es el cambio de un adaptador para el que la arquitectura se construyó. (v) Los pesos de combinación
 multi-gatillo y la tasa crítica de deformación aún no están calibrados. (vi) Los
 adaptadores de deshielo, deformación InSAR y runout de flujo de detritos
 (Sección~5.9) ejercitan la arquitectura pero no son predicciones validadas; solo el
@@ -1452,7 +1545,7 @@ diseñada de modo que una forzante de mayor resolución y mejor medida, la vía 
 \section*{Disponibilidad de código y datos}
 
 El código fuente de \texttt{nowcast} (doce crates de Rust, incluidos un ejecutable
-de línea de comandos y bindings de Python por PyO3, más treinta y seis ejemplos) y todos
+de línea de comandos y bindings de Python por PyO3, más treinta y ocho ejemplos) y todos
 los scripts de extracción de datos están disponibles abiertamente en
 \url{https://github.com/franciscoparrao/nowcast} bajo licencia MIT o Apache-2.0; un
 snapshot citable de la versión usada aquí (v0.2.0) está archivado en Zenodo en
@@ -1463,7 +1556,7 @@ versión).
 \paragraph{Qué reproduce el snapshot archivado, y qué no}
 La reproducibilidad aquí no es uniforme a lo largo del paper, y sería engañoso
 afirmar lo contrario. \texttt{nowcast-core} \emph{no} tiene dependencias por ruta:
-compila y testea sin conexión y sin dependencias de sistema, y sus 22 ejemplos
+compila y testea sin conexión y sin dependencias de sistema, y sus 24 ejemplos
 regeneran cada resultado de las Secciones~\ref{sec:lumped}--\ref{sec:intercept} ---
 los backtests agrupado y distribuido y sus diagnósticos del nulo, el ensemble de
 umbrales publicados, el experimento controlado de resolución, el head-to-head, los
@@ -1509,6 +1602,23 @@ necesitan \texttt{numpy}, \texttt{netCDF4}, \texttt{xarray} y \texttt{earthacces
 \emph{Tamaño del programa}: aproximadamente 17\,000 líneas de Rust en doce crates.
 \emph{Disponibilidad y costo}: libre y de código abierto, MIT o Apache-2.0, en el
 repositorio y los DOI de Zenodo de arriba.
+
+\paragraph{Verificación y entradas derivadas}
+Un flujo de integración continua en el repositorio (\texttt{.github/workflows/ci.yml})
+corre \texttt{scripts/reproduce\_core.sh --lint}: la batería de tests del núcleo y el
+linter sobre biblioteca, tests y ejemplos, en el workspace solo del núcleo que la
+instantánea reproduce. Los tiempos se tomaron en un portátil Intel Core i7-1270P (12
+núcleos, 16 hilos, 38\,GB de RAM). Cada paso estocástico tiene semilla fija e impresa: el
+bootstrap de bloques mensuales de la Sección~5.2 (semilla de NumPy 42), las
+realizaciones sintéticas de la Sección~5.3 (un paso determinista de razón áurea), la
+búsqueda aleatoria de GR4J de la Sección~5.8 y los nulos por permutación y por bloques
+de año (semillas lineales congruenciales fijas en cada ejemplo). Las entradas derivadas
+del Maipo (la tabla de 157 eventos con sus identificadores de registro de SERNAGEOMIN,
+la asignación a celdas, la susceptibilidad agregada y las 123\,120 etiquetas de
+celda-mes, con sumas SHA-256) están preparadas para depositarse con la instantánea una
+vez confirmados los términos de redistribución del inventario; mientras tanto se
+regeneran con los scripts de extracción desde el inventario compilado en el estudio de
+susceptibilidad acompañante \citep{parra2026transfer}.
 
 \section*{Financiamiento}
 
@@ -1592,6 +1702,11 @@ dataset for hydroclimatic research in Chile. EGU General Assembly 2018.
 Brunetti, M.T., Melillo, M., Peruccacci, S., Ciabatta, L., Brocca, L., 2018. How
 far are we from the use of satellite rainfall products in landslide forecasting?
 Remote Sens.\ Environ.\ 210, 65--75. \url{https://doi.org/10.1016/j.rse.2018.03.016}.
+
+\bibitem[Boisier(2023)]{boisier2023cr2met}
+Boisier, J.P., 2023. CR2MET: A high-resolution precipitation and temperature dataset
+for the period 1960--2021 in continental Chile (v2.5) [data set]. Zenodo.
+\url{https://doi.org/10.5281/zenodo.7529682}.
 
 \bibitem[Brier(1950)]{brier1950}
 Brier, G.W., 1950. Verification of forecasts expressed in terms of probability.
@@ -1754,6 +1869,12 @@ Parra, F., 2026. SurtGIS: A high-performance raster geospatial analysis library
 in Rust with WebAssembly and Python support. Environ.\ Model.\ Softw.\ 204,
 107102. \url{https://doi.org/10.1016/j.envsoft.2026.107102}.
 
+\bibitem[Parra et al.(2026)]{parra2026transfer}
+Parra, F., Gil-Costa, V., Bonacic, C., Mar\'in, M., 2026. When are landslide
+susceptibility models transferable across hydrological basins? A data-driven
+benchmark for engineering-geological hazard zoning along the climatic gradient of
+Chile (18\textdegree\,S--54\textdegree\,S). Unpublished manuscript.
+
 \bibitem[Peres et al.(2018)]{peres2018}
 Peres, D.J., Cancelliere, A., Greco, R., Bogaard, T., 2018. Influence of
 uncertain identification of triggering rainfall on the assessment of landslide
@@ -1801,6 +1922,12 @@ Sci.\ 15, 1821--1833. \url{https://doi.org/10.5194/nhess-15-1821-2015}.
 Stanley, T.A., Kirschbaum, D.B., Benz, G., et al., 2021. Data-driven landslide
 nowcasting at the global scale. Front.\ Earth Sci.\ 9, 640043.
 \url{https://doi.org/10.3389/feart.2021.640043}.
+
+\bibitem[Stanley et al.(2023)]{lhasa2023data}
+Stanley, T.A., Kirschbaum, D.B., Benz, G., Emberson, R.A., Amatya, P.M., Medwedeff,
+W., Clark, M.K., 2023. Global Landslide Nowcasts from LHASA L4 1 day 1 km x 1 km,
+version 2.0.0 [data set]. Goddard Earth Sciences Data and Information Services Center
+(GES DISC). \url{https://doi.org/10.5067/8VKQDQFFOTS3}.
 
 \bibitem[Tan et al.(2019)]{tan2019}
 Tan, J., Huffman, G.J., Bolvin, D.T., Nelkin, E.J., 2019. IMERG V06: changes to

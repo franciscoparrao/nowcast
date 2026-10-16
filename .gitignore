@@ -5,6 +5,9 @@ Cargo.lock.bak
 
 # Derived backtest data — regenerate with scripts/extract_maipo_cr2met.py
 /data/*.csv
+# Deposit package of the derived Maipo inputs: held out of git until the
+# redistribution terms of the SERNAGEOMIN-derived event table are confirmed.
+/data/deposit/
 
 # IMERG raw HDF5 (large, downloaded) — keep derived CSV only
 /data/imerg_hhr/

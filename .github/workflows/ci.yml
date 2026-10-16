@@ -1,0 +1,19 @@
+# Continuous integration for the core engine: the part of the workspace that
+# builds without the sibling repositories (see the paper's Code availability).
+# scripts/reproduce_core.sh builds the core in a workspace of its own (the root
+# workspace references sibling engines by path) and, with --lint, runs the core
+# test suite and clippy over library, tests and examples with warnings as errors.
+name: ci-core
+on:
+  push:
+  pull_request:
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: core tests + clippy
+        run: bash scripts/reproduce_core.sh --lint

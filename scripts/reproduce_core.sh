@@ -17,6 +17,7 @@
 # Usage:
 #   scripts/reproduce_core.sh            # tests + every paper example
 #   scripts/reproduce_core.sh --tests    # tests only
+#   scripts/reproduce_core.sh --lint     # tests + clippy -D warnings (CI)
 #
 # The examples read the derived input CSVs from data/ (not versioned; regenerate
 # them with the extraction scripts in scripts/, see the README).
@@ -48,6 +49,12 @@ cd "$WORK"
 echo "[reproduce] core-only workspace: $WORK"
 cargo test --release -p nowcast-core
 [[ "${1:-}" == "--tests" ]] && { echo "[reproduce] tests OK"; exit 0; }
+if [[ "${1:-}" == "--lint" ]]; then
+    # CI mode (.github/workflows/ci.yml): tests above, then the linter over the
+    # library, tests and every example, warnings as errors.
+    cargo clippy --release -p nowcast-core --all-targets -- -D warnings
+    echo "[reproduce] tests + clippy OK"; exit 0
+fi
 
 if [[ ! -d "$ROOT/data" ]] || ! compgen -G "$ROOT/data/*.csv" >/dev/null; then
     echo "[reproduce] data/ has no derived CSVs: regenerate them with scripts/extract_*.py" >&2
@@ -66,6 +73,7 @@ EXAMPLES=(
     single_factor_resolution  # 5.6 product vs resolution
     intercept_sensitivity     # 5.7 intercept sensitivity
     sensitivity_oat           # 5.7 one-at-a-time sensitivity (b, m_max, k, alert level)
+    antecedent_trigger        # 5.7 antecedent-moisture trigger, alone and with I–D
 )
 cargo build --release -p nowcast-core --examples
 for ex in "${EXAMPLES[@]}"; do

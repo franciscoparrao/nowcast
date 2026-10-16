@@ -23,8 +23,12 @@
 //! the susceptibility surface a slide occurs — that arrives with distributed
 //! forcing in v0.2.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::path::PathBuf;
+
+#[path = "shared/verif.rs"]
+mod verif;
+use verif::{frac_ge, month_contingency, wilson, year_shuffle, Lcg};
 
 use nowcast_core::{
     Contingency, GridDims, IdThreshold, MonthKey, Nowcast, SusceptibilityMap, TriggerModel,
@@ -99,64 +103,6 @@ fn alert_days(depths: &[f64], a: f64) -> Vec<bool> {
         .collect()
 }
 
-/// Wilson 95 % interval for `k` successes in `n` trials.
-fn wilson(k: u64, n: u64) -> (f64, f64) {
-    if n == 0 {
-        return (f64::NAN, f64::NAN);
-    }
-    let (z, p, n) = (1.96_f64, k as f64 / n as f64, n as f64);
-    let denom = 1.0 + z * z / n;
-    let centre = (p + z * z / (2.0 * n)) / denom;
-    let half = z * (p * (1.0 - p) / n + z * z / (4.0 * n * n)).sqrt() / denom;
-    (centre - half, centre + half)
-}
-
-/// Same counting as `monthly_contingency`, on month-level sets (used by the
-/// permutation null, which shuffles alert months rather than days).
-fn month_contingency(
-    present: &BTreeSet<MonthKey>,
-    alerted: &BTreeSet<MonthKey>,
-    observed: &BTreeSet<MonthKey>,
-    tol: i32,
-) -> Contingency {
-    let shift = |(y, m): MonthKey, d: i32| -> MonthKey {
-        let idx = y * 12 + (m as i32 - 1) + d;
-        (idx.div_euclid(12), (idx.rem_euclid(12) + 1) as u32)
-    };
-    let alert_near = |mk: MonthKey| (-tol..=tol).any(|d| alerted.contains(&shift(mk, d)));
-    let event_near = |mk: MonthKey| (-tol..=tol).any(|d| observed.contains(&shift(mk, d)));
-    let mut c = Contingency::default();
-    for &ev in observed {
-        if alert_near(ev) {
-            c.hits += 1;
-        } else {
-            c.misses += 1;
-        }
-    }
-    for &mk in present {
-        if event_near(mk) {
-            continue;
-        }
-        if alerted.contains(&mk) {
-            c.false_alarms += 1;
-        } else {
-            c.correct_negatives += 1;
-        }
-    }
-    c
-}
-
-/// Deterministic LCG (Numerical Recipes constants) — no `rand` dependency.
-struct Lcg(u64);
-impl Lcg {
-    fn next_u32(&mut self) -> u32 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
-        (self.0 >> 32) as u32
-    }
-    fn below(&mut self, n: usize) -> usize {
-        (self.next_u32() as usize) % n
-    }
-}
 
 fn nulls_and_intervals(day_month: &[MonthKey], alerts: &[bool], events: &[MonthKey], a: f64) {
     const N_PERM: usize = 2000;
@@ -168,11 +114,6 @@ fn nulls_and_intervals(day_month: &[MonthKey], alerts: &[bool], events: &[MonthK
         .collect();
     let observed: BTreeSet<MonthKey> =
         events.iter().copied().filter(|mk| present.contains(mk)).collect();
-    let years: Vec<i32> = {
-        let mut v: Vec<i32> = present.iter().map(|&(y, _)| y).collect();
-        v.dedup();
-        v
-    };
     println!(
         "\nUncertainty and nulls at a*={a:.1}: {} event-months, {} alert-months of {} ({:.0} % alert rate)",
         observed.len(),
@@ -191,27 +132,8 @@ fn nulls_and_intervals(day_month: &[MonthKey], alerts: &[bool], events: &[MonthK
         let (pod_lo, pod_hi) = wilson(c.hits, c.hits + c.misses);
         let (far_lo, far_hi) = wilson(c.false_alarms, c.hits + c.false_alarms);
         let obs_csi = c.csi().unwrap_or(0.0);
-        // Year-shuffle null: alert months of year y are reassigned to year perm(y).
-        let (mut pods, mut csis) = (Vec::with_capacity(N_PERM), Vec::with_capacity(N_PERM));
-        let mut ge = 0usize;
-        for _ in 0..N_PERM {
-            let mut perm = years.clone();
-            for i in (1..perm.len()).rev() {
-                let j = rng.below(i + 1);
-                perm.swap(i, j);
-            }
-            let map: BTreeMap<i32, i32> = years.iter().copied().zip(perm).collect();
-            let shuffled: BTreeSet<MonthKey> = alerted.iter().map(|&(y, m)| (map[&y], m)).collect();
-            let cn = month_contingency(&present, &shuffled, &observed, tol);
-            let csi_n = cn.csi().unwrap_or(0.0);
-            pods.push(cn.pod().unwrap_or(0.0));
-            csis.push(csi_n);
-            if csi_n >= obs_csi {
-                ge += 1;
-            }
-        }
-        pods.sort_by(|x, y| x.partial_cmp(y).unwrap());
-        csis.sort_by(|x, y| x.partial_cmp(y).unwrap());
+        let (pods, csis) = year_shuffle(&present, &alerted, &observed, tol, N_PERM, &mut rng);
+        let ge = (frac_ge(&csis, obs_csi) * N_PERM as f64).round() as usize;
         let mean = pods.iter().sum::<f64>() / pods.len() as f64;
         let p95 = |v: &[f64]| v[(0.95 * (v.len() - 1) as f64) as usize];
         println!(
