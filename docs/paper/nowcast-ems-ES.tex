@@ -1415,8 +1415,9 @@ de validación. El inventario está fechado a $\sim$mes y es incompleto, en eco 
 hallazgo más amplio, obtenido con experimentos sintéticos: la identificación incierta
 del propio episodio de lluvia gatillante distorsiona la evaluación de umbrales, en
 general sesgándolos hacia abajo, con un efecto que crece cuando el error de fechado
-supera un día \citep{peres2018}. El fechado a nivel de mes por sí solo da cuenta de una
-fracción grande de los fallos aparentes (Tabla~\ref{tab:lumped}), y la
+supera un día \citep{peres2018}. El fechado a nivel de mes limita lo que cualquier gatillo puede
+puntuar, pero el alza del POD con la tolerancia de calce no puede decir cuánto,
+porque un nulo estacional sube del mismo modo (Tabla~\ref{tab:lumped}); la
 incompletitud vuelve poco informativo el FAR por celda. Una discriminación creíble
 y un skill de lead time verdadero requieren un inventario con resolución de día o
 de hora, o lluvia segmentada por evento: un problema de datos, no de software, y el
@@ -1538,8 +1539,8 @@ eventos (AUC $\approx 0.48$); el gatillo idéntico sobre forzante satelital
 semihoraria ubica el cruce del umbral en una marca de tiempo horas antes de los
 flujos documentados del mismo día en tres eventos climáticamente distintos, y una descomposición
 por factor único separa cuánto de esa ganancia le debe al producto de lluvia y
-cuánto a su resolución, lo que resulta diferir según el evento. El motor, su marco
-de backtesting y todos los ejemplos son reproducibles, y la arquitectura está
+cuánto a su resolución, lo que resulta diferir según el evento. El núcleo del motor, su marco
+de backtesting y los ejemplos detrás de los resultados de resolución son reproducibles desde el snapshot archivado, y la arquitectura está
 diseñada de modo que una forzante de mayor resolución y mejor medida, la vía demostrada hacia el timing y la vía diagnosticada hacia la detección, pueda enchufarse sin tocar la lógica de peligro.
 
 \section*{Disponibilidad de código y datos}

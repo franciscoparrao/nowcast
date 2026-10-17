@@ -1252,8 +1252,9 @@ broader finding, from synthetic experiments, that uncertain identification of th
 triggering rainfall episode itself distorts threshold assessment, generally biasing
 thresholds low, with an effect that grows once dating errors exceed one day
 \citep{peres2018}. Month-level
-dating alone accounts for a large fraction of apparent misses
-(Table~\ref{tab:lumped}), and incompleteness makes per-cell FAR uninformative.
+dating caps what any trigger can score, but the rise of POD with the match
+tolerance cannot say by how much, because a seasonal null rises the same way
+(Table~\ref{tab:lumped}); incompleteness makes per-cell FAR uninformative.
 Credible discrimination and true lead-time skill require a day- or hour-resolution
 inventory, or event-segmented rainfall, a data problem, not a software one, and
 the single largest unlock for future validation.
@@ -1360,8 +1361,8 @@ Used as an experimental instrument over Chilean basins, it yields a diagnosis th
 the threshold crossing at a timestamp hours ahead of the documented flows on the same day across three
 climatically distinct events, and a single-factor decomposition separates what that
 gain owes to the rainfall product from what it owes to its resolution, which turns
-out to differ by event. The engine, its backtesting framework and all
-examples are reproducible, and the architecture is designed so that
+out to differ by event. The core engine, its backtesting framework and the
+examples behind the resolution results are reproducible from the archived snapshot, and the architecture is designed so that
 higher-resolution and better-measured forcing, the demonstrated path to timing and the diagnosed path to detection, can be plugged in
 without touching the hazard logic.
 
