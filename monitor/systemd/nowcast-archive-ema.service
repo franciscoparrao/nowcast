@@ -12,7 +12,9 @@ Type=oneshot
 # primera alerta de rm (10-oct-2026) quedó sin verificar porque solo se
 # archivaba El Colorado. Desde el 2026-10-12 también las ocho EMAs de
 # monitor@araucania (380xxx/390xxx; Angol 370067 no entrega datos).
-ExecStart=%h/proyectos/nowcast/monitor/archive_ema.py --code 330077,330112,330122,330019,380063,380018,380032,380013,380033,380029,390028,390056
+# Desde el 2026-10-19 también las cinco EMAs DMC de O'Higgins (340xxx), sin
+# monitor en vivo todavía, por las alertas de remoción en masa del 20-oct.
+ExecStart=%h/proyectos/nowcast/monitor/archive_ema.py --code 330077,330112,330122,330019,380063,380018,380032,380013,380033,380029,390028,390056,340045,340048,340066,340093,340115
 Environment=DMC_USUARIO=
 Environment=DMC_TOKEN=
 # Las credenciales reales salen de monitor/config.local.env, que el script lee
