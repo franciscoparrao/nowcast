@@ -39,3 +39,8 @@ scratch_fanapex/
 
 # Minutario EMA archivado por monitor/archive_ema.py (datos crecientes)
 monitor/data/ema/
+
+# Huellas enero 2021: recortes Sentinel-2 (~250 MB/fecha), salidas e informes descargados
+/data/huellas_2021/s2/
+/data/huellas_2021/out*/
+/data/huellas_2021/informes_sng/
