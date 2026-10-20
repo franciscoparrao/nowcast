@@ -1,0 +1,28 @@
+{
+ "utc": "2026-10-20T18:46:25Z",
+ "feed": "glm:noaa-goes19",
+ "newest_step": "20261020T1830",
+ "newest_file": "2026-10-20T18:45:40+00:00",
+ "stale_minutes": 0.7640037333333333,
+ "stale_hours_threshold": 1.0,
+ "n_steps": 31,
+ "n_gaps": 0,
+ "gap_fraction": 0.0,
+ "fetched_this_cycle": 96,
+ "fetch_errors": 0,
+ "scars": [],
+ "recent": {
+  "domain": 14,
+  "max_cell": 5,
+  "max_cell_lonlat": [
+   -70.35,
+   -33.85
+  ],
+  "scars": {},
+  "minutes": 60,
+  "top_scar": {
+   "nombre": null,
+   "flashes": 0
+  }
+ }
+}

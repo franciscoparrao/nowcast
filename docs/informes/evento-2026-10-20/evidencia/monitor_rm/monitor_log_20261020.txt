@@ -1,0 +1,192 @@
+[2026-10-20T00:17:24Z] rayos GLM: Rayos GLM 60 min: 1 en el dominio (máx celda 1@(-70.25,-33.05)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T00:17:24Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261019T2330; dga: 107 reales, 0 rellenos (0 de cola), último 20261019T2330
+[2026-10-20T00:17:24Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 1; sostienen: imerg
+[2026-10-20T00:17:24Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T00:17:25Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 186
+[2026-10-20T00:44:39Z] rayos GLM: Rayos GLM 60 min: 1 en el dominio (máx celda 1@(-70.25,-33.05)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T00:44:40Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0000; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0000
+[2026-10-20T00:44:40Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 1; sostienen: imerg
+[2026-10-20T00:44:40Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T00:44:41Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 189
+[2026-10-20T01:15:00Z] rayos GLM: Rayos GLM 60 min: 6 en el dominio (máx celda 3@(-69.95,-34.25)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T01:15:02Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0030; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0030
+[2026-10-20T01:15:05Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 6; sostienen: imerg
+[2026-10-20T01:15:05Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T01:15:11Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 192
+[2026-10-20T01:45:21Z] rayos GLM: Rayos GLM 60 min: 13 en el dominio (máx celda 3@(-69.95,-34.25)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T01:45:25Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0100; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0100
+[2026-10-20T01:45:28Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 13; sostienen: imerg
+[2026-10-20T01:45:28Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T01:45:36Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 195
+[2026-10-20T02:18:38Z] rayos GLM: Rayos GLM 60 min: 10 en el dominio (máx celda 3@(-70.55,-34.25)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T02:18:42Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0130; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0130
+[2026-10-20T02:18:46Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 10; sostienen: imerg
+[2026-10-20T02:18:47Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T02:18:55Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 198
+[2026-10-20T02:45:50Z] rayos GLM: Rayos GLM 60 min: 3 en el dominio (máx celda 2@(-69.95,-34.25)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T02:45:55Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0200; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0200
+[2026-10-20T02:45:58Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 3; sostienen: imerg
+[2026-10-20T02:45:59Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T02:46:10Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 201
+[2026-10-20T03:15:19Z] rayos GLM: Rayos GLM 60 min: 4 en el dominio (máx celda 3@(-70.65,-33.15)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T03:15:24Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0230; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0230
+[2026-10-20T03:15:26Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 4; sostienen: imerg
+[2026-10-20T03:15:26Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T03:15:37Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 204
+[2026-10-20T03:45:34Z] rayos GLM: Rayos GLM 60 min: 11 en el dominio (máx celda 8@(-70.65,-33.15)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T03:45:39Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0300; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0300
+[2026-10-20T03:45:43Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 11; sostienen: imerg
+[2026-10-20T03:45:43Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T03:45:54Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 207
+[2026-10-20T04:19:03Z] rayos GLM: Rayos GLM 60 min: 13 en el dominio (máx celda 8@(-70.65,-33.15)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T04:19:09Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0330; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0330
+[2026-10-20T04:19:12Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 13; sostienen: imerg
+[2026-10-20T04:19:13Z] NOTIFY[urgent] nowcast-monitor: ALERTA I-D persiste en el dominio — 1 paso(s) en alerta (nivel 0.267); último: paso 58 con 1 celda(s) (1% del dominio), pico de la ventana 0.27; cruce desde Mon 19 00:30 Chile (20261019T0330Z). Sostienen: imerg. Último dato IMERG: 20261019T2230 (~4 h de latencia). Rayos GLM 60 min: 13 en el dominio (máx celda 8@(-70.65,-33.15)), 0 sobre san_carlos_apoquindo_2025-12-29. Feeds: goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0330; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0330. Detalle: /home/franciscoparrao/nowcast-monitor-rm/out/last_run.json
+[2026-10-20T04:19:26Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 210
+[2026-10-20T04:43:57Z] rayos GLM: Rayos GLM 60 min: 20 en el dominio (máx celda 6@(-70.15,-33.75)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T04:44:01Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0400; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0400
+[2026-10-20T04:44:04Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 20; sostienen: imerg
+[2026-10-20T04:44:04Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T04:44:12Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 213
+[2026-10-20T05:15:23Z] rayos GLM: Rayos GLM 60 min: 23 en el dominio (máx celda 6@(-70.15,-33.75)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T05:15:25Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0430; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0430
+[2026-10-20T05:15:27Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 23; sostienen: imerg
+[2026-10-20T05:15:27Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T05:15:32Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 216
+[2026-10-20T05:45:15Z] rayos GLM: Rayos GLM 60 min: 13 en el dominio (máx celda 4@(-70.15,-33.75)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T05:45:18Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0500; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0500
+[2026-10-20T05:45:20Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 13; sostienen: imerg
+[2026-10-20T05:45:21Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T05:45:31Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 219
+[2026-10-20T06:14:53Z] rayos GLM: Rayos GLM 60 min: 0 en el dominio (máx celda 0@(-,-)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T06:14:54Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0530; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0530
+[2026-10-20T06:14:56Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 0; sostienen: imerg
+[2026-10-20T06:14:56Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T06:15:01Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 222
+[2026-10-20T06:46:28Z] rayos GLM: Rayos GLM 60 min: 1 en el dominio (máx celda 1@(-70.45,-33.45)), 1 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T06:46:30Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0600; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0600
+[2026-10-20T06:46:32Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 1; sostienen: imerg
+[2026-10-20T06:46:32Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T06:46:36Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 225
+[2026-10-20T07:15:37Z] rayos GLM: Rayos GLM 60 min: 9 en el dominio (máx celda 4@(-70.35,-33.85)), 1 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T07:15:40Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0630; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0630
+[2026-10-20T07:15:42Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 9; sostienen: imerg
+[2026-10-20T07:15:42Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T07:15:50Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 228
+[2026-10-20T07:45:39Z] rayos GLM: Rayos GLM 60 min: 211 en el dominio (máx celda 38@(-70.55,-33.35)), 99 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T07:45:39Z] NOTIFY[urgent] nowcast-monitor: CONVECCIÓN sobre cicatriz post-incendio — 99 descargas GLM en 60 min sobre san_carlos_apoquindo_2025-12-29 (+5 km); 211 en el dominio. Es el patrón del 8-oct-2026 (ráfaga convectiva que los QPE no ven): revisar estaciones y GOES ahora. Diagnóstico, no cambia el peligro I-D.
+[2026-10-20T07:45:42Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T0700; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T0700
+[2026-10-20T07:45:43Z] corroboración: 1 (imerg) — lluvia 3 h en celdas en alerta: imerg 3.5 mm, goes 0.0 mm, dga 0.0 mm; rayos GLM 211; sostienen: imerg
+[2026-10-20T07:45:43Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T07:45:47Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261019T0330 4 231
+[2026-10-20T08:13:01Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+[2026-10-20T08:45:26Z] NOTIFY[high] nowcast-monitor: FETCH FALLÓ — El ciclo de ingesta IMERG Early falló; revisa /home/franciscoparrao/nowcast-monitor-rm/monitor.log en franciscoparrao-ThinkPad-T14-Gen-3. El monitor NO corrió.
+[2026-10-20T09:15:24Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+[2026-10-20T09:44:25Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+[2026-10-20T10:15:21Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+[2026-10-20T10:43:21Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+[2026-10-20T11:18:13Z] rayos GLM: Rayos GLM 60 min: 3 en el dominio (máx celda 1@(-70.35,-33.05)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T11:18:14Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1030; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1030
+[2026-10-20T11:18:16Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 0.0 mm, goes 8.2 mm, dga 1.3 mm; rayos GLM 3; sostienen: dga, goes
+[2026-10-20T11:18:16Z] NOTIFY[urgent] nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio — 5 paso(s) en alerta (nivel 0.267); último: paso 104 con 1 celda(s) (1% del dominio), pico de la ventana 0.55; cruce desde Tue 20 05:00 Chile (20261020T0800Z). Sostienen: dga,goes. Último dato IMERG: 20261020T0530 (~4 h de latencia). Rayos GLM 60 min: 3 en el dominio (máx celda 1@(-70.35,-33.05)), 0 sobre san_carlos_apoquindo_2025-12-29. Feeds: goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1030; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1030. Detalle: /home/franciscoparrao/nowcast-monitor-rm/out/last_run.json
+[2026-10-20T11:18:20Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T0800 89 89
+[2026-10-20T11:19:22Z] rayos GLM: Rayos GLM 60 min: 3 en el dominio (máx celda 1@(-70.35,-33.05)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T11:19:23Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1030; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1030
+[2026-10-20T11:19:24Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 0.0 mm, goes 8.2 mm, dga 1.3 mm; rayos GLM 3; sostienen: dga, goes
+[2026-10-20T11:19:24Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T11:19:28Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T0800 4 92
+[2026-10-20T11:48:40Z] rayos GLM: Rayos GLM 60 min: 0 en el dominio (máx celda 0@(-,-)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T11:48:41Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1100; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1100
+[2026-10-20T11:48:42Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 0.0 mm, goes 8.2 mm, dga 1.3 mm; rayos GLM 0; sostienen: dga, goes
+[2026-10-20T11:48:42Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T11:48:46Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T0800 11 101
+[2026-10-20T12:14:19Z] rayos GLM: Rayos GLM 60 min: 3 en el dominio (máx celda 3@(-70.25,-33.05)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T12:14:21Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1130; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1130
+[2026-10-20T12:14:23Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 0.0 mm, goes 8.2 mm, dga 1.3 mm; rayos GLM 3; sostienen: dga, goes
+[2026-10-20T12:14:23Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T12:14:26Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T0800 13 108
+[2026-10-20T12:48:34Z] rayos GLM: Rayos GLM 60 min: 9 en el dominio (máx celda 3@(-70.25,-33.05)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T12:48:35Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1200; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1200
+[2026-10-20T12:48:36Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 0.2 mm, goes 8.2 mm, dga 1.3 mm; rayos GLM 9; sostienen: dga, goes
+[2026-10-20T12:48:36Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T12:48:37Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T0800 11 117
+[2026-10-20T13:16:21Z] rayos GLM: Rayos GLM 60 min: 15 en el dominio (máx celda 3@(-70.25,-33.05)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T13:16:22Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1230; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1230
+[2026-10-20T13:16:22Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 0.2 mm, goes 8.2 mm, dga 1.3 mm; rayos GLM 15; sostienen: dga, goes
+[2026-10-20T13:16:23Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T13:16:24Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T0800 11 123
+[2026-10-20T13:45:42Z] rayos GLM: Rayos GLM 60 min: 14 en el dominio (máx celda 3@(-70.35,-34.25)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T13:45:43Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1300; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1300
+[2026-10-20T13:45:44Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 1.8 mm, goes 8.2 mm, dga 1.3 mm; rayos GLM 14; sostienen: dga, goes
+[2026-10-20T13:45:44Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T13:45:45Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T0800 6 128
+[2026-10-20T14:16:29Z] rayos GLM: Rayos GLM 60 min: 5 en el dominio (máx celda 3@(-70.35,-34.25)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T14:16:30Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1330; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1330
+[2026-10-20T14:16:30Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 1.8 mm, goes 8.2 mm, dga 1.3 mm; rayos GLM 5; sostienen: dga, goes
+[2026-10-20T14:16:30Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T14:16:31Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T0800 4 131
+[2026-10-20T14:47:15Z] NOTIFY[urgent] nowcast-monitor: feed PRIMARIO atrasado — Último paso IMERG real: 20261020T0830 (hace 375 min > 6 h). La vigilancia sigue SI la fusión (GOES/DGA) cubre la ventana — el guard de datos decide sobre la unión; se pierde mientras tanto la forzante calibrada del umbral I-D.
+[2026-10-20T14:47:17Z] rayos GLM: Rayos GLM 60 min: 8 en el dominio (máx celda 3@(-70.65,-33.05)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T14:47:17Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1400; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1400
+[2026-10-20T14:47:17Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 1.8 mm, goes 8.2 mm, dga 1.3 mm; rayos GLM 8; sostienen: dga, goes
+[2026-10-20T14:47:17Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T14:47:18Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T0800 4 134
+[2026-10-20T15:14:26Z] notify suprimida por histéresis (stale): nowcast-monitor: feed PRIMARIO atrasado
+[2026-10-20T15:14:27Z] rayos GLM: Rayos GLM 60 min: 37 en el dominio (máx celda 13@(-70.55,-33.15)), 9 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T15:14:28Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1430; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1430
+[2026-10-20T15:14:28Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 1.8 mm, goes 8.2 mm, dga 1.3 mm; rayos GLM 37; sostienen: dga, goes
+[2026-10-20T15:14:29Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T15:14:30Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T0800 4 137
+[2026-10-20T15:46:29Z] notify suprimida por histéresis (stale): nowcast-monitor: feed PRIMARIO atrasado
+[2026-10-20T15:46:31Z] rayos GLM: Rayos GLM 60 min: 61 en el dominio (máx celda 13@(-70.55,-33.15)), 17 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T15:46:31Z] NOTIFY[urgent] nowcast-monitor: CONVECCIÓN sobre cicatriz post-incendio — 17 descargas GLM en 60 min sobre san_carlos_apoquindo_2025-12-29 (+5 km); 61 en el dominio. Es el patrón del 8-oct-2026 (ráfaga convectiva que los QPE no ven): revisar estaciones y GOES ahora. Diagnóstico, no cambia el peligro I-D.
+[2026-10-20T15:46:32Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1500; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1500
+[2026-10-20T15:46:33Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 1.8 mm, goes 8.2 mm, dga 1.3 mm; rayos GLM 61; sostienen: dga, goes
+[2026-10-20T15:46:33Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T15:46:34Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T0800 4 140
+[2026-10-20T16:16:36Z] rayos GLM: Rayos GLM 60 min: 165 en el dominio (máx celda 41@(-70.85,-33.35)), 15 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T16:16:36Z] notify suprimida por histéresis (glm_conv_scar): nowcast-monitor: CONVECCIÓN sobre cicatriz post-incendio
+[2026-10-20T16:16:37Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1530; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1530
+[2026-10-20T16:16:38Z] corroboración: 1 (dga) — lluvia 3 h en celdas en alerta: imerg 0.0 mm, goes 0.2 mm, dga 5.7 mm; rayos GLM 165; sostienen: dga
+[2026-10-20T16:16:38Z] NOTIFY[urgent] nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio — 6 paso(s) en alerta (nivel 0.267); último: paso 106 con 1 celda(s) (1% del dominio), pico de la ventana 0.55; cruce desde Tue 20 12:30 Chile (20261020T1530Z). Sostienen: dga. Último dato IMERG: 20261020T1030 (~4 h de latencia). Rayos GLM 60 min: 165 en el dominio (máx celda 41@(-70.85,-33.35)), 15 sobre san_carlos_apoquindo_2025-12-29. Feeds: goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1530; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1530. Detalle: /home/franciscoparrao/nowcast-monitor-rm/out/last_run.json
+[2026-10-20T16:16:39Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T1530 66 66
+[2026-10-20T16:44:12Z] rayos GLM: Rayos GLM 60 min: 345 en el dominio (máx celda 63@(-70.75,-33.55)), 0 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T16:44:12Z] NOTIFY[high] nowcast-monitor: convección eléctrica en el dominio — 345 descargas GLM en 60 min; máx por celda 63@(-70.75,-33.55). Diagnóstico, no cambia el peligro I-D.
+[2026-10-20T16:44:13Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1600; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1600
+[2026-10-20T16:44:13Z] corroboración: 1 (dga) — lluvia 3 h en celdas en alerta: imerg 0.0 mm, goes 0.2 mm, dga 5.7 mm; rayos GLM 345; sostienen: dga
+[2026-10-20T16:44:13Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T16:44:15Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T1530 11 75
+[2026-10-20T17:15:25Z] rayos GLM: Rayos GLM 60 min: 381 en el dominio (máx celda 63@(-70.75,-33.55)), 1 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T17:15:25Z] notify suprimida por histéresis (glm_conv_dom): nowcast-monitor: convección eléctrica en el dominio
+[2026-10-20T17:15:26Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1630; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1630
+[2026-10-20T17:15:27Z] corroboración: 1 (dga) — lluvia 3 h en celdas en alerta: imerg 0.0 mm, goes 0.2 mm, dga 5.7 mm; rayos GLM 381; sostienen: dga
+[2026-10-20T17:15:27Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T17:15:28Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T1530 13 82
+[2026-10-20T17:44:46Z] rayos GLM: Rayos GLM 60 min: 216 en el dominio (máx celda 19@(-70.65,-33.55)), 1 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T17:44:46Z] notify suprimida por histéresis (glm_conv_dom): nowcast-monitor: convección eléctrica en el dominio
+[2026-10-20T17:44:46Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1700; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1700
+[2026-10-20T17:44:47Z] corroboración: 1 (dga) — lluvia 3 h en celdas en alerta: imerg 0.0 mm, goes 0.2 mm, dga 5.7 mm; rayos GLM 216; sostienen: dga
+[2026-10-20T17:44:47Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T17:44:48Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T1530 11 91
+[2026-10-20T18:15:46Z] rayos GLM: Rayos GLM 60 min: 155 en el dominio (máx celda 19@(-70.65,-33.55)), 3 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T18:15:46Z] notify suprimida por histéresis (glm_conv_dom): nowcast-monitor: convección eléctrica en el dominio
+[2026-10-20T18:15:46Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1730; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1730
+[2026-10-20T18:15:47Z] corroboración: 1 (dga) — lluvia 3 h en celdas en alerta: imerg 0.0 mm, goes 0.2 mm, dga 5.7 mm; rayos GLM 155; sostienen: dga
+[2026-10-20T18:15:47Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T18:15:48Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T1530 13 98
+[2026-10-20T18:45:43Z] rayos GLM: Rayos GLM 60 min: 70 en el dominio (máx celda 11@(-70.45,-33.75)), 7 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T18:45:43Z] NOTIFY[high] nowcast-monitor: convección eléctrica en el dominio — 70 descargas GLM en 60 min; máx por celda 11@(-70.45,-33.75). Diagnóstico, no cambia el peligro I-D.
+[2026-10-20T18:45:44Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1800; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1800
+[2026-10-20T18:45:45Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 0.0 mm, goes 4.3 mm, dga 2.1 mm; rayos GLM 70; sostienen: dga, goes
+[2026-10-20T18:45:45Z] NOTIFY[urgent] nowcast-monitor: ALERTA I-D: CRUCE NUEVO en el dominio — 7 paso(s) en alerta (nivel 0.267); último: paso 106 con 1 celda(s) (1% del dominio), pico de la ventana 0.55; cruce desde Tue 20 15:00 Chile (20261020T1800Z). Sostienen: dga,goes. Último dato IMERG: 20261020T1330 (~4 h de latencia). Rayos GLM 60 min: 70 en el dominio (máx celda 11@(-70.45,-33.75)), 7 sobre san_carlos_apoquindo_2025-12-29. Feeds: goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1800; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1800. Detalle: /home/franciscoparrao/nowcast-monitor-rm/out/last_run.json
+[2026-10-20T18:45:47Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T1800 67 67
+[2026-10-20T19:15:15Z] rayos GLM: Rayos GLM 60 min: 39 en el dominio (máx celda 8@(-70.55,-33.15)), 7 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T19:15:15Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1830; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1830
+[2026-10-20T19:15:16Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 0.0 mm, goes 4.4 mm, dga 3.6 mm; rayos GLM 39; sostienen: dga, goes
+[2026-10-20T19:15:16Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T19:15:17Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T1800 13 74
+[2026-10-20T19:46:22Z] rayos GLM: Rayos GLM 60 min: 14 en el dominio (máx celda 3@(-70.45,-33.25)), 3 sobre san_carlos_apoquindo_2025-12-29.
+[2026-10-20T19:46:23Z] fusión (2 feed(s) secundario(s), noisy-or): goes: 107 reales, 0 rellenos (0 de cola), último 20261020T1900; dga: 107 reales, 0 rellenos (0 de cola), último 20261020T1900
+[2026-10-20T19:46:23Z] corroboración: 1 (dga,goes) — lluvia 3 h en celdas en alerta: imerg 0.0 mm, goes 4.4 mm, dga 3.6 mm; rayos GLM 14; sostienen: dga, goes
+[2026-10-20T19:46:23Z] notify suprimida por histéresis (alert): nowcast-monitor: ALERTA I-D persiste en el dominio
+[2026-10-20T19:46:24Z] evidencia congelada: /home/franciscoparrao/nowcast-monitor-rm/evidence/20261020T1800 15 83

@@ -1,0 +1,172 @@
+{
+ "20261020T1200": {
+  "domain": 4,
+  "max_cell": 3,
+  "max_cell_lonlat": [
+   -70.25,
+   -33.05
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261020T1230": {
+  "domain": 9,
+  "max_cell": 2,
+  "max_cell_lonlat": [
+   -70.45,
+   -33.05
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261020T1300": {
+  "domain": 5,
+  "max_cell": 3,
+  "max_cell_lonlat": [
+   -70.35,
+   -34.25
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261020T1330": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261020T1400": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261020T1430": {
+  "domain": 30,
+  "max_cell": 13,
+  "max_cell_lonlat": [
+   -70.55,
+   -33.15
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 2
+  }
+ },
+ "20261020T1500": {
+  "domain": 18,
+  "max_cell": 6,
+  "max_cell_lonlat": [
+   -70.45,
+   -33.25
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 15
+  }
+ },
+ "20261020T1530": {
+  "domain": 55,
+  "max_cell": 41,
+  "max_cell_lonlat": [
+   -70.85,
+   -33.35
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261020T1600": {
+  "domain": 238,
+  "max_cell": 63,
+  "max_cell_lonlat": [
+   -70.75,
+   -33.55
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261020T1630": {
+  "domain": 88,
+  "max_cell": 16,
+  "max_cell_lonlat": [
+   -70.75,
+   -33.35
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261020T1700": {
+  "domain": 103,
+  "max_cell": 19,
+  "max_cell_lonlat": [
+   -70.65,
+   -33.55
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 1
+  }
+ },
+ "20261020T1730": {
+  "domain": 36,
+  "max_cell": 11,
+  "max_cell_lonlat": [
+   -70.45,
+   -33.75
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261020T1800": {
+  "domain": 28,
+  "max_cell": 8,
+  "max_cell_lonlat": [
+   -70.55,
+   -33.15
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 4
+  }
+ },
+ "20261020T1830": {
+  "domain": 6,
+  "max_cell": 3,
+  "max_cell_lonlat": [
+   -70.45,
+   -33.25
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 3
+  }
+ },
+ "20261020T1900": {
+  "domain": 3,
+  "max_cell": 1,
+  "max_cell_lonlat": [
+   -70.25,
+   -33.65
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ },
+ "20261020T1930": {
+  "domain": 1,
+  "max_cell": 1,
+  "max_cell_lonlat": [
+   -70.65,
+   -33.25
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 0
+  }
+ }
+}

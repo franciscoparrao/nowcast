@@ -1,0 +1,29 @@
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-17T14:13:00Z,2026-10-19T20:13:59Z&bounding_box=-70.85,-34.25,-69.75,-33.05&page_size=0
+[2026-10-19T20:22:10Z] NOTIFY[high] nowcast-monitor: FETCH FALLÓ — El ciclo de ingesta IMERG Early falló; revisa /home/franciscoparrao/nowcast-monitor-rm/monitor.log en franciscoparrao-ThinkPad-T14-Gen-3. El monitor NO corrió.
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-17T14:42:00Z,2026-10-19T20:42:59Z&bounding_box=-70.85,-34.25,-69.75,-33.05&page_size=0
+[2026-10-19T20:43:08Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-17T15:14:00Z,2026-10-19T21:14:59Z&bounding_box=-70.85,-34.25,-69.75,-33.05&page_size=0
+[2026-10-19T21:14:21Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+[2026-10-19T22:20:31Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-18T02:12:00Z,2026-10-20T08:12:59Z&bounding_box=-70.85,-34.25,-69.75,-33.05&page_size=0
+[2026-10-20T08:13:01Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-18T02:45:00Z,2026-10-20T08:45:59Z&bounding_box=-70.85,-34.25,-69.75,-33.05&page_size=0
+[2026-10-20T08:45:26Z] NOTIFY[high] nowcast-monitor: FETCH FALLÓ — El ciclo de ingesta IMERG Early falló; revisa /home/franciscoparrao/nowcast-monitor-rm/monitor.log en franciscoparrao-ThinkPad-T14-Gen-3. El monitor NO corrió.
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-18T03:15:00Z,2026-10-20T09:15:59Z&bounding_box=-70.85,-34.25,-69.75,-33.05&page_size=0
+[2026-10-20T09:15:24Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-18T03:44:00Z,2026-10-20T09:44:59Z&bounding_box=-70.85,-34.25,-69.75,-33.05&page_size=0
+[2026-10-20T09:44:25Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-18T04:15:00Z,2026-10-20T10:15:59Z&bounding_box=-70.85,-34.25,-69.75,-33.05&page_size=0
+[2026-10-20T10:15:21Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-18T04:43:00Z,2026-10-20T10:43:59Z&bounding_box=-70.85,-34.25,-69.75,-33.05&page_size=0
+[2026-10-20T10:43:21Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+[fetch] AVISO: búsqueda CMR falló ({"errors":["An Internal Error has occurred."]}); respaldo por listado de GES DISC
+[fetch] 6 gránulo(s) nuevo(s) de 108 en ventana (GES DISC directo)
+[fetch] AVISO: búsqueda CMR falló ({"errors":["An Internal Error has occurred."]}); respaldo por listado de GES DISC
+[fetch] AVISO: búsqueda CMR falló ({"errors":["An Internal Error has occurred."]}); respaldo por listado de GES DISC
+[fetch] 2 gránulo(s) nuevo(s) de 110 en ventana (GES DISC directo)
+[fetch] AVISO: búsqueda CMR falló ({"errors":["An Internal Error has occurred."]}); respaldo por listado de GES DISC
+[fetch] AVISO: búsqueda CMR falló ({"errors":["An Internal Error has occurred."]}); respaldo por listado de GES DISC
+[fetch] 2 gránulo(s) nuevo(s) de 112 en ventana (GES DISC directo)
+[fetch] AVISO: búsqueda CMR falló ({"errors":["An Internal Error has occurred."]}); respaldo por listado de GES DISC
+[fetch] 2 gránulo(s) nuevo(s) de 120 en ventana (GES DISC directo)

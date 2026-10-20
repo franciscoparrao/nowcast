@@ -1,0 +1,360 @@
+{
+ "version": 1,
+ "meta": {
+  "titulo": "Evento del 20 de octubre de 2026 en la RM y O'Higgins: lo que midieron las estaciones, lo que dijeron los monitores y lo que falló",
+  "proyecto": "nowcast",
+  "tarea": "Dejar constancia del evento de lluvia convectiva del 20-oct-2026 (alerta roja de Senapred en la RM, alerta amarilla en O'Higgins) con los datos medidos hasta las 19:00Z: EMAs DMC archivadas, avisos y rachas de monitor@rm y monitor@ohiggins (instanciado esa madrugada), rayos GLM y pronóstico comunal; y registrar las dos fallas operacionales del día (caída de CMR y cortes por tiempo del pronóstico)",
+  "autor": "Francisco Parra O. (con Claude Opus 5.5)",
+  "fecha": "2026-10-20T16:51:27-03:00",
+  "root": "../../.."
+ },
+ "bluf": "Hasta las 19:00Z del 20-oct, lo que cayó fue un chubasco convectivo de precordillera, de alrededor de una hora, hacia las 13–14 h de Chile. Solo una estación pasó con claridad la curva I-D regional: Portezuelo-Codelco, en Machalí, con 10.8 mm en 1 h (E=2.55). No hay reportes de remociones ocurridas en las notas de prensa revisadas. monitor@ohiggins alertó a tiempo en Machalí, pero su área en alerta (80 celdas, hasta San Fernando) es casi entera un artefacto de la interpolación de esa sola estación. monitor@rm solo alertó en San José de Maipo, coherente con las estaciones del piedemonte, que quedaron bajo la curva. Como el 8-oct, IMERG y GOES no vieron el chubasco. El día tuvo dos fallas operacionales: la caída de CMR dejó los monitores 3.5 h sin correr, y el pronóstico moría por tiempo; las dos quedaron corregidas. El frente principal (noche del 20 al 21 en la RM) todavía no llegaba.",
+ "afirmaciones": [
+  {
+   "id": "A1",
+   "texto": "Según la prensa del 18 al 20 de octubre: Senapred tenía alerta roja por remoción en masa en 10 comunas de la RM desde el 18-oct (San José de Maipo, Puente Alto, Pirque, La Florida, Peñalolén, La Reina, Las Condes, Lo Barnechea, Vitacura y Colina) y la tarde del 20-oct la extendió a toda la región; O'Higgins tenía alerta amarilla y suspensión de clases en 12 comunas (entre ellas Machalí, Rancagua, Requínoa, Rengo y San Fernando). El 20-oct hubo granizadas en nueve comunas de la RM y anegamientos en Maipú y Padre Hurtado. Ninguna de esas notas informa una remoción en masa ocurrida. No se contrastó con los reportes oficiales de Senapred ni de SERNAGEOMIN.",
+   "estado": "supuesto",
+   "tema": "Contexto",
+   "evidencia": [
+    {
+     "tipo": "referencia",
+     "ref": "https://www.elmostrador.cl/noticias/pais/2026/10/20/senapred-declara-alerta-roja-en-toda-la-region-metropolitana-por-intensas-lluvias-y-granizos/",
+     "nota": ""
+    },
+    {
+     "tipo": "referencia",
+     "ref": "https://www.radioagricultura.cl/noticias/nacional/senapred-declara-alerta-roja-por-remocion-en-masa-en-10-comunas-de-la-region-metropolitana_20261018/",
+     "nota": ""
+    },
+    {
+     "tipo": "referencia",
+     "ref": "https://www.biobiochile.cl/noticias/nacional/chile/2026/10/19/gobierno-decreta-suspension-de-clases-y-evacuaciones-preventivas-ante-ingreso-de-nuevo-sistema-frontal.shtml",
+     "nota": ""
+    }
+   ]
+  },
+  {
+   "id": "A2",
+   "texto": "Entre las 00:00 y las 19:00Z del 20-oct, la única EMA claramente sobre la curva regional a*=5.5 fue Portezuelo-Codelco (Machalí, 1185 m): 9.2 mm en 30 min y 10.8 mm en 1 h desde las 13:48 de Chile, E=2.55 con a*=5.5 y 0.95 con Caine. San José de Guayacán quedó justo sobre la curva (E=1.11; 14.6 mm en el día). El resto quedó bajo ella: Tobalaba 0.89, Quimávida 0.84, Rancagua 0.73, La Florida 0.67 y El Colorado 0.24. La costa de O'Higgins estuvo seca: Pichilemu 0.1 mm y Nilahue 0.0 mm. La cobertura del minutario fue de 98–100 % en las nueve estaciones.",
+   "estado": "verificado",
+   "tema": "Lluvia medida",
+   "evidencia": [
+    {
+     "tipo": "dato",
+     "ruta": "docs/informes/evento-2026-10-20/evidencia/ema/340093-20261020.jsonl",
+     "sha256": "4e086eec9fe9d238ea54c61c686d26f14cf20f8e91c2b60914071bf475d02189",
+     "bytes": 159467
+    },
+    {
+     "tipo": "dato",
+     "ruta": "docs/informes/evento-2026-10-20/evidencia/ema/330112-20261020.jsonl",
+     "sha256": "bae048c551ee43a41ac0426bd83b8264c768d3cf9f73078f52495418a9cf19c7",
+     "bytes": 159412
+    },
+    {
+     "tipo": "comando",
+     "cmd": "python3 docs/informes/evento-2026-10-20/scripts/estaciones.py",
+     "cwd": ".",
+     "exit": 0,
+     "sha256": "aaf140b35e2875135bffe6e7fcfd89bc935163c9fe50fbffaa78612b584e882b",
+     "salida": "ventana: 2026-10-20 00:00 → 19:00 UTC (hora Chile = UTC−3)\nestación                     comuna                 m  total  máx 30 min          máx 1 h   máx 3 h  E(a*=5.5) E(Caine)\nTobalaba Ad.                 La Reina             650    5.6    3.2 mm     3.4 mm 13:22 Chile    4.4 mm   0.89      0.33   (cobertura 100%)\n                             horas Chile con ≥0.5 mm: {'09h': 0.6, '12h': 0.8, '14h': 3.2}\nLa Florida (Aguas Andinas)   La Florida           790    4.6    2.4 mm     2.6 mm 13:17 Chile    3.5 mm   0.67      0.25   (cobertura 100%)\n                             horas Chile con ≥0.5 mm: {'09h': 0.6, '11h': 0.6, '14h': 2.4}\nSan José de Guayacán         San José de Maipo    960   14.6    4.0 mm     4.5 mm 12:39 Chile    7.5 mm   1.11      0.41   (cobertura 100%)\n                             horas Chile con ≥0.5 mm: {'01h': 0.5, '05h': 1.8, '10h': 1.7, '12h': 3.9, '13h': 0.9, '14h': 2.2, '15h': 2.9}\nEl Colorado                  Lo Barnechea        2750    3.9    0.8 mm     1.3 mm 10:36 Chile    2.1 mm   0.24      0.09   (cobertura 100%)\n                             horas Chile con ≥0.5 mm: {'01h': 0.7, '10h': 0.7, '11h': 0.9}\nRancagua                     Rancagua             482    5.4    2.4 mm     4.0 mm 13:28 Chile    5.2 mm   0.73      0.27   (cobertura 100%)\n                             horas Chile con ≥0.5 mm: {'13h': 2.3, '14h': 2.5}\nQuimávida                    Coltauco             316    9.6    3.0 mm     4.6 mm 13:10 Chile    6.8 mm   0.84      0.31   (cobertura 98%)\n                             horas Chile con ≥0.5 mm: {'09h': 0.8, '10h': 1.2, '12h': 1.8, '13h': 3.9, '14h': 1.1, '15h': 0.5}\nPortezuelo-Codelco           Machalí             1185   12.5    9.2 mm    10.8 mm 13:48 Chile   12.5 mm   2.55      0.95   (cobertura 100%)\n                             horas Chile con ≥0.5 mm: {'13h': 2.2, '14h': 9.3, '15h': 1.0}\nNilahue-La Quebrada          Pumanque              81    0.0    0.0 mm     0.0 mm    —           0.0 mm   0.00      0.00   (cobertura 100%)\n                             horas Chile con ≥0.5 mm: —\nPichilemu Ad.                Pichilemu             25    0.1    0.1 mm     0.1 mm 12:23 Chile    0.1 mm   0.03      0.01   (cobertura 100%)\n                             horas Chile con ≥0.5 mm: —\n\nI_crit(D) = a·D^−0.39 → a*=5.5: 7.2 mm/h a 30 min, 5.5 a 1 h, 3.6 a 3 h; Caine: 19.4 / 14.8 / 9.7 mm/h",
+     "fecha": "2026-10-20T16:52:11-03:00",
+     "segundos": 0.11
+    }
+   ]
+  },
+  {
+   "id": "A4",
+   "texto": "Lo que se midió hasta las 19:00Z fue un chubasco convectivo de precordillera de alrededor de una hora, entre las 13 y las 15 de Chile, con tormenta eléctrica, y no lluvia frontal sostenida. El pico de rayos (13 h) coincide con el inicio de las horas de mayor lluvia en las EMAs (13:10–13:48), y los acumulados del día son bajos (≤14.6 mm). El frente que anuncian los modelos para la noche y los días siguientes todavía no había llegado.",
+   "estado": "inferido",
+   "confianza": "muy probable",
+   "tema": "Lluvia medida",
+   "depende_de": [
+    "A2",
+    "A3"
+   ],
+   "evidencia": []
+  },
+  {
+   "id": "A3",
+   "texto": "El sensor GLM contó 893 descargas en el dominio rm y 493 en el dominio ohiggins el 20-oct; los dos bbox se solapan en la fila −33.85, así que no se pueden sumar. El máximo de los dos dominios cayó en la hora de las 13 de Chile: 326 en rm y 300 en ohiggins. Sobre la cicatriz de San Carlos de Apoquindo (+5 km) hubo 98 descargas a las 04 h y 15 a las 12 h de Chile.",
+   "estado": "verificado",
+   "tema": "Rayos",
+   "evidencia": [
+    {
+     "tipo": "comando",
+     "cmd": "python3 docs/informes/evento-2026-10-20/scripts/rayos.py",
+     "cwd": ".",
+     "exit": 0,
+     "sha256": "e7c7b13b176e0f01a12fd427e1a7e1d42fb6f02c3e3189326c9529ca5bbf3e7c",
+     "salida": "\n== rm: 893 descargas el 20-oct (UTC; horas Chile)\n  19-oct 21h Chile:    3  (máx en una celda y paso: 3 en [-69.95, -34.25])\n  19-oct 22h Chile:   10  (máx en una celda y paso: 3 en [-70.55, -34.25])\n  20-oct 00h Chile:   11  (máx en una celda y paso: 8 en [-70.65, -33.15])\n  20-oct 01h Chile:   23  (máx en una celda y paso: 6 en [-70.15, -33.75])\n  20-oct 03h Chile:    2  (máx en una celda y paso: 1 en [-70.45, -33.45]) | sobre cicatriz 1\n  20-oct 04h Chile:  209  (máx en una celda y paso: 38 en [-70.55, -33.35]) | sobre cicatriz 98\n  20-oct 06h Chile:    4  (máx en una celda y paso: 4 en [-70.35, -33.05])\n  20-oct 07h Chile:    3  (máx en una celda y paso: 1 en [-70.35, -33.05])\n  20-oct 09h Chile:   13  (máx en una celda y paso: 3 en [-70.25, -33.05])\n  20-oct 10h Chile:    5  (máx en una celda y paso: 3 en [-70.35, -34.25])\n  20-oct 11h Chile:   30  (máx en una celda y paso: 13 en [-70.55, -33.15]) | sobre cicatriz 2\n  20-oct 12h Chile:   73  (máx en una celda y paso: 41 en [-70.85, -33.35]) | sobre cicatriz 15\n  20-oct 13h Chile:  326  (máx en una celda y paso: 63 en [-70.75, -33.55])\n  20-oct 14h Chile:  139  (máx en una celda y paso: 19 en [-70.65, -33.55]) | sobre cicatriz 1\n  20-oct 15h Chile:   36  (máx en una celda y paso: 8 en [-70.55, -33.15]) | sobre cicatriz 7\n  20-oct 16h Chile:    6  (máx en una celda y paso: 1 en [-70.75, -33.15])\n\n== ohiggins: 493 descargas el 20-oct (UTC; horas Chile)\n  20-oct 00h Chile:    3  (máx en una celda y paso: 3 en [-70.25, -34.65])\n  20-oct 01h Chile:   16  (máx en una celda y paso: 4 en [-70.15, -33.85])\n  20-oct 04h Chile:   36  (máx en una celda y paso: 6 en [-70.35, -33.85])\n  20-oct 06h Chile:    4  (máx en una celda y paso: 1 en [-70.35, -34.55])\n  20-oct 08h Chile:    1  (máx en una celda y paso: 1 en [-70.45, -34.55])\n  20-oct 09h Chile:    7  (máx en una celda y paso: 3 en [-70.75, -34.55])\n  20-oct 10h Chile:   16  (máx en una celda y paso: 5 en [-70.65, -34.75])\n  20-oct 11h Chile:    1  (máx en una celda y paso: 1 en [-71.35, -34.05])\n  20-oct 12h Chile:   37  (máx en una celda y paso: 8 en [-70.95, -34.55])\n  20-oct 13h Chile:  300  (máx en una celda y paso: 57 en [-70.85, -34.35])\n  20-oct 14h Chile:   68  (máx en una celda y paso: 16 en [-70.45, -34.25])\n  20-oct 15h Chile:    3  (máx en una celda y paso: 2 en [-71.05, -33.85])\n  20-oct 16h Chile:    1  (máx en una celda y paso: 1 en [-70.35, -33.85])",
+     "fecha": "2026-10-20T16:52:11-03:00",
+     "segundos": 0.02
+    }
+   ]
+  },
+  {
+   "id": "A5",
+   "texto": "La convección sobre la cicatriz de San Carlos de Apoquindo a las 04 h de Chile (98 descargas) no dejó lluvia medible en Tobalaba, a unos 7 km: esa estación no registra ninguna hora con 0.5 mm o más antes de las 09 h. Como el 8-oct, el GLM ve la tormenta, pero no dice cuánta lluvia cae en la cicatriz.",
+   "estado": "inferido",
+   "confianza": "probable",
+   "tema": "Rayos",
+   "depende_de": [
+    "A2",
+    "A3"
+   ],
+   "evidencia": []
+  },
+  {
+   "id": "A6",
+   "texto": "monitor@ohiggins tuvo su cruce principal entre las 13:00 y las 15:30 de Chile: 80 celdas sobre el nivel 0.318, con un pico de 0.71 en Machalí, y el aviso urgente «CRUCE NUEVO» salió a las 13:46. Lo sostienen las estaciones y GOES. En la celda del máximo, durante la racha, IMERG puso 0.0 mm, GOES 0.1 mm y el feed de estaciones 10.9 mm. Ese día hubo otros dos avisos «CRUCE NUEVO», a la 01:45 y a las 09:46 de Chile. La racha de 05:00–06:00, en celdas de San José de Maipo que comparte con el dominio rm, la sostuvo GOES con 7.0 mm frente a 0.0 de las estaciones. De 24 veredictos de corroboración, 11 los sostuvo solo GOES.",
+   "estado": "verificado",
+   "tema": "monitor@ohiggins",
+   "evidencia": [
+    {
+     "tipo": "comando",
+     "cmd": "python3 docs/informes/evento-2026-10-20/scripts/monitores.py",
+     "cwd": ".",
+     "exit": 0,
+     "sha256": "a7fbac3a44ce3c25712e95a78e72307a5fd26b467878285eeedb1232ecf5ace6",
+     "salida": "    celda (-70.65, -34.85) peligro máx 0.50 → San Fernando\n    celda (-70.45, -34.65) peligro máx 0.50 → San Fernando\n    celda (-70.35, -33.95) peligro máx 0.50 → San José De Maipo\n    celda (-70.15, -34.55) peligro máx 0.49 → Machalí (centro fuera de comuna, a 1 km)\n    celda (-70.65, -34.45) peligro máx 0.49 → Requínoa\n    celda (-70.55, -34.65) peligro máx 0.48 → San Fernando\n    celda (-70.45, -34.85) peligro máx 0.47 → San Fernando\n    celda (-70.65, -34.65) peligro máx 0.47 → San Fernando\n    celda (-70.45, -34.95) peligro máx 0.47 → San Fernando\n    celda (-70.15, -33.95) peligro máx 0.47 → San José De Maipo\n    celda (-70.65, -34.15) peligro máx 0.47 → Machalí\n    celda (-70.55, -33.95) peligro máx 0.46 → Mostazal\n    celda (-70.35, -34.75) peligro máx 0.46 → San Fernando\n    celda (-70.15, -33.85) peligro máx 0.46 → San José De Maipo\n    celda (-70.05, -33.95) peligro máx 0.46 → San José De Maipo\n    celda (-70.65, -34.55) peligro máx 0.46 → Rengo\n    celda (-70.25, -33.95) peligro máx 0.45 → San José De Maipo\n    celda (-70.45, -33.95) peligro máx 0.44 → Mostazal\n    celda (-70.35, -33.85) peligro máx 0.44 → San José De Maipo\n    celda (-70.05, -34.05) peligro máx 0.44 → San José De Maipo\n    celda (-70.05, -33.85) peligro máx 0.44 → San José De Maipo\n    celda (-70.05, -34.15) peligro máx 0.44 → San José De Maipo\n    celda (-70.45, -34.75) peligro máx 0.43 → San Fernando\n    celda (-70.25, -33.85) peligro máx 0.42 → San José De Maipo\n    celda (-70.35, -34.85) peligro máx 0.41 → San Fernando\n    celda (-70.85, -34.85) peligro máx 0.41 → Chimbarongo\n    celda (-70.35, -34.95) peligro máx 0.40 → San Fernando\n    celda (-70.55, -33.85) peligro máx 0.40 → Paine\n    celda (-70.25, -34.75) peligro máx 0.40 → San Fernando (centro fuera de comuna, a 2 km)\n    celda (-70.45, -33.85) peligro máx 0.39 → Pirque\n    celda (-70.65, -33.95) peligro máx 0.37 → Mostazal\n    celda (-70.25, -34.85) peligro máx 0.36 → San Fernando (centro fuera de comuna, a 3 km)\n    celda (-70.65, -34.05) peligro máx 0.36 → Codegua\n    celda (-70.75, -34.85) peligro máx 0.36 → San Fernando\n    celda (-70.75, -34.65) peligro máx 0.35 → San Fernando\n    celda (-70.75, -34.45) peligro máx 0.34 → Rengo\n    celda (-70.75, -34.35) peligro máx 0.34 → Requínoa\n    celda (-70.75, -34.55) peligro máx 0.34 → Malloa\n    celda (-70.75, -34.75) peligro máx 0.32 → San Fernando\n    lámina en la celda del máximo durante la racha: {'IMERG': 0.0, 'GOES': 0.1, 'DGA': 10.9}",
+     "fecha": "2026-10-20T16:52:49-03:00",
+     "segundos": 0.6
+    }
+   ]
+  },
+  {
+   "id": "A7",
+   "texto": "El área de esa racha sale casi entera de una sola estación. El feed de estaciones interpola por IDW con potencia 2 y sin radio máximo (fetch_dga.py:250-263), así que todas las celdas del dominio reciben un promedio ponderado de las 5 EMAs. En el paso de 17:00Z, Portezuelo-Codelco aportó 7.35 mm, y 184 de las 240 celdas recibieron 1 mm o más. De las 80 celdas en alerta, 74 tienen a Portezuelo-Codelco como la EMA de mayor peso, y 65 están a más de 25 km de cualquier EMA. Además, Pichilemu queda justo fuera de la grilla (−72.019): entra al IDW, pero no tiene celda propia.",
+   "estado": "verificado",
+   "tema": "monitor@ohiggins",
+   "evidencia": [
+    {
+     "tipo": "codigo",
+     "ruta": "monitor/fetch_dga.py",
+     "lineas": [
+      250,
+      263
+     ],
+     "sha256": "7f8ac4adefd481df81e0fa67acb7b1281b63ffb766b87eb85ba22659ac2ab274",
+     "extracto": "def idw_field(stations_mm, lons, lats, power):\n    \"\"\"IDW de los valores por estación a la grilla (norte arriba).\"\"\"\n    nrows, ncols = lats.size, lons.size\n    grid = np.zeros((nrows, ncols))\n    glon, glat = np.meshgrid(lons, lats)\n    num = np.zeros_like(grid)\n    den = np.zeros_like(grid)\n    for st, mm in stations_mm:\n        d2 = (glon - st[\"lon\"]) ** 2 + (glat - st[\"lat\"]) ** 2\n        w = 1.0 / np.maximum(d2, 1e-8) ** (power / 2.0)\n        num += w * mm\n        den += w\n    grid = np.where(den > 0, num / den, 0.0)\n    return grid[::-1, :]  # S→N a north-up"
+    },
+    {
+     "tipo": "comando",
+     "cmd": "python3 docs/informes/evento-2026-10-20/scripts/idw_ohiggins.py",
+     "cwd": ".",
+     "exit": 0,
+     "sha256": "a02cdbc8111d12b63ad676a3bfda8fd730432a64444ae83cd3cd2a701d204df7",
+     "salida": "paso DGA de mayor lámina total: 20261020T1700Z | grilla: mín 0.00, mediana 2.12, máx 7.35 mm/30 min\n  Rancagua               celda (-70.75,-34.15): 2.18 mm\n  Quimavida              celda (-70.95,-34.25): 1.23 mm\n  Nilahue La Quebrada    celda (-71.75,-34.65): 0.00 mm\n  Portezuelo Codelco     celda (-70.55,-34.15): 7.35 mm\n  Pichilemu Ad           (-72.019,-34.394): fuera de la grilla (entra al IDW, no tiene celda propia)\n  celdas del dominio con ≥1 mm en ese paso: 184 de 240\n\nceldas en alerta en la racha: 80\n  a  0–10  km de la EMA más cercana:   4\n  a 10–25  km de la EMA más cercana:  11\n  a 25–50  km de la EMA más cercana:  35\n  a 50–200 km de la EMA más cercana:  30\n  EMA que más pesa = Rancagua              :   4 celdas (peso IDW mediano 0.38)\n  EMA que más pesa = Quimavida             :   2 celdas (peso IDW mediano 0.26)\n  EMA que más pesa = Portezuelo Codelco    :  74 celdas (peso IDW mediano 0.47)",
+     "fecha": "2026-10-20T16:52:31-03:00",
+     "segundos": 0.32
+    }
+   ]
+  },
+  {
+   "id": "A8",
+   "texto": "El cruce en la precordillera de Machalí es real en el punto, porque el pluviómetro midió E=2.55. Su extensión no lo es: 80 celdas que llegan a San Fernando, Chimbarongo y Mostazal son un artefacto del IDW sin radio. Fuera de unos 10–25 km de Portezuelo-Codelco no hay medición que sostenga esas celdas, y GOES no vio la ráfaga. Para que el área sea creíble, el IDW necesita un radio máximo o una mezcla con GOES.",
+   "estado": "inferido",
+   "confianza": "muy probable",
+   "tema": "monitor@ohiggins",
+   "depende_de": [
+    "A2",
+    "A6",
+    "A7"
+   ],
+   "evidencia": []
+  },
+  {
+   "id": "A9",
+   "texto": "monitor@rm tuvo tres rachas el 20-oct, todas en San José de Maipo: de 05:00 a 06:30 de Chile (9 celdas, pico 0.55, GOES 7.6 mm frente a 0.9 de las estaciones), a las 12:30 (1 celda, peligro 0.33, solo estaciones con 3.6 mm) y de 15:00 a 15:30 (2 celdas). Mandó avisos «CRUCE NUEVO» a las 08:18, 13:16 y 15:45 de Chile. Hubo además cuatro avisos de convección: dos sobre la cicatriz de San Carlos de Apoquindo (04:45 y 12:46) y dos de convección eléctrica en el dominio (13:44 y 15:45). Ninguna celda de Las Condes, La Reina ni Peñalolén cruzó el nivel 0.267.",
+   "estado": "verificado",
+   "tema": "monitor@rm",
+   "evidencia": [
+    {
+     "tipo": "comando",
+     "cmd": "python3 docs/informes/evento-2026-10-20/scripts/monitores.py",
+     "cwd": ".",
+     "exit": 0,
+     "sha256": "a7fbac3a44ce3c25712e95a78e72307a5fd26b467878285eeedb1232ecf5ace6",
+     "salida": "    celda (-70.65, -34.85) peligro máx 0.50 → San Fernando\n    celda (-70.45, -34.65) peligro máx 0.50 → San Fernando\n    celda (-70.35, -33.95) peligro máx 0.50 → San José De Maipo\n    celda (-70.15, -34.55) peligro máx 0.49 → Machalí (centro fuera de comuna, a 1 km)\n    celda (-70.65, -34.45) peligro máx 0.49 → Requínoa\n    celda (-70.55, -34.65) peligro máx 0.48 → San Fernando\n    celda (-70.45, -34.85) peligro máx 0.47 → San Fernando\n    celda (-70.65, -34.65) peligro máx 0.47 → San Fernando\n    celda (-70.45, -34.95) peligro máx 0.47 → San Fernando\n    celda (-70.15, -33.95) peligro máx 0.47 → San José De Maipo\n    celda (-70.65, -34.15) peligro máx 0.47 → Machalí\n    celda (-70.55, -33.95) peligro máx 0.46 → Mostazal\n    celda (-70.35, -34.75) peligro máx 0.46 → San Fernando\n    celda (-70.15, -33.85) peligro máx 0.46 → San José De Maipo\n    celda (-70.05, -33.95) peligro máx 0.46 → San José De Maipo\n    celda (-70.65, -34.55) peligro máx 0.46 → Rengo\n    celda (-70.25, -33.95) peligro máx 0.45 → San José De Maipo\n    celda (-70.45, -33.95) peligro máx 0.44 → Mostazal\n    celda (-70.35, -33.85) peligro máx 0.44 → San José De Maipo\n    celda (-70.05, -34.05) peligro máx 0.44 → San José De Maipo\n    celda (-70.05, -33.85) peligro máx 0.44 → San José De Maipo\n    celda (-70.05, -34.15) peligro máx 0.44 → San José De Maipo\n    celda (-70.45, -34.75) peligro máx 0.43 → San Fernando\n    celda (-70.25, -33.85) peligro máx 0.42 → San José De Maipo\n    celda (-70.35, -34.85) peligro máx 0.41 → San Fernando\n    celda (-70.85, -34.85) peligro máx 0.41 → Chimbarongo\n    celda (-70.35, -34.95) peligro máx 0.40 → San Fernando\n    celda (-70.55, -33.85) peligro máx 0.40 → Paine\n    celda (-70.25, -34.75) peligro máx 0.40 → San Fernando (centro fuera de comuna, a 2 km)\n    celda (-70.45, -33.85) peligro máx 0.39 → Pirque\n    celda (-70.65, -33.95) peligro máx 0.37 → Mostazal\n    celda (-70.25, -34.85) peligro máx 0.36 → San Fernando (centro fuera de comuna, a 3 km)\n    celda (-70.65, -34.05) peligro máx 0.36 → Codegua\n    celda (-70.75, -34.85) peligro máx 0.36 → San Fernando\n    celda (-70.75, -34.65) peligro máx 0.35 → San Fernando\n    celda (-70.75, -34.45) peligro máx 0.34 → Rengo\n    celda (-70.75, -34.35) peligro máx 0.34 → Requínoa\n    celda (-70.75, -34.55) peligro máx 0.34 → Malloa\n    celda (-70.75, -34.75) peligro máx 0.32 → San Fernando\n    lámina en la celda del máximo durante la racha: {'IMERG': 0.0, 'GOES': 0.1, 'DGA': 10.9}",
+     "fecha": "2026-10-20T16:52:49-03:00",
+     "segundos": 0.66
+    }
+   ]
+  },
+  {
+   "id": "A10",
+   "texto": "Que el piedemonte de Santiago no alertara es coherente con lo medido: Tobalaba (E=0.89) y La Florida (0.67) quedaron bajo la curva, y los satélites no aportaron lámina en esas celdas. Por lo tanto, el silencio del monitor en Las Condes y La Reina no fue una falla del motor. Si hubo una ráfaga entre estaciones, como el 8-oct, ninguna fuente la habría visto.",
+   "estado": "inferido",
+   "confianza": "muy probable",
+   "tema": "monitor@rm",
+   "depende_de": [
+    "A2",
+    "A9"
+   ],
+   "evidencia": []
+  },
+  {
+   "id": "A11",
+   "texto": "Se repite el hallazgo del 8-oct: los dos productos satelitales de lluvia no ven el chubasco convectivo de la tarde. En las celdas de la racha de Machalí, IMERG puso 0.0 mm y GOES 0.1 mm frente a 10.9 del feed de estaciones; en la racha de la RM de las 12:30, IMERG 0.0 y GOES 0.1 frente a 3.6. IMERG, además, iba con unas 6 h de atraso (aviso «feed PRIMARIO atrasado» a las 11:45 de Chile). Las alertas útiles de la tarde vinieron de las estaciones; las que sostuvo solo GOES ocurrieron de madrugada, sin lluvia medida.",
+   "estado": "inferido",
+   "confianza": "casi seguro",
+   "tema": "Satélites",
+   "depende_de": [
+    "A6",
+    "A9",
+    "A2"
+   ],
+   "evidencia": []
+  },
+  {
+   "id": "A12",
+   "texto": "En el ciclo 06z del 20-oct, O'Higgins tiene 22 comunas en ALTO; 16 de ellas las sostiene un solo modelo con 0.5 o más. Machalí (0.97) y Rancagua (0.92) están en ALTO por GFS; Pichilemu (0.99) y Pumanque (0.84) por ECMWF. En la RM hay 6 comunas en ALTO (San Bernardo, Buin, Paine, Talagante, Alhué y Calera de Tango), y La Reina y La Florida están en BAJO (0.38). Del 00z al 06z, el número de comunas en ALTO pasó de 11 a 22 en O'Higgins y de 1 a 6 en la RM. Con a*=5.5, GFS 06z hace cruzar el dominio centro-sur desde las 13Z del 20-oct, y la RM desde las 00Z del 21-oct.",
+   "estado": "verificado",
+   "tema": "Pronóstico",
+   "evidencia": [
+    {
+     "tipo": "comando",
+     "cmd": "python3 docs/informes/evento-2026-10-20/scripts/pronostico.py",
+     "cwd": ".",
+     "exit": 0,
+     "sha256": "0826ce5ebec07fbe1d4978795d8783e6d098bdb06d03c9887d61a8d8b9a540e3",
+     "salida": "\n== ciclo 20261020T00z\n  RM         {'ALTO': 1, 'MEDIO': 18, 'BAJO': 33} | ALTO: San José De Maipo 0.84\n             comunas ALTO sostenidas por un solo modelo ≥0.5: 1 de 1\n  O'Higgins  {'ALTO': 11, 'MEDIO': 22, 'BAJO': 0} | ALTO: Pichilemu 0.99, Paredones 0.99, Litueche 0.99, San Fernando 0.98, Navidad 0.97, Marchihue 0.90, Malloa 0.87, Rengo 0.87, Requínoa 0.84, Chimbarongo 0.84, Pumanque 0.84\n             comunas ALTO sostenidas por un solo modelo ≥0.5: 1 de 11\n\n== ciclo 20261020T06z\n  RM         {'ALTO': 6, 'MEDIO': 22, 'BAJO': 24} | ALTO: San Bernardo 0.92, Buin 0.92, Paine 0.92, Talagante 0.92, Alhué 0.87, Calera De Tango 0.85\n             comunas ALTO sostenidas por un solo modelo ≥0.5: 5 de 6\n  O'Higgins  {'ALTO': 22, 'MEDIO': 11, 'BAJO': 0} | ALTO: San Fernando 1.00, Pichilemu 0.99, Paredones 0.99, Malloa 0.99, Rengo 0.99, Litueche 0.99, Requínoa 0.98, Chimbarongo 0.98, Navidad 0.97, Machalí 0.97, Rancagua 0.92, Olivar 0.92, Codegua 0.92, San Vicente 0.91, Graneros 0.90, Marchihue 0.90, Quinta De Tilcoco 0.90, Mostazal 0.87, Coinco 0.86, Doñihue 0.86, Coltauco 0.86, Pumanque 0.84\n             comunas ALTO sostenidas por un solo modelo ≥0.5: 16 de 22\n\n== ventanas de cruce GFS (a*=5.5), hora UTC\n  20261020T00z rm               : 10-20T21:00→10-21T04:00 pico 0.84 (7 celdas)\n  20261020T00z chile-centro-sur : 10-20T14:00→10-20T17:00 pico 0.73 (8 celdas); 10-20T18:00→10-24T17:00 pico 1.00 (335 celdas)\n  20261020T06z rm               : 10-21T00:00→10-21T13:00 pico 0.97 (19 celdas)\n  20261020T06z chile-centro-sur : 10-20T13:00→10-24T10:00 pico 1.00 (168 celdas)\n  20261020T12z rm               : 10-20T21:00→10-21T11:00 pico 0.99 (20 celdas)\n  20261020T12z chile-centro-sur : 10-20T14:00→10-20T16:00 pico 0.51 (3 celdas); 10-20T17:00→10-24T18:00 pico 1.00 (289 celdas)\n\n== comunas con EMA: nivel pronosticado (06z) vs lo medido (scripts/estaciones.py)\n  La Reina           (Tobalaba          ): BAJO  peor 0.38 | gfs 0.38 ecmwf 0.02 icon 0.22\n  La Florida         (La Florida        ): BAJO  peor 0.38 | gfs 0.38 ecmwf 0.02 icon 0.26\n  San José De Maipo  (S. J. de Guayacán ): MEDIO peor 0.49 | gfs 0.49 ecmwf 0.04 icon 0.26\n  Lo Barnechea       (El Colorado       ): BAJO  peor 0.38 | gfs 0.38 ecmwf 0.02 icon 0.29\n  Rancagua           (Rancagua          ): ALTO  peor 0.92 | gfs 0.92 ecmwf 0.18 icon 0.22\n  Coltauco           (Quimávida         ): ALTO  peor 0.86 | gfs 0.86 ecmwf 0.48 icon 0.20\n  Machalí            (Portezuelo-Codelco): ALTO  peor 0.97 | gfs 0.97 ecmwf 0.09 icon 0.38\n  Pumanque           (Nilahue           ): ALTO  peor 0.84 | gfs 0.23 ecmwf 0.84 icon 0.18\n  Pichilemu          (Pichilemu         ): ALTO  peor 0.99 | gfs 0.42 ecmwf 0.99 icon 0.32",
+     "fecha": "2026-10-20T16:53:17-03:00",
+     "segundos": 0.02
+    }
+   ]
+  },
+  {
+   "id": "A13",
+   "texto": "El nivel comunal no dice cuándo. Cada comuna toma el pico de `hazard_max`, el máximo de los 120 pasos horarios del pronóstico (5 días), no el valor del día. Un ALTO del 20-oct puede corresponder a lluvia del 22 o del 23.",
+   "estado": "verificado",
+   "tema": "Pronóstico",
+   "evidencia": [
+    {
+     "tipo": "codigo",
+     "ruta": "monitor/comuna_impact.py",
+     "lineas": [
+      14,
+      17
+     ],
+     "sha256": "c805c01f6f272b8e468747b52d6107fd649eb730ac381156fad633f9002ea225",
+     "extracto": "  - Peligro: `hazard_max_regional-a5.5.tif` de GFS/ECMWF y `hazard_max.tif`\n    (caine-global) de ICON por dominio (ya corridos) — variante distinta por\n    fuente porque ICON no diluye picos como el bilineal de GFS/ECMWF, ver\n    susc_overlay.py — más `hazard_x_susc_max.tif` (terreno) donde exista."
+    },
+    {
+     "tipo": "codigo",
+     "ruta": "monitor/comuna_impact.py",
+     "lineas": [
+      139,
+      152
+     ],
+     "sha256": "bdb5f4326068759449d50c285ba8abd56aee69b8a051b8da53fc958426855e16",
+     "extracto": "    from variantes import archivo_max  # una sola copia de la regla\n    HAZARD_VARIANT_BY_SOURCE = {m: archivo_max(m) for m in (\"gfs\", \"ecmwf\", \"icon\")}\n    for label, sub in [(\"gfs\", \"\"), (\"ecmwf\", \"ecmwf\"), (\"icon\", \"icon\")]:\n        variant = HAZARD_VARIANT_BY_SOURCE[label]\n        vals_by_domain = {}\n        for dom in set(REGION_DOMAIN.get(r, DEFAULT_DOMAIN) for r in TARGET_REGIONS):\n            hz_path = os.path.join(fdir, dom, sub, variant) if sub else os.path.join(fdir, dom, variant)\n            vals_by_domain[dom] = zonal_peak(hz_path, gdf.geometry)\n        col = np.full(len(gdf), np.nan)\n        for i, (_, row) in enumerate(gdf.iterrows()):\n            dom = REGION_DOMAIN.get(int(row[\"COD_REGION\"]), DEFAULT_DOMAIN)\n            v = vals_by_domain[dom][i]\n            col[i] = v if v is not None else np.nan\n        gdf[f\"peak_{label}\"] = col"
+    }
+   ]
+  },
+  {
+   "id": "A14",
+   "texto": "En la precordillera de O'Higgins el pronóstico acertó la zona y casi la hora: Machalí estaba en ALTO por GFS, el dominio cruzaba desde las 13Z y el chubasco medido empezó a las 16:48Z. En la costa, el ALTO de Pichilemu y Pumanque, que da ECMWF, todavía no se puede evaluar: las dos estaciones están secas, pero la ventana del pronóstico llega al 24-oct (A13). En la RM, el ALTO del valle (San Bernardo, Buin, Paine) corresponde a la lluvia de la noche del 20 al 21, que no está en este informe.",
+   "estado": "inferido",
+   "confianza": "probable",
+   "tema": "Pronóstico",
+   "depende_de": [
+    "A2",
+    "A12",
+    "A13"
+   ],
+   "evidencia": []
+  },
+  {
+   "id": "A15",
+   "texto": "El buscador CMR de Earthdata respondió 500 a todas las consultas de los monitores entre las 08:12 y las 10:44Z del 20-oct (9 consultas de rm y 6 de ohiggins) y ya había fallado de forma intermitente el 19-oct entre las 20:13 y las 21:14Z. Los dos monitores quedaron sin ciclo completo de 07:45 a 11:18Z, unas 3.5 h. Desde el arreglo, 6 ciclos de rm y 4 de ohiggins entraron al respaldo por listado de GES DISC y siguieron (commit d9ffb75).",
+   "estado": "verificado",
+   "tema": "Fallas operacionales",
+   "evidencia": [
+    {
+     "tipo": "codigo",
+     "ruta": "monitor/fetch_imerg_early.py",
+     "lineas": [
+      210,
+      223
+     ],
+     "sha256": "5ec9d9e19b2762ffc194101f3e7684b67d1cf773cc7453b13448e8db5f1b93f3",
+     "extracto": "        session = None\n        try:\n            granules = earthaccess.search_data(\n                short_name=SHORT_NAME, version=VERSION,\n                temporal=(t0.strftime(\"%Y-%m-%d %H:%M\"), now.strftime(\"%Y-%m-%d %H:%M\")),\n                bounding_box=bbox,\n            )\n        except Exception as exc:\n            # CMR caído: listar GES DISC directo. Si esto también falla, el\n            # ciclo muere como antes (no hay de dónde sacar IMERG).\n            print(f\"[fetch] AVISO: búsqueda CMR falló ({str(exc)[:120]}); \"\n                  f\"respaldo por listado de GES DISC\", file=sys.stderr)\n            session = earthaccess.get_requests_https_session()\n            granules = list_gesdisc(session, t0, now)"
+    },
+    {
+     "tipo": "comando",
+     "cmd": "python3 docs/informes/evento-2026-10-20/scripts/caida_cmr.py",
+     "cwd": ".",
+     "exit": 0,
+     "sha256": "d2f72183701e888113a695581995d1099ef2cb29de728b44252c36e7f4b6f83c",
+     "salida": "\n== rm: consultas CMR con 500 (hora UTC de la consulta): 9\n  10-19T20:13, 10-19T20:42, 10-19T21:14, 10-20T08:12, 10-20T08:45, 10-20T09:15, 10-20T09:44, 10-20T10:15, 10-20T10:43\n  ciclos con FETCH FALLÓ (aviso o suprimido por histéresis): 10: 10-19T20:22, 10-19T20:43, 10-19T21:14, 10-19T22:20, 10-20T08:13, 10-20T08:45, 10-20T09:15, 10-20T09:44, 10-20T10:15, 10-20T10:43\n  ciclos que entraron al respaldo GES DISC (CMR falló, siguió por listado): 6\n  ciclos completos el 20-oct: 36; huecos > 45 min entre ciclos: ['07:45→11:18Z (3.5 h)']\n\n== ohiggins: consultas CMR con 500 (hora UTC de la consulta): 6\n  10-20T08:16, 10-20T08:45, 10-20T09:17, 10-20T09:45, 10-20T10:15, 10-20T10:44\n  ciclos con FETCH FALLÓ (aviso o suprimido por histéresis): 6: 10-20T08:16, 10-20T08:45, 10-20T09:17, 10-20T09:45, 10-20T10:15, 10-20T10:44\n  ciclos que entraron al respaldo GES DISC (CMR falló, siguió por listado): 4\n  ciclos completos el 20-oct: 25; huecos > 45 min entre ciclos: ['07:47→11:17Z (3.5 h)']",
+     "fecha": "2026-10-20T16:53:17-03:00",
+     "segundos": 0.02
+    },
+    {
+     "tipo": "comando",
+     "cmd": "/home/franciscoparrao/nowcast-monitor/venv/bin/python monitor/fetch_imerg_early.py --selftest",
+     "cwd": ".",
+     "exit": 0,
+     "sha256": "012283189bc25bb3ed20c8f941f759bb1b11188f9cca159aaa5337dc813f6b69",
+     "salida": "fetch_imerg_early selftest OK (2 casos)",
+     "fecha": "2026-10-20T16:53:17-03:00",
+     "segundos": 0.12
+    }
+   ]
+  },
+  {
+   "id": "A16",
+   "texto": "Con TimeoutStartSec=90min, el pronóstico murió por tiempo en 3 ciclos (19-oct 00:43 y 12:33, 20-oct 00:16, hora Chile). Desde que el límite pasó a 240 min, todos los ciclos han terminado.",
+   "estado": "verificado",
+   "tema": "Fallas operacionales",
+   "evidencia": [
+    {
+     "tipo": "codigo",
+     "ruta": "monitor/systemd/nowcast-forecast.service",
+     "lineas": [
+      23,
+      30
+     ],
+     "sha256": "68406c4dac6f516d9080b6851cca6cca252f03a3ca87e5a885f4ae1c99af7b2e",
+     "extracto": "\n# El pronóstico son ~20 min (3 fuentes) y el análisis ~10 min (overlay 30 m +\n# agregación censal de 18.5M filas) en un día tranquilo. En un día de EVENTO\n# el runout ABM por localidad (paso 5, 2-3 min c/u) corre sobre las 30\n# comunas de la watchlist y suma ~75 min: con 90 min murieron por tiempo 3\n# de 6 ciclos del 18-19 oct, justo los que importaban. 240 min sigue debajo\n# de las 6 h entre ciclos (el timer no lanza una corrida encima de otra).\nTimeoutStartSec=240min"
+    },
+    {
+     "tipo": "comando",
+     "cmd": "grep -E 'timed out|Finished' docs/informes/evento-2026-10-20/evidencia/forecast_journal.txt",
+     "cwd": ".",
+     "exit": 0,
+     "sha256": "b42b8dd5f270eee374c0e3daaa50818053ee3be04f0300561aca083449bd5634",
+     "salida": "2026-10-18T05:13:03-03:00 franciscoparrao-ThinkPad-T14-Gen-3 systemd[1771]: Finished nowcast-forecast.service - nowcast-forecast: pronóstico GFS+ECMWF+ICON + cadena de análisis (interno).\n2026-10-18T12:16:39-03:00 franciscoparrao-ThinkPad-T14-Gen-3 systemd[1771]: Finished nowcast-forecast.service - nowcast-forecast: pronóstico GFS+ECMWF+ICON + cadena de análisis (interno).\n2026-10-18T17:16:50-03:00 franciscoparrao-ThinkPad-T14-Gen-3 systemd[1771]: Finished nowcast-forecast.service - nowcast-forecast: pronóstico GFS+ECMWF+ICON + cadena de análisis (interno).\n2026-10-19T00:43:20-03:00 franciscoparrao-ThinkPad-T14-Gen-3 systemd[1771]: nowcast-forecast.service: start operation timed out. Terminating.\n2026-10-19T06:20:34-03:00 franciscoparrao-ThinkPad-T14-Gen-3 systemd[1771]: Finished nowcast-forecast.service - nowcast-forecast: pronóstico GFS+ECMWF+ICON + cadena de análisis (interno).\n2026-10-19T12:33:32-03:00 franciscoparrao-ThinkPad-T14-Gen-3 systemd[1771]: nowcast-forecast.service: start operation timed out. Terminating.\n2026-10-19T17:14:58-03:00 franciscoparrao-ThinkPad-T14-Gen-3 systemd[1771]: Finished nowcast-forecast.service - nowcast-forecast: pronóstico GFS+ECMWF+ICON + cadena de análisis (interno).\n2026-10-20T00:16:09-03:00 franciscoparrao-ThinkPad-T14-Gen-3 systemd[1771]: nowcast-forecast.service: start operation timed out. Terminating.\n2026-10-20T03:11:01-03:00 franciscoparrao-ThinkPad-T14-Gen-3 systemd[1771]: Finished nowcast-forecast.service - nowcast-forecast: pronóstico GFS+ECMWF+ICON + cadena de análisis (interno).\n2026-10-20T05:19:08-03:00 franciscoparrao-ThinkPad-T14-Gen-3 systemd[1771]: Finished nowcast-forecast.service - nowcast-forecast: pronóstico GFS+ECMWF+ICON + cadena de análisis (interno).\n2026-10-20T11:16:03-03:00 franciscoparrao-ThinkPad-T14-Gen-3 systemd[1771]: Finished nowcast-forecast.service - nowcast-forecast: pronóstico GFS+ECMWF+ICON + cadena de análisis (interno).",
+     "fecha": "2026-10-20T16:53:17-03:00",
+     "segundos": 0.0
+    }
+   ]
+  },
+  {
+   "id": "A17",
+   "texto": "Este informe llega hasta las 19:00Z del 20-oct, con el evento en curso: GFS 12z hace cruzar la RM de 21Z a 11Z del 21-oct. Ninguna afirmación es una verificación contra remociones ocurridas, porque no hay inventario del día. Los dos monitores corren en sombra, con a*=5.5 calibrado en el Maipo y no en O'Higgins. Las estaciones son 9 puntos en dos regiones, y una sola (Portezuelo-Codelco) está en la precordillera de O'Higgins.",
+   "estado": "supuesto",
+   "tema": "Límites",
+   "evidencia": []
+  }
+ ],
+ "pendientes": [
+  "Ponerle radio máximo al IDW del feed de estaciones (fetch_dga.py) o mezclarlo con GOES, y barrer las hermanas: corroborate.py lee el mismo campo.",
+  "Repetir este informe tras el frente de la noche del 20 al 21 (RM) y del 22 al 24 (O'Higgins), con las EMAs archivadas.",
+  "Buscar remociones ocurridas el 20–24 oct (Senapred, SERNAGEOMIN, prensa local de Machalí y San José de Maipo) para tener verdad de terreno.",
+  "Revisar si la regla de corroboración debe aceptar GOES solo de madrugada: 11 de 24 veredictos de ohiggins fueron solo GOES, sin lluvia medida.",
+  "Instalar el binario y la unit de la versión con respaldo CMR en los nodos que corran monitores fuera de esta máquina, si los hay."
+ ],
+ "reproducir": [
+  "Ubícate en la raíz del repositorio nowcast.",
+  "Ejecuta python3 docs/informes/evento-2026-10-20/scripts/estaciones.py para la lluvia por estación y la excedencia I-D.",
+  "Ejecuta python3 docs/informes/evento-2026-10-20/scripts/monitores.py para los avisos, las rachas y las celdas en alerta con su comuna.",
+  "Ejecuta python3 docs/informes/evento-2026-10-20/scripts/idw_ohiggins.py para el peso de cada estación en el área en alerta de O'Higgins.",
+  "Ejecuta python3 docs/informes/evento-2026-10-20/scripts/rayos.py para las descargas GLM por hora.",
+  "Ejecuta python3 docs/informes/evento-2026-10-20/scripts/pronostico.py para el pronóstico comunal y las ventanas de cruce.",
+  "Ejecuta python3 docs/informes/evento-2026-10-20/scripts/caida_cmr.py para la línea de tiempo de la caída de CMR.",
+  "Ejecuta python3 ~/proyectos/informe-trazable/trazar.py check docs/informes/evento-2026-10-20/informe.json --rerun para recomprobar toda la evidencia."
+ ]
+}

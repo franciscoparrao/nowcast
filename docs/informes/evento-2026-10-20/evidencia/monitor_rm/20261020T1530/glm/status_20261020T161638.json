@@ -1,0 +1,32 @@
+{
+ "utc": "2026-10-20T16:16:17Z",
+ "feed": "glm:noaa-goes19",
+ "newest_step": "20261020T1600",
+ "newest_file": "2026-10-20T16:15:40+00:00",
+ "stale_minutes": 0.6306746333333333,
+ "stale_hours_threshold": 1.0,
+ "n_steps": 106,
+ "n_gaps": 0,
+ "gap_fraction": 0.0,
+ "fetched_this_cycle": 91,
+ "fetch_errors": 0,
+ "scars": [
+  "san_carlos_apoquindo_2025-12-29"
+ ],
+ "recent": {
+  "domain": 165,
+  "max_cell": 41,
+  "max_cell_lonlat": [
+   -70.85,
+   -33.35
+  ],
+  "scars": {
+   "san_carlos_apoquindo_2025-12-29": 15
+  },
+  "minutes": 60,
+  "top_scar": {
+   "nombre": "san_carlos_apoquindo_2025-12-29",
+   "flashes": 15
+  }
+ }
+}

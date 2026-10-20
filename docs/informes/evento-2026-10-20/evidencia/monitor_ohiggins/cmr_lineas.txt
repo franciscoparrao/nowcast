@@ -1,0 +1,19 @@
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-18T02:16:00Z,2026-10-20T08:16:59Z&bounding_box=-71.95,-34.95,-70.05,-33.85&page_size=0
+[2026-10-20T08:16:29Z] NOTIFY[high] nowcast-monitor: FETCH FALLÓ — El ciclo de ingesta IMERG Early falló; revisa /home/franciscoparrao/nowcast-monitor-ohiggins/monitor.log en franciscoparrao-ThinkPad-T14-Gen-3. El monitor NO corrió.
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-18T02:45:00Z,2026-10-20T08:45:59Z&bounding_box=-71.95,-34.95,-70.05,-33.85&page_size=0
+[2026-10-20T08:45:24Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-18T03:17:00Z,2026-10-20T09:17:59Z&bounding_box=-71.95,-34.95,-70.05,-33.85&page_size=0
+[2026-10-20T09:17:24Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-18T03:45:00Z,2026-10-20T09:45:59Z&bounding_box=-71.95,-34.95,-70.05,-33.85&page_size=0
+[2026-10-20T09:45:27Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-18T04:15:00Z,2026-10-20T10:15:59Z&bounding_box=-71.95,-34.95,-70.05,-33.85&page_size=0
+[2026-10-20T10:15:21Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://cmr.earthdata.nasa.gov/search/granules.umm_json?short_name=GPM_3IMERGHHE&version=07&temporal%5B%5D=2026-10-18T04:44:00Z,2026-10-20T10:44:59Z&bounding_box=-71.95,-34.95,-70.05,-33.85&page_size=0
+[2026-10-20T10:44:21Z] notify suprimida por histéresis (fetch_fail): nowcast-monitor: FETCH FALLÓ
+[fetch] AVISO: búsqueda CMR falló ({"errors":["An Internal Error has occurred."]}); respaldo por listado de GES DISC
+[fetch] 6 gránulo(s) nuevo(s) de 108 en ventana (GES DISC directo)
+[fetch] AVISO: búsqueda CMR falló ({"errors":["An Internal Error has occurred."]}); respaldo por listado de GES DISC
+[fetch] 2 gránulo(s) nuevo(s) de 110 en ventana (GES DISC directo)
+[fetch] AVISO: búsqueda CMR falló ({"errors":["An Internal Error has occurred."]}); respaldo por listado de GES DISC
+[fetch] AVISO: búsqueda CMR falló ({"errors":["An Internal Error has occurred."]}); respaldo por listado de GES DISC
+[fetch] 2 gránulo(s) nuevo(s) de 112 en ventana (GES DISC directo)

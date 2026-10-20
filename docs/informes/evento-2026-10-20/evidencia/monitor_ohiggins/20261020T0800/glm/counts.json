@@ -1,0 +1,134 @@
+{
+ "20261020T0230": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {}
+ },
+ "20261020T0300": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {}
+ },
+ "20261020T0330": {
+  "domain": 3,
+  "max_cell": 3,
+  "max_cell_lonlat": [
+   -70.25,
+   -34.65
+  ],
+  "scars": {}
+ },
+ "20261020T0400": {
+  "domain": 8,
+  "max_cell": 2,
+  "max_cell_lonlat": [
+   -70.45,
+   -34.55
+  ],
+  "scars": {}
+ },
+ "20261020T0430": {
+  "domain": 8,
+  "max_cell": 4,
+  "max_cell_lonlat": [
+   -70.15,
+   -33.85
+  ],
+  "scars": {}
+ },
+ "20261020T0500": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {}
+ },
+ "20261020T0530": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {}
+ },
+ "20261020T0600": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {}
+ },
+ "20261020T0630": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {}
+ },
+ "20261020T0700": {
+  "domain": 19,
+  "max_cell": 4,
+  "max_cell_lonlat": [
+   -70.55,
+   -33.85
+  ],
+  "scars": {}
+ },
+ "20261020T0730": {
+  "domain": 17,
+  "max_cell": 6,
+  "max_cell_lonlat": [
+   -70.35,
+   -33.85
+  ],
+  "scars": {}
+ },
+ "20261020T0900": {
+  "domain": 2,
+  "max_cell": 1,
+  "max_cell_lonlat": [
+   -70.35,
+   -34.55
+  ],
+  "scars": {}
+ },
+ "20261020T0930": {
+  "domain": 2,
+  "max_cell": 1,
+  "max_cell_lonlat": [
+   -70.25,
+   -34.65
+  ],
+  "scars": {}
+ },
+ "20261020T1000": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {}
+ },
+ "20261020T1030": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {}
+ },
+ "20261020T1100": {
+  "domain": 1,
+  "max_cell": 1,
+  "max_cell_lonlat": [
+   -70.45,
+   -34.55
+  ],
+  "scars": {}
+ },
+ "20261020T1130": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {}
+ },
+ "20261020T1200": {
+  "domain": 0,
+  "max_cell": 0,
+  "max_cell_lonlat": null,
+  "scars": {}
+ }
+}
