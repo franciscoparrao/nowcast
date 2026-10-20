@@ -29,6 +29,7 @@ BBOX, WORK_DIR, WINDOW_HOURS, STALE_HOURS. Uso directo:
 import glob
 import json
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 
@@ -39,6 +40,12 @@ from lib_raster import purge_invalid, write_geotiff, write_json  # escritura at�
 STEP = timedelta(minutes=30)
 SHORT_NAME = "GPM_3IMERGHHE"  # IMERG Early half-hourly (NRT)
 VERSION = "07"
+# Respaldo cuando CMR (el buscador de Earthdata) cae pero el servidor de datos
+# sigue arriba: el 20-oct-2026 CMR devolvió 500 a TODA búsqueda de gránulos
+# desde las 08:13Z, el día de una alerta de remociones en RM y O'Higgins, y los
+# monitores dejaron de correr aunque GES DISC servía los archivos sin problema.
+GESDISC_DIR = "https://gpm1.gesdisc.eosdis.nasa.gov/data/GPM_L3/GPM_3IMERGHHE.07/{y}/{doy:03d}/"
+GRANULE_RE = re.compile(r"3B-HHR-E\.MS\.MRG\.3IMERG\.\d{8}-S\d{6}-E\d{6}\.\d{4}\.V[0-9A-Z]+\.HDF5")
 
 
 def env(name, default=None):
@@ -62,6 +69,61 @@ def granule_start(path):
     return datetime.strptime(
         tok.split("-")[0] + tok.split("-S")[1][:6], "%Y%m%d%H%M%S"
     ).replace(tzinfo=timezone.utc)
+
+
+def latest_versions(names):
+    """Un nombre por hora de inicio: si conviven V07B y V07C del mismo paso
+    (reprocesos), gana la versión más alta. Orden cronológico."""
+    best = {}
+    for n in names:
+        k = step_key(granule_start(n))
+        if k not in best or n > best[k]:
+            best[k] = n
+    return [best[k] for k in sorted(best)]
+
+
+def list_gesdisc(session, t0, now):
+    """URLs de los gránulos de los días UTC que toca la ventana, leídas del
+    listado de directorios de GES DISC (sin pasar por CMR)."""
+    names_by_dir = []
+    d = t0.date()
+    while d <= now.date():
+        url = GESDISC_DIR.format(y=d.year, doy=d.timetuple().tm_yday)
+        r = session.get(url, timeout=60)
+        if r.status_code == 404:  # día aún sin directorio (pasada la medianoche UTC)
+            d += timedelta(days=1)
+            continue
+        r.raise_for_status()
+        names_by_dir += [(url, n) for n in set(GRANULE_RE.findall(r.text))]
+        d += timedelta(days=1)
+    base = {n: u for u, n in names_by_dir}
+    return [base[n] + n for n in latest_versions(base)]
+
+
+def download_url(session, url, raw_dir):
+    """Baja un gránulo por URL directa: escribe en .part y renombra, para que un
+    corte a medio camino no deje un HDF5 truncado con nombre válido."""
+    out = os.path.join(raw_dir, url.rsplit("/", 1)[1])
+    with session.get(url, stream=True, timeout=120) as r:
+        r.raise_for_status()
+        with open(out + ".part", "wb") as fh:
+            for chunk in r.iter_content(1 << 20):
+                fh.write(chunk)
+    os.replace(out + ".part", out)
+
+
+def selftest():
+    names = [
+        "3B-HHR-E.MS.MRG.3IMERG.20261020-S050000-E052959.0300.V07B.HDF5",
+        "3B-HHR-E.MS.MRG.3IMERG.20261020-S050000-E052959.0300.V07C.HDF5",
+        "3B-HHR-E.MS.MRG.3IMERG.20261020-S043000-E045959.0270.V07C.HDF5",
+    ]
+    html = "".join(f'<a href="{n}">{n}</a> <a href="{n}.xml">x</a>' for n in names)
+    found = sorted(set(GRANULE_RE.findall(html)))
+    assert found == sorted(names), found  # el .xml no se cuela como gránulo
+    picked = latest_versions(found)
+    assert picked == [names[2], names[1]], picked  # cronológico, V07C sobre V07B
+    print("fetch_imerg_early selftest OK (2 casos)")
 
 
 def convert(hdf5_path, bbox, out_tif):
@@ -145,16 +207,25 @@ def main():
         import earthaccess
 
         earthaccess.login(strategy="netrc")
-        granules = earthaccess.search_data(
-            short_name=SHORT_NAME, version=VERSION,
-            temporal=(t0.strftime("%Y-%m-%d %H:%M"), now.strftime("%Y-%m-%d %H:%M")),
-            bounding_box=bbox,
-        )
+        session = None
+        try:
+            granules = earthaccess.search_data(
+                short_name=SHORT_NAME, version=VERSION,
+                temporal=(t0.strftime("%Y-%m-%d %H:%M"), now.strftime("%Y-%m-%d %H:%M")),
+                bounding_box=bbox,
+            )
+        except Exception as exc:
+            # CMR caído: listar GES DISC directo. Si esto también falla, el
+            # ciclo muere como antes (no hay de dónde sacar IMERG).
+            print(f"[fetch] AVISO: búsqueda CMR falló ({str(exc)[:120]}); "
+                  f"respaldo por listado de GES DISC", file=sys.stderr)
+            session = earthaccess.get_requests_https_session()
+            granules = list_gesdisc(session, t0, now)
         # earthaccess nombra por el link de descarga; filtramos por hora S.
         new = []
         for g in granules:
             try:
-                name = g.data_links()[0].rsplit("/", 1)[1]
+                name = (g if isinstance(g, str) else g.data_links()[0]).rsplit("/", 1)[1]
                 start = granule_start(name)
             except Exception:
                 new.append(g)  # nombre inesperado: bajar y decidir después
@@ -162,14 +233,18 @@ def main():
             if step_key(start) not in have and start >= first:
                 new.append(g)
         if new:
-            print(f"[fetch] {len(new)} gránulo(s) nuevo(s) de {len(granules)} en ventana")
+            src = "GES DISC directo" if session else "CMR"
+            print(f"[fetch] {len(new)} gránulo(s) nuevo(s) de {len(granules)} en ventana ({src})")
         # UNO A LA VEZ (bajar → convertir → borrar): un arranque en frío del
         # lote completo son ~800 MB simultáneos en disco, letal en un nodo
         # chico como sentinel (57 GB al 96 %). Así el pico transitorio queda
         # acotado a UN gránulo (~10 MB) sin importar el tamaño de la ventana.
         for g in new:
             try:
-                earthaccess.download([g], local_path=raw_dir)
+                if isinstance(g, str):
+                    download_url(session, g, raw_dir)
+                else:
+                    earthaccess.download([g], local_path=raw_dir)
             except Exception as exc:
                 failed += 1
                 print(f"[fetch] ERROR bajando gránulo: {exc}", file=sys.stderr)
@@ -257,4 +332,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if "--selftest" in sys.argv:
+        selftest()
+    else:
+        main()
