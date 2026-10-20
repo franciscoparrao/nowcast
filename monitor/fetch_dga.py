@@ -31,7 +31,8 @@ Cada ciclo:
      parseo son RUIDOSAS (log + conteo en status.json), nunca silenciosas.
   3. Rasteriza cada paso a la MISMA grilla 0.1° de los otros feeds (convenio
      IMERG, mismo geotransform → `same_grid` del CLI acepta la fusión) por IDW
-     (potencia 2) entre las estaciones con dato. Grueso a propósito: 3
+     (potencia 2) entre las estaciones con dato a menos de DGA_IDW_RADIUS_KM
+     (15 km por defecto); más lejos el feed queda en 0, sin evidencia. Grueso a propósito: 3
      pluviómetros no son un campo de lluvia; es la pata in-situ del noisy-OR,
      no un QPE.
   4. Huecos viejos → cero MARCADO (gapmark_*), rotación y status.json — el
@@ -41,7 +42,7 @@ Cada ciclo:
 
 Config por variables de entorno (las exporta monitor.sh desde config.env):
 BBOX, WORK_DIR (raíz del feed, p.ej. $MON/feeds/dga), WINDOW_HOURS,
-DMC_USUARIO, DMC_TOKEN, DGA_STATIONS, DGA_IDW_POWER. Selftest sin red:
+DMC_USUARIO, DMC_TOKEN, DGA_STATIONS, DGA_IDW_POWER, DGA_IDW_RADIUS_KM. Selftest sin red:
     python3 fetch_dga.py --selftest
 """
 
@@ -247,19 +248,29 @@ def series_to_step_depths(series, mode=None):
     return depths, mode
 
 
-def idw_field(stations_mm, lons, lats, power):
-    """IDW de los valores por estación a la grilla (norte arriba)."""
-    nrows, ncols = lats.size, lons.size
-    grid = np.zeros((nrows, ncols))
+def idw_field(stations_mm, lons, lats, power, radius_km=None):
+    """IDW de los valores por estación a la grilla (norte arriba).
+
+    Distancias en km (equirectangular, corregida por latitud). Con `radius_km`
+    cada celda interpola SOLO con las estaciones a esa distancia o menos, y la
+    celda sin ninguna queda en 0: el feed no tiene evidencia ahí, y en el
+    noisy-OR un 0 no aporta (deciden IMERG/GOES), ni corrobora. Sin radio (el
+    comportamiento hasta el 2026-10-20) TODA celda era un promedio de TODAS las
+    estaciones: ese día una sola EMA de precordillera (Portezuelo-Codelco,
+    10.8 mm/h) puso en alerta 80 celdas de O'Higgins, 65 de ellas a más de
+    25 km de cualquier pluviómetro (docs/informes/evento-2026-10-20, A7)."""
     glon, glat = np.meshgrid(lons, lats)
-    num = np.zeros_like(grid)
-    den = np.zeros_like(grid)
+    num = np.zeros_like(glon, dtype=float)
+    den = np.zeros_like(glon, dtype=float)
     for st, mm in stations_mm:
-        d2 = (glon - st["lon"]) ** 2 + (glat - st["lat"]) ** 2
-        w = 1.0 / np.maximum(d2, 1e-8) ** (power / 2.0)
+        d = np.hypot((glon - st["lon"]) * 111.32 * np.cos(np.radians(st["lat"])),
+                     (glat - st["lat"]) * 111.32)
+        w = 1.0 / np.maximum(d, 1e-3) ** power
+        if radius_km is not None:
+            w = np.where(d <= radius_km, w, 0.0)
         num += w * mm
         den += w
-    grid = np.where(den > 0, num / den, 0.0)
+    grid = np.where(den > 0, num / np.where(den > 0, den, 1.0), 0.0)
     return grid[::-1, :]  # S→N a north-up
 
 
@@ -319,6 +330,22 @@ def selftest():
     st = parse_stations(DEFAULT_STATIONS)
     grid = idw_field([(st[0], 10.0), (st[1], 0.0)], lons, lats, 2.0)
     assert grid.shape == (11, 11) and grid.max() <= 10.0 + 1e-9 and grid.min() >= 0.0
+    # Radio: una estación con 10 mm en (-70.25,-33.75). Sin radio TODO el
+    # dominio recibe 10 (una sola estación); con 15 km solo su vecindad, y la
+    # celda a ~50 km queda en 0. La celda de la estación conserva su valor.
+    one = [({"lon": -70.25, "lat": -33.75}, 10.0)]
+    sin = idw_field(one, lons, lats, 2.0)
+    con = idw_field(one, lons, lats, 2.0, radius_km=15.0)
+    assert np.allclose(sin, 10.0), "sin radio, una estación llena el dominio (el defecto del 20-oct)"
+    r_est, c_est = list(lats[::-1]).index(lats[np.argmin(abs(lats + 33.75))]), int(np.argmin(abs(lons + 70.25)))
+    assert abs(con[r_est, c_est] - 10.0) < 1e-9, "la celda de la estación conserva su lámina"
+    assert con[0, 0] == 0.0 and con[-1, -1] == 0.0, "lejos del radio no hay evidencia → 0"
+    n_viva = int((con > 0).sum())
+    assert 1 <= n_viva <= 9, f"15 km ≈ la celda y sus vecinas, no {n_viva}"
+    # Dos estaciones dentro del radio: el valor queda entre ambas (sigue siendo IDW).
+    two = [({"lon": -70.25, "lat": -33.75}, 10.0), ({"lon": -70.15, "lat": -33.75}, 0.0)]
+    g2 = idw_field(two, lons, lats, 2.0, radius_km=15.0)
+    assert 0.0 < g2[r_est, c_est] <= 10.0 and g2[r_est, c_est + 1] < g2[r_est, c_est]
     import tempfile
 
     with tempfile.TemporaryDirectory() as td:
@@ -327,7 +354,7 @@ def selftest():
 
         with rasterio.open(os.path.join(td, "t.tif")) as src:
             assert abs(src.transform.c - -70.80) < 1e-9 and abs(src.transform.f - -33.20) < 1e-9
-    print("fetch_dga selftest: OK (extracción A/B, modo acumulado con reset, IDW, grilla)")
+    print("fetch_dga selftest: OK (extracción A/B, modo acumulado con reset, IDW, radio, grilla)")
 
 
 def main():
@@ -340,6 +367,10 @@ def main():
     # un env() a secas tomaría el string vacío y fallaría el parseo.
     stations = parse_stations(os.environ.get("DGA_STATIONS") or DEFAULT_STATIONS)
     power = float(env("DGA_IDW_POWER", "2.0"))
+    # Radio de influencia de cada pluviómetro. Vacío o "0" = sin radio (todo el
+    # dominio, el comportamiento viejo); se deja explícito en cada config.
+    r = os.environ.get("DGA_IDW_RADIUS_KM", "15").strip()
+    radius_km = float(r) if r and float(r) > 0 else None
 
     steps_dir = os.path.join(work, "steps")
     os.makedirs(steps_dir, exist_ok=True)
@@ -407,7 +438,7 @@ def main():
         while t + STEP <= now:
             k = step_key(t)
             with_data = [(st, depths.get(k, 0.0)) for st, depths in per_station.values()]
-            grid = idw_field(with_data, lons, lats, power)
+            grid = idw_field(with_data, lons, lats, power, radius_km)
             write_step(os.path.join(steps_dir, f"step_{k}.tif"), grid, lons, lats)
             mark = os.path.join(steps_dir, f"gapmark_{k}")
             if os.path.exists(mark):

@@ -116,6 +116,7 @@ if [[ "${SKIP_FETCH:-0}" != "1" ]]; then
     if [[ "${DGA_ENABLED:-0}" == "1" ]]; then
         if ! WORK_DIR="$WORK_DIR/feeds/dga" DMC_USUARIO="${DMC_USUARIO:-}" \
                 DMC_TOKEN="${DMC_TOKEN:-}" DGA_STATIONS="${DGA_STATIONS:-}" \
+                DGA_IDW_POWER="${DGA_IDW_POWER:-2.0}" DGA_IDW_RADIUS_KM="${DGA_IDW_RADIUS_KM:-15}" \
                 python3 "$HERE/fetch_dga.py" >>"$LOG" 2>&1; then
             notify "nowcast-monitor: ingesta DGA falló" \
                 "El fetch de telemetría DGA/DMC falló; el ciclo sigue sin la capa in-situ. Ver $LOG." \

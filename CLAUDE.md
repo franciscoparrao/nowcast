@@ -773,6 +773,19 @@ también en `archive_ema`. `ID_A=5.5` en sombra, sin calibrar acá. Primer ciclo
 cerca): candidata a falsa alarma de IMERG, la regla de corroboración lo acepta
 porque IMERG cuenta como respaldo por sí solo.
 
+**Radio en el IDW del feed de estaciones (2026-10-20, `DGA_IDW_RADIUS_KM`=15)**:
+`fetch_dga.idw_field` interpolaba SIN radio, así que toda celda del dominio era
+un promedio de TODAS las EMAs. El 20-oct una sola EMA de precordillera
+(Portezuelo-Codelco, 10.8 mm/h, E=2.55) puso en alerta 80 celdas de O'Higgins,
+65 a más de 25 km de cualquier pluviómetro (informe `evento-2026-10-20`, A7).
+Ahora cada celda interpola solo con las EMAs a ≤15 km (distancia en km corregida
+por latitud) y fuera de eso el feed vale 0: sin evidencia, no aporta al noisy-OR
+ni corrobora. Repetida la racha: 76 → 16 celdas (7 junto al pluviómetro, 9 de
+GOES en San Fernando), ninguna encendida. De paso: `DGA_IDW_POWER` NUNCA llegó
+al fetcher (`monitor.sh` exporta solo BBOX/WORK_DIR/WINDOW_HOURS/STALE_HOURS);
+ahora se pasan los dos explícitos. Barrido: ninguna otra variable de fetcher
+quedaba sin pasar. Vacío o 0 = sin radio (comportamiento viejo).
+
 **`nowcast-forecast` moría por tiempo en los días de evento (2026-10-20)**:
 `TimeoutStartSec=90min` mató 3 de 6 ciclos del 18-19 oct (18z, 06z, 18z) en el
 paso 5 de `analysis_all.sh`: el runout ABM por localidad tarda 2-3 min c/u y en
