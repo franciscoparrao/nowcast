@@ -750,6 +750,37 @@ Lonquimay, Rucamanque, Maquehue ×2, La Araucanía Ad., Villarrica, Pucón;
 Angol 370067 no entrega datos desde julio), todas de valle salvo Lonquimay;
 no hay EMA en Curacautín. `archive_ema` (unit) archiva también esas ocho.
 
+**`monitor@ohiggins` EN OPERACIÓN (2026-10-20, modo sombra, con GLM)**: cuarto
+dominio, instanciado de madrugada por las alertas de remoción en masa para la
+RM y la VI Región de ese día (el pronóstico 12z del 19-oct ponía 17 comunas de
+O'Higgins en ALTO y la región no tenía monitor ni EMAs archivadas). Config
+`~/nowcast-monitor/domains/ohiggins/config.env`, `WORK_DIR`
+`~/nowcast-monitor-ohiggins`, bbox −71.95..−70.05 / −34.95..−33.85 (20×12
+celdas, Pichilemu a la cordillera). Susceptibilidad: p90 de `10_rio_rapel` +
+`17_costa_transfer` (la costa al oeste de −71.86 queda fuera del ráster del
+Rapel) + `09_rio_maipo` + `11_rio_maule`; mediana 0.637 → `ALERT_LEVEL=0.318`.
+GOTCHA: con solo Rapel+costa quedaban 52/240 celdas MUDAS, todas de borde:
+leían solo los píxeles de la divisoria (≈0.22, el piso del RandomForest).
+Sumar las cuencas vecinas las bajó a 25 (`--allow-mute`): valle plano y Lago
+Rapel (correcto), la fila sur −34.95 cuyo terreno es del Mataquito (sin modelo)
+y la alta cordillera del Tinguiririca (RF ≈0.22). Feed DGA con las 5 EMAs DMC
+de la región (`getEstacionesRedEma`, `region=6`: Rancagua 340045, Quimávida
+340048, Nilahue 340066, Portezuelo-Codelco 340093 a 1185 m, Pichilemu 340115),
+también en `archive_ema`. `ID_A=5.5` en sombra, sin calibrar acá. Primer ciclo
+(04:45Z): "CRUCE NUEVO" en 3 celdas de la cordillera de la costa (−71.6,
+−34.1) a las 21:30Z del 19-oct, sostenido SOLO por un paso IMERG aislado
+(5.1 mm/30 min con ceros antes y después; GOES 0.2 mm, rayos lejos, sin EMA
+cerca): candidata a falsa alarma de IMERG, la regla de corroboración lo acepta
+porque IMERG cuenta como respaldo por sí solo.
+
+**`nowcast-forecast` moría por tiempo en los días de evento (2026-10-20)**:
+`TimeoutStartSec=90min` mató 3 de 6 ciclos del 18-19 oct (18z, 06z, 18z) en el
+paso 5 de `analysis_all.sh`: el runout ABM por localidad tarda 2-3 min c/u y en
+un evento la watchlist llega a 30 comunas (~75 min solo ese paso). Los ciclos
+que morían eran justo los de lluvia. Subido a 240 min (debajo de las 6 h entre
+ciclos). Si vuelve a quedar corto, paralelizar `run_localidades` en vez de
+seguir subiendo el límite.
+
 **`monitor@rm` EN OPERACIÓN (2026-10-11, modo sombra)**: el piloto RM de
 `config.env` NUNCA tuvo timer propio (solo corría `monitor@atacama`), y por eso
 el 8-oct nadie vio en vivo la ráfaga de Las Condes. Instancia:

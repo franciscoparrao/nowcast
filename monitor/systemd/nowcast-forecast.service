@@ -22,7 +22,10 @@ ExecStart=%h/proyectos/nowcast/monitor/forecast_all.sh
 ExecStart=%h/proyectos/nowcast/monitor/analysis_all.sh
 
 # El pronóstico son ~20 min (3 fuentes) y el análisis ~10 min (overlay 30 m +
-# agregación censal de 18.5M filas). 90 min deja margen para reintentos
-# lentos de NOMADS/ECMWF sin colgar la unidad indefinidamente.
-TimeoutStartSec=90min
+# agregación censal de 18.5M filas) en un día tranquilo. En un día de EVENTO
+# el runout ABM por localidad (paso 5, 2-3 min c/u) corre sobre las 30
+# comunas de la watchlist y suma ~75 min: con 90 min murieron por tiempo 3
+# de 6 ciclos del 18-19 oct, justo los que importaban. 240 min sigue debajo
+# de las 6 h entre ciclos (el timer no lanza una corrida encima de otra).
+TimeoutStartSec=240min
 Nice=10
