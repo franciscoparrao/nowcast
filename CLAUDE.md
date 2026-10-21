@@ -773,6 +773,26 @@ también en `archive_ema`. `ID_A=5.5` en sombra, sin calibrar acá. Primer ciclo
 cerca): candidata a falsa alarma de IMERG, la regla de corroboración lo acepta
 porque IMERG cuenta como respaldo por sí solo.
 
+**El runout ABM NO responde a la lluvia (2026-10-21, `scripts/huellas_2021/`)**:
+el runout por localidad del pronóstico (`run_localidades` → `runout_localidad`
+→ `runout_ondemand`) está calibrado en UN solo temporal (Atacama 25-mar-2015:
+`chanaral_enhanced` en Chañaral, `de` en Copiapó). Medido en El Arrayán con la
+lluvia escalada: `chanaral_enhanced` da la MISMA huella (6.417 celdas) de 0.3 a
+200 mm/día y `de` es un interruptor (0 a 0.3 mm/día, saturado desde 1).
+Causa en `swarm-abm/models/debris-flow/src/model.rs`: agentes de lluvia FIJOS
+(orígenes por susceptibilidad) y nace un flujo si la lluvia horaria supera
+`rain_threshold`, calibrado en [0.01, 0.3] mm/h (`chanaral_enhanced` = 0.01,
+el límite): con un solo evento lluvioso el umbral no es identificable. El largo
+lo decide dónde se traba el flujo, no el volumen. **Los runouts de los registros
+son mapas de terreno condicionados a "llovió ≥1 mm", no pronóstico.**
+Validación contra 86 puntos del catálogo nacional (29–31 ene 2021, RM;
+`validar_puntos.py`): lift 1.5–1.8 a 150 m sobre un nulo de puntos al azar
+junto a cauces en Cajón y El Arrayán, inconsistente a 0–60 m, 0 aciertos en Las
+Vertientes con el preset operacional. Mapear huellas de ese evento con
+Sentinel-2 10 m no funcionó (`huellas.py`: depósitos bajo la resolución).
+Arreglo de fondo pendiente (repo hermano): que el gatillo I-D del propio motor
+decida si y dónde nacen flujos, y calibrar con eventos Y no-eventos.
+
 **Radio en el IDW del feed de estaciones (2026-10-20, `DGA_IDW_RADIUS_KM`=15)**:
 `fetch_dga.idw_field` interpolaba SIN radio, así que toda celda del dominio era
 un promedio de TODAS las EMAs. El 20-oct una sola EMA de precordillera
