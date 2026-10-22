@@ -26,6 +26,17 @@ VARIANTE_POR_MODELO = {
 _ARCHIVO_MAX = {"regional-a5.5": "hazard_max_regional-a5.5.tif", "caine-global": "hazard_max.tif"}
 
 
+# Intercepto I-D (mm/h, b=0.39) de cada variante. Lo usa el gatillo externo del
+# runout (runout_localidad.py --trigger), para que el runout y el peligro
+# comunal disparen con el MISMO umbral por modelo.
+_INTERCEPTO = {"regional-a5.5": 5.5, "caine-global": 14.82}
+
+
+def intercepto(modelo):
+    """Intercepto I-D a (mm/h) de la variante del modelo."""
+    return _INTERCEPTO[VARIANTE_POR_MODELO[modelo]]
+
+
 def variante(modelo):
     return VARIANTE_POR_MODELO[modelo]
 

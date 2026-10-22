@@ -50,3 +50,5 @@ monitor/data/ema/
 # scripts/calibracion_runout/armar_paquete.py. Solo el README va versionado.
 /data/calibracion_runout/*
 !/data/calibracion_runout/README.md
+/data/huellas_2021/runout/
+/data/huellas_2021/validacion_puntos.json

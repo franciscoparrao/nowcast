@@ -117,10 +117,60 @@ struct Args {
     /// GeoTIFFs into --out, for QGIS inspection.
     #[arg(long, default_value_t = false)]
     write_layers: bool,
+    /// Hourly rain series (mm/h, uniform over the window, up to 72 values,
+    /// index 0 = first simulated hour). With `--trigger-id-a` it drives the
+    /// EXTERNAL trigger (swarm-abm `Layers::trigger`): flows start only where
+    /// and when the I–D exceedance E ≥ 1. It also replaces
+    /// `--rain-mm-per-day` (the daily layers become the 24-h sums).
+    #[arg(long, value_delimiter = ',')]
+    rain_mm_per_hour: Option<Vec<f64>>,
+    /// I–D intercept a (mm/h) for the external trigger, E = I·D^b / a, with
+    /// the engine's own window kernel (`IdThreshold::worst_window`).
+    #[arg(long)]
+    trigger_id_a: Option<f64>,
+    /// I–D exponent b for the external trigger.
+    #[arg(long, default_value_t = 0.39)]
+    trigger_id_b: f64,
+    /// Longest trailing I–D window, hours (the monitor uses 48 h).
+    #[arg(long, default_value_t = 48)]
+    trigger_max_window_h: usize,
+    /// Override `trigger_volume_scale` (flow volume = scale × E). A FREE
+    /// parameter in swarm-abm: uncalibrated until there are events and
+    /// non-events to fit it.
+    #[arg(long)]
+    trigger_volume_scale: Option<f64>,
+}
+
+/// Hourly I–D exceedance of a uniform series: for each hour, the worst
+/// trailing window up to `max_m` hours, through the engine's own kernel.
+fn hourly_exceedance(series: &[f64], th: &nowcast_core::IdThreshold, max_m: usize) -> Vec<f64> {
+    let mut pre = vec![0.0; series.len() + 1];
+    for (i, v) in series.iter().enumerate() {
+        pre[i + 1] = pre[i] + v.max(0.0);
+    }
+    (0..series.len())
+        .map(|t| {
+            let m_max = max_m.min(t + 1);
+            th.worst_window(1.0, m_max, |m| pre[t + 1] - pre[t + 1 - m]).0
+        })
+        .collect()
 }
 
 fn main() -> Result<()> {
-    let args = Args::parse();
+    let mut args = Args::parse();
+    if let Some(h) = &args.rain_mm_per_hour {
+        if h.is_empty() || h.len() > 72 {
+            bail!("--rain-mm-per-hour takes 1 to 72 hourly values (got {})", h.len());
+        }
+        if h.iter().any(|v| !v.is_finite() || *v < 0.0) {
+            bail!("--rain-mm-per-hour values must be finite and ≥ 0");
+        }
+        // The model's daily rain layers become the 24-h sums of the series.
+        args.rain_mm_per_day = h.chunks(24).map(|c| c.iter().sum()).collect();
+    }
+    if args.trigger_id_a.is_some() && args.rain_mm_per_hour.is_none() {
+        bail!("--trigger-id-a needs --rain-mm-per-hour (the trigger is computed from the hourly series)");
+    }
     if args.rain_mm_per_day.is_empty() || args.rain_mm_per_day.len() > 3 {
         bail!(
             "--rain-mm-per-day takes 1 to 3 days (the model's hourly \
@@ -272,6 +322,24 @@ fn main() -> Result<()> {
             susc_max, params.susceptibility_threshold,
         );
     }
+    // External trigger: hourly E from the series, uniform over the window.
+    let (trigger_grids, trigger_info) = match (&args.rain_mm_per_hour, args.trigger_id_a) {
+        (Some(h), Some(a)) => {
+            let th = nowcast_core::IdThreshold::new(a, args.trigger_id_b)
+                .map_err(|e| anyhow::anyhow!("I–D threshold: {e}"))?;
+            let e = hourly_exceedance(h, &th, args.trigger_max_window_h);
+            let horas_on = e.iter().filter(|&&x| x >= 1.0).count();
+            let e_max = e.iter().cloned().fold(0.0_f64, f64::max);
+            println!(
+                "Gatillo externo: I–D a={a} b={} · E máx {e_max:.2} · {horas_on} de {} h con E ≥ 1",
+                args.trigger_id_b,
+                e.len()
+            );
+            let grids: Vec<SwarmGrid<f32>> = e.iter().map(|&x| SwarmGrid::fill(n, n, x as f32)).collect();
+            (Some(grids), Some((a, e_max, horas_on, e.len())))
+        }
+        _ => (None, None),
+    };
     let dem_grid = grid_from(&filled, |v| v as f32);
     let layers = Layers {
         slope: grid_from(&slope_pct, |v| (v / 100.0) as f32),
@@ -292,9 +360,9 @@ fn main() -> Result<()> {
             f32::from(streams.data()[[p.y, p.x]])
         }),
         dem: dem_grid,
-        // Sin gatillo externo: inicio por la regla de lluvia del preset
+        // Sin `--trigger-id-a`: inicio por la regla de lluvia del preset
         // (paridad bit a bit con el modelo previo a swarm-abm 8ccad98).
-        trigger: None,
+        trigger: trigger_grids.clone(),
     };
 
     // ── 8. Run the ABM ───────────────────────────────────────────────────
@@ -423,6 +491,14 @@ fn main() -> Result<()> {
             "rain_mm_per_day": args.rain_mm_per_day,
             "isotherm_m": args.isotherm_m,
             "sediment_const": args.sediment,
+            "rain_mm_per_hour": args.rain_mm_per_hour,
+            "trigger": trigger_info.map(|(a, e_max, on, n_h)| serde_json::json!({
+                "mode": "external_id", "id_a": a, "id_b": args.trigger_id_b,
+                "max_window_h": args.trigger_max_window_h, "e_max": e_max,
+                "hours_e_ge_1": on, "hours": n_h,
+                "volume_scale": params.trigger_volume_scale,
+                "volume_scale_calibrated": false,
+            })),
         },
         "params": {
             "preset": args.params,
@@ -462,6 +538,9 @@ fn build_params(args: &Args) -> Result<DebrisParams> {
     };
     if let Some(a) = args.agents {
         p.n_rain_agents = a;
+    }
+    if let Some(v) = args.trigger_volume_scale {
+        p.trigger_volume_scale = v;
     }
     Ok(p)
 }

@@ -59,6 +59,7 @@ import rasterio
 from pyproj import Transformer
 
 from susc_overlay import DOMAIN_BASINS, KINGSTON, raster_coverage_warning
+from variantes import intercepto
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -129,6 +130,11 @@ def main():
     ap.add_argument("--source", choices=["gfs", "ecmwf", "icon"], default="gfs",
                     help="qué pronóstico fuerza el ABM — usar 'icon' cuando el valle/orografía "
                          "queda sub-resuelto por GFS/ECMWF 0.25° (hallazgo Atacama 2026-07-15).")
+    ap.add_argument("--trigger", action="store_true",
+                    help="gatillo externo (swarm-abm Layers::trigger): los flujos nacen solo con E ≥ 1 "
+                         "según el umbral I-D del modelo (variantes.intercepto), desde la serie HORARIA "
+                         "del pronóstico en el punto. Apagado por defecto: trigger_volume_scale no está "
+                         "calibrado y con gotas fijas la huella satura igual (2026-10-22).")
     a = ap.parse_args()
 
     base_fdir = os.path.join(os.path.realpath(os.path.expanduser(a.forecast)), a.domain)
@@ -157,6 +163,28 @@ def main():
         if s > best_sum:
             best_i, best_sum = i, s
     rain3 = [round(daily[d], 1) for d in days[best_i:best_i + 3]]
+
+    # Serie HORARIA en el punto para el gatillo externo: peor ventana de 72 h
+    # por suma. Pasos de 3 h (ECMWF) se reparten en partes iguales, lo que
+    # atenúa los picos horarios — queda anotado en el resumen.
+    hourly, hourly_note = None, None
+    if a.trigger:
+        from datetime import datetime as _dt
+        pasos = sorted(_glob.glob(os.path.join(fdir, "steps", "step_*.tif")))
+        tiempos = [_dt.strptime(os.path.basename(f)[5:18], "%Y%m%dT%H%M") for f in pasos]
+        dt_h = int(round((tiempos[1] - tiempos[0]).total_seconds() / 3600)) if len(tiempos) > 1 else 1
+        serie = []
+        for f in pasos:
+            v = max(point_value(f, a.lon, a.lat), 0.0)
+            serie += [v / dt_h] * dt_h
+        if len(serie) < 72:
+            serie += [0.0] * (72 - len(serie))
+        sums = [sum(serie[i:i + 72]) for i in range(len(serie) - 71)]
+        i0 = max(range(len(sums)), key=sums.__getitem__)
+        hourly = [round(v, 3) for v in serie[i0:i0 + 72]]
+        rain3 = [round(sum(hourly[k:k + 24]), 1) for k in range(0, 72, 24)]
+        hourly_note = (f"paso {dt_h} h repartido en partes iguales (atenúa picos)" if dt_h > 1 else "paso horario")
+        hourly_start = (tiempos[0] + __import__("datetime").timedelta(hours=i0)).strftime("%Y-%m-%dT%H:%MZ")
     if a.source != "gfs":
         # ECMWF/ICON ya entregan lluvia liquida; el ABM todavia necesita una
         # isoterma escalar para rotular el escenario. Se usa la media GFS del
@@ -196,7 +224,9 @@ def main():
                  f"--example runout_ondemand && install -Dm755 target/release/examples/runout_ondemand {runner}")
     cmd = [runner,
            f"--lon={a.lon}", f"--lat={a.lat}", "--size-km", str(a.size_km),
-           "--rain-mm-per-day", ",".join(str(v) for v in rain3),
+           *(["--rain-mm-per-hour", ",".join(str(v) for v in hourly),
+              "--trigger-id-a", str(intercepto(a.source))] if a.trigger else
+             ["--rain-mm-per-day", ",".join(str(v) for v in rain3)]),
            "--isotherm-m", str(iso0), "--sediment", "0.5",
            "--susceptibility", susc, "--out", out,
            "--agents", str(a.agents), "--seed", str(a.seed), "--params", a.params]
@@ -308,6 +338,11 @@ def main():
     resumen = {"name": a.name, "lon": a.lon, "lat": a.lat, "domain": a.domain,
                "source": a.source, "cycle": meta["cycle"], "signal": signal,
                "rain3_mm_day": rain3, "rain3_start": days[best_i],
+               "trigger": ({"mode": "external_id", "id_a": intercepto(a.source),
+                            "serie_horaria": hourly_note, "serie_inicio_utc": hourly_start,
+                            "e_max": stats["forcing"]["trigger"]["e_max"],
+                            "hours_e_ge_1": stats["forcing"]["trigger"]["hours_e_ge_1"],
+                            "volume_scale_calibrated": False} if a.trigger else None),
                "iso0_m": iso0, "susceptibility": susc,
                "params_preset": a.params,
                "params_preset_iou": PRESET_IOU.get(a.params, "sin IoU documentado"),
