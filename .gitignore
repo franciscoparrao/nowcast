@@ -52,3 +52,4 @@ monitor/data/ema/
 !/data/calibracion_runout/README.md
 /data/huellas_2021/runout/
 /data/huellas_2021/validacion_puntos.json
+/data/huellas_2021/series_2021.json

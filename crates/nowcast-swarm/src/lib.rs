@@ -26,7 +26,7 @@ use swarm_abm::prelude::{Activation, Grid2D, Pos, Schedule, Simulation};
 
 // Re-export the model building blocks so callers need only this crate.
 pub use debris_flow::raster::{CopiapoData, Window, load};
-pub use debris_flow::{Layers, Params as DebrisParams};
+pub use debris_flow::{Layers, Params as DebrisParams, TriggerSeeding};
 pub use swarm_abm::prelude::{Grid2D as SwarmGrid, Pos as SwarmPos};
 
 /// Convert a nowcast [`SusceptibilityMap`] into a `swarm_abm::Grid2D<f32>`
@@ -170,16 +170,15 @@ mod tests {
         // A small, sane layer stack so the ABM runs end-to-end without panicking.
         let (w, h) = (24usize, 24usize);
         let g = |f: fn(Pos) -> f32| Grid2D::from_fn(w, h, f);
-        let layers = Layers {
-            dem: Grid2D::from_fn(w, h, |p| 1000.0 - p.y as f32 * 4.0),
-            slope: g(|_| 12.0),
-            rain: vec![Grid2D::from_fn(w, h, |_| 60.0)],
-            isotherm: g(|_| 4000.0),
-            sediment: g(|_| 1.0),
-            susceptibility: g(|_| 0.6),
-            streams: g(|_| 0.0),
-            trigger: None,
-        };
+        let layers = Layers::new(
+            Grid2D::from_fn(w, h, |p| 1000.0 - p.y as f32 * 4.0),
+            g(|_| 12.0),
+            vec![Grid2D::from_fn(w, h, |_| 60.0)],
+            g(|_| 4000.0),
+            g(|_| 1.0),
+            g(|_| 0.6),
+            g(|_| 0.0),
+        );
         let runout = run_runout(Arc::new(layers), Params::default(), 30.0, 42, 12).unwrap();
         assert_eq!(runout.dims(), GridDims::new(24, 24));
         // affected_km2 is well-defined regardless of how far the flow spread.

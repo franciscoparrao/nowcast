@@ -812,8 +812,21 @@ si E ≥ 1, volumen `trigger_volume_scale`·E, parámetro LIBRE a calibrar) ya e
 en main (`8ccad98`, paridad bit a bit con `trigger: None`). Mata el interruptor
 (0.3–5 mm/día ya no generan flujos), pero la huella sigue saturando: los flujos
 nacen en las mismas `n_rain_agents` posiciones fijas, así que el rango dinámico
-lo fija el número de gotas, no el forzante. Prioridad acordada: (1) gatillo
-externo ✔, (2) gotas que sigan al campo de gatillo, (3) calibrar con eventos y
+lo fija el número de gotas, no el forzante. **Punto 2 hecho (swarm-abm
+6f07499, 22-oct)**: `TriggerSeeding::FollowField` (default con gatillo) siembra
+cada hora `trigger_drops_per_km2`×área excedida gotas entre las celdas con E≥1;
+`Fixed` reproduce el modo anterior. API ahora `#[non_exhaustive]`: se construye
+con `Layers::new(..).with_trigger(..)` y `Params` partiendo de un preset.
+Medido en El Arrayán (`scripts/huellas_2021/sensibilidad_gatillo.py`, La Platina
+29–31 ene 2021 ×1/×2/×4): `fixed` 6.417 celdas siempre; `follow` responde a la
+lluvia por las HORAS excedidas (12.682 → 15.135 de ×1 a ×2, plano de ×2 a ×4
+porque E es uniforme en la ventana) y sobre todo a la densidad de gotas, un
+parámetro LIBRE: 0.02 → 12.682 celdas, 0.1 → 31.691, 0.5 → 72.472. El default
+0.02 sale de dominios de miles de km²; en una ventana de 14 km (69 km² sobre las
+compuertas) da k = 1 gota/h. Con forzante puntual o de 0.25° el área excedida
+casi no varía dentro de la ventana, así que el efecto área de FollowField no
+aparece en nuestros runouts. Prioridad acordada: (1) gatillo
+externo ✔, (2) gotas que sigan al campo de gatillo ✔, (3) calibrar con eventos y
 no-eventos (catálogo nacional + lluvia de estaciones), (4) largo según volumen
 junto con el presupuesto de pasos. Hasta (2) y (4) los runouts NO son pronóstico
 de extensión.

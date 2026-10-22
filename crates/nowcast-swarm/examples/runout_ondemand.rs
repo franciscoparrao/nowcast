@@ -43,7 +43,7 @@ use anyhow::{Context, Result, bail};
 use clap::Parser;
 use surtgis_core::ndarray::Array2;
 use nowcast_surtgis::{Georef, write_hazard_geotiff};
-use nowcast_swarm::{DebrisParams, Layers, SwarmGrid, SwarmPos, run_runout};
+use nowcast_swarm::{DebrisParams, Layers, SwarmGrid, SwarmPos, TriggerSeeding, run_runout};
 use surtgis_algorithms::hydrology::{
     FillSinksParams, StreamNetworkParams, fill_sinks, flow_accumulation, flow_direction,
     stream_network,
@@ -139,6 +139,18 @@ struct Args {
     /// non-events to fit it.
     #[arg(long)]
     trigger_volume_scale: Option<f64>,
+    /// Where triggered flows start (swarm-abm 6f07499): `follow` samples new
+    /// drops every hour among the cells with E ≥ 1 that pass the terrain
+    /// gates (number ∝ exceeded area); `fixed` keeps the preset's fixed
+    /// sample of `n_rain_agents` (the 8ccad98 behaviour).
+    #[arg(long, default_value = "follow")]
+    trigger_seeding: String,
+    /// Override `trigger_drops_per_km2` (FREE parameter; placeholder 0.02).
+    #[arg(long)]
+    trigger_drops_per_km2: Option<f64>,
+    /// Override `trigger_max_drops` per hour (FREE parameter; placeholder 1000).
+    #[arg(long)]
+    trigger_max_drops: Option<usize>,
 }
 
 /// Hourly I–D exceedance of a uniform series: for each hour, the worst
@@ -341,29 +353,75 @@ fn main() -> Result<()> {
         _ => (None, None),
     };
     let dem_grid = grid_from(&filled, |v| v as f32);
-    let layers = Layers {
-        slope: grid_from(&slope_pct, |v| (v / 100.0) as f32),
-        rain: args
-            .rain_mm_per_day
-            .iter()
-            .map(|&mm| SwarmGrid::fill(n, n, mm as f32))
-            .collect(),
+    let layers = Layers::new(
+        dem_grid.clone(),
+        grid_from(&slope_pct, |v| (v / 100.0) as f32),
+        args.rain_mm_per_day.iter().map(|&mm| SwarmGrid::fill(n, n, mm as f32)).collect(),
         // Binary "liquid rain" mask, like the Copiapó isotherm layer: 1 below
         // the 0 °C isotherm, 0 above (the model tests `isotherm > 0.5`).
-        isotherm: SwarmGrid::from_fn(n, n, |p: SwarmPos| {
+        SwarmGrid::from_fn(n, n, |p: SwarmPos| {
             let z = f64::from(dem_grid[p]);
             if z.is_finite() && z < args.isotherm_m { 1.0 } else { 0.0 }
         }),
-        sediment: SwarmGrid::fill(n, n, args.sediment as f32),
-        susceptibility: SwarmGrid::from_fn(n, n, |p: SwarmPos| susc_clean[[p.y, p.x]] as f32),
-        streams: SwarmGrid::from_fn(n, n, |p: SwarmPos| {
-            f32::from(streams.data()[[p.y, p.x]])
-        }),
-        dem: dem_grid,
-        // Sin `--trigger-id-a`: inicio por la regla de lluvia del preset
-        // (paridad bit a bit con el modelo previo a swarm-abm 8ccad98).
-        trigger: trigger_grids.clone(),
+        SwarmGrid::fill(n, n, args.sediment as f32),
+        SwarmGrid::from_fn(n, n, |p: SwarmPos| susc_clean[[p.y, p.x]] as f32),
+        SwarmGrid::from_fn(n, n, |p: SwarmPos| f32::from(streams.data()[[p.y, p.x]])),
+    );
+    // Sin `--trigger-id-a`: inicio por la regla de lluvia del preset (paridad
+    // bit a bit con el modelo previo a swarm-abm 8ccad98).
+    let layers = match trigger_grids.clone() {
+        Some(g) => layers.with_trigger(g),
+        None => layers,
     };
+
+    // Exceeded area that passes the terrain gates, and the drop target k per
+    // hour (what swarm-abm's FollowField samples): requested by swarm-abm to
+    // separate the sampling effect from the threshold effect. E is uniform
+    // over the window here, so the gated area is the same in every hour with
+    // E ≥ 1. Gates mirror `Raindrop::can_generate_flow`.
+    let gate_cells = {
+        let mut c = 0usize;
+        for row in 0..n {
+            for col in 0..n {
+                let z = dem_grid[SwarmPos::new(col, row)];
+                let iso_ok = z.is_finite() && f64::from(z) < args.isotherm_m;
+                if iso_ok && args.sediment > params.sediment_threshold
+                    && susc_clean[[row, col]] > params.susceptibility_threshold
+                {
+                    c += 1;
+                }
+            }
+        }
+        c
+    };
+    let gate_km2 = gate_cells as f64 * PIXEL_M * PIXEL_M / 1.0e6;
+    let (area_by_hour, k_by_hour): (Vec<f64>, Vec<usize>) = match &trigger_grids {
+        Some(g) => g
+            .iter()
+            .map(|grid| {
+                let on = grid[SwarmPos::new(0, 0)] >= 1.0;
+                let a = if on { gate_km2 } else { 0.0 };
+                // k only exists in FollowField; Fixed uses the preset's drops.
+                let k = if on && params.trigger_seeding == TriggerSeeding::FollowField {
+                    ((params.trigger_drops_per_km2 * a).round() as usize).min(params.trigger_max_drops)
+                } else {
+                    0
+                };
+                (a, k)
+            })
+            .unzip(),
+        None => (vec![], vec![]),
+    };
+    if trigger_grids.is_some() {
+        println!(
+            "Siembra {:?}: área excedida con compuertas {gate_km2:.1} km² por hora excedida · \
+             k objetivo {} gotas/h (densidad {} /km², tope {})",
+            params.trigger_seeding,
+            k_by_hour.iter().max().copied().unwrap_or(0),
+            params.trigger_drops_per_km2,
+            params.trigger_max_drops
+        );
+    }
 
     // ── 8. Run the ABM ───────────────────────────────────────────────────
     println!(
@@ -498,6 +556,12 @@ fn main() -> Result<()> {
                 "hours_e_ge_1": on, "hours": n_h,
                 "volume_scale": params.trigger_volume_scale,
                 "volume_scale_calibrated": false,
+                "seeding": format!("{:?}", params.trigger_seeding),
+                "drops_per_km2": params.trigger_drops_per_km2,
+                "max_drops": params.trigger_max_drops,
+                "gated_area_km2": gate_km2,
+                "exceeded_area_km2_by_hour": area_by_hour,
+                "k_target_by_hour": k_by_hour,
             })),
         },
         "params": {
@@ -541,6 +605,17 @@ fn build_params(args: &Args) -> Result<DebrisParams> {
     }
     if let Some(v) = args.trigger_volume_scale {
         p.trigger_volume_scale = v;
+    }
+    p.trigger_seeding = match args.trigger_seeding.as_str() {
+        "follow" => TriggerSeeding::FollowField,
+        "fixed" => TriggerSeeding::Fixed,
+        other => bail!("unknown --trigger-seeding '{other}' (follow|fixed)"),
+    };
+    if let Some(v) = args.trigger_drops_per_km2 {
+        p.trigger_drops_per_km2 = v;
+    }
+    if let Some(v) = args.trigger_max_drops {
+        p.trigger_max_drops = v;
     }
     Ok(p)
 }
