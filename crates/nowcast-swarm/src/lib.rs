@@ -178,6 +178,7 @@ mod tests {
             sediment: g(|_| 1.0),
             susceptibility: g(|_| 0.6),
             streams: g(|_| 0.0),
+            trigger: None,
         };
         let runout = run_runout(Arc::new(layers), Params::default(), 30.0, 42, 12).unwrap();
         assert_eq!(runout.dims(), GridDims::new(24, 24));

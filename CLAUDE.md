@@ -773,6 +773,19 @@ también en `archive_ema`. `ID_A=5.5` en sombra, sin calibrar acá. Primer ciclo
 cerca): candidata a falsa alarma de IMERG, la regla de corroboración lo acepta
 porque IMERG cuenta como respaldo por sí solo.
 
+**Runout por localidad: binario INSTALADO, no `cargo run` (2026-10-22)**:
+`runout_localidad.py` compilaba `nowcast-swarm` en caliente en cada localidad.
+swarm-abm agregó `Layers::trigger` (`8ccad98`) y el struct literal de
+`runout_ondemand.rs` dejó de compilar: **40 runouts fallidos en dos ciclos**
+(21-oct 06z y 12z) con «could not compile». Mismo patrón que el `target/`
+borrado de septiembre: dependencia por path a un repo hermano que cambia sin
+avisar. Ahora usa `RUNOUT_BIN` (default `~/nowcast-monitor/bin/runout_ondemand`)
+y si falta ABORTA con la instrucción de instalar; tras cada build:
+`install -Dm755 target/release/examples/runout_ondemand ~/nowcast-monitor/bin/`.
+`trigger: None` en el ejemplo y el test conserva paridad (huellas idénticas
+píxel a píxel con chanaral_enhanced y de). `flood_localidad.py` (manual)
+prefiere `FLOOD_ONDEMAND_BIN` y compila con aviso si no está.
+
 **El runout ABM NO responde a la lluvia (2026-10-21, `scripts/huellas_2021/`)**:
 el runout por localidad del pronóstico (`run_localidades` → `runout_localidad`
 → `runout_ondemand`) está calibrado en UN solo temporal (Atacama 25-mar-2015:

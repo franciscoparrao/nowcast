@@ -185,8 +185,16 @@ def main():
     if cobertura["sospechoso"]:
         print(f"[{a.name}] AVISO QA cobertura de raster: {cobertura['nota']}")
 
-    cmd = ["cargo", "run", "--release", "-q", "-p", "nowcast-swarm",
-           "--example", "runout_ondemand", "--",
+    # Binario INSTALADO, nunca `cargo run` en caliente: nowcast-swarm depende
+    # por path de swarm-abm, y un cambio allá (8ccad98 agregó Layers::trigger,
+    # 21-oct-2026) rompió la compilación y con ella 40 runouts en dos ciclos del
+    # pronóstico, igual que el borrado de target/ en sep-2026. Tras cada build:
+    #   install -Dm755 target/release/examples/runout_ondemand ~/nowcast-monitor/bin/
+    runner = os.environ.get("RUNOUT_BIN", os.path.expanduser("~/nowcast-monitor/bin/runout_ondemand"))
+    if not os.path.isfile(runner):
+        sys.exit(f"falta el runner instalado {runner}: cargo build --release -p nowcast-swarm "
+                 f"--example runout_ondemand && install -Dm755 target/release/examples/runout_ondemand {runner}")
+    cmd = [runner,
            f"--lon={a.lon}", f"--lat={a.lat}", "--size-km", str(a.size_km),
            "--rain-mm-per-day", ",".join(str(v) for v in rain3),
            "--isotherm-m", str(iso0), "--sediment", "0.5",

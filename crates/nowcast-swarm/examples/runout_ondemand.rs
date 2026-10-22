@@ -292,6 +292,9 @@ fn main() -> Result<()> {
             f32::from(streams.data()[[p.y, p.x]])
         }),
         dem: dem_grid,
+        // Sin gatillo externo: inicio por la regla de lluvia del preset
+        // (paridad bit a bit con el modelo previo a swarm-abm 8ccad98).
+        trigger: None,
     };
 
     // ── 8. Run the ABM ───────────────────────────────────────────────────

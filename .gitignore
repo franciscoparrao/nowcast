@@ -44,3 +44,9 @@ monitor/data/ema/
 /data/huellas_2021/s2/
 /data/huellas_2021/out*/
 /data/huellas_2021/informes_sng/
+
+# Paquete de calibración del runout: derivado del catálogo SERNAGEOMIN (mismos términos
+# de redistribución pendientes que /data/deposit) y de agromet; se regenera con
+# scripts/calibracion_runout/armar_paquete.py. Solo el README va versionado.
+/data/calibracion_runout/*
+!/data/calibracion_runout/README.md

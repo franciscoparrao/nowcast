@@ -107,8 +107,16 @@ def main():
           f"| cruce f+{signal['first_crossing_fhour']}h | lluvia líquida 120h "
           f"{signal['rain_liquid_total_mm']} mm | peor día {rain_mm_day} mm/día (desde {worst_day})")
 
-    cmd = ["cargo", "run", "--release", "-q", "-p", "nowcast-hydroflux",
-           "--example", "flood_ondemand", "--",
+    # Herramienta manual: prefiere el binario instalado (mismo motivo que en
+    # runout_localidad.py: un cambio en el repo hermano rompe `cargo run`) y,
+    # si no existe, compila en caliente con aviso.
+    runner = os.environ.get("FLOOD_ONDEMAND_BIN", os.path.expanduser("~/nowcast-monitor/bin/flood_ondemand"))
+    if os.path.isfile(runner):
+        base = [runner]
+    else:
+        print(f"[{a.name}] AVISO: no está {runner}; compilando nowcast-hydroflux en caliente", file=sys.stderr)
+        base = ["cargo", "run", "--release", "-q", "-p", "nowcast-hydroflux", "--example", "flood_ondemand", "--"]
+    cmd = base + [
            f"--lon={a.lon}", f"--lat={a.lat}",
            "--size-km", str(a.size_km), "--basin-window-km", str(a.basin_window_km),
            "--basin-pixel-m", str(a.basin_pixel_m),
