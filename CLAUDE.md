@@ -783,15 +783,27 @@ Causa en `swarm-abm/models/debris-flow/src/model.rs`: agentes de lluvia FIJOS
 (orígenes por susceptibilidad) y nace un flujo si la lluvia horaria supera
 `rain_threshold`, calibrado en [0.01, 0.3] mm/h (`chanaral_enhanced` = 0.01,
 el límite): con un solo evento lluvioso el umbral no es identificable. El largo
-lo decide dónde se traba el flujo, no el volumen. **Los runouts de los registros
+no depende del volumen, pero NO porque el flujo se trabe: lo corta el
+presupuesto de pasos (`--steps` 300; en chanaral_enhanced semilla 42, 437 de
+615 flujos siguen vivos al final — corrección de swarm-abm, 21-oct). Además
+`flow_radius` ignora el volumen con física Copiapo y `update_velocity` solo usa
+pendiente. **Los runouts de los registros
 son mapas de terreno condicionados a "llovió ≥1 mm", no pronóstico.**
 Validación contra 86 puntos del catálogo nacional (29–31 ene 2021, RM;
 `validar_puntos.py`): lift 1.5–1.8 a 150 m sobre un nulo de puntos al azar
 junto a cauces en Cajón y El Arrayán, inconsistente a 0–60 m, 0 aciertos en Las
 Vertientes con el preset operacional. Mapear huellas de ese evento con
 Sentinel-2 10 m no funcionó (`huellas.py`: depósitos bajo la resolución).
-Arreglo de fondo pendiente (repo hermano): que el gatillo I-D del propio motor
-decida si y dónde nacen flujos, y calibrar con eventos Y no-eventos.
+swarm-abm respondió (21-oct): `Layers::trigger` (E por celda y hora; nace flujo
+si E ≥ 1, volumen `trigger_volume_scale`·E, parámetro LIBRE a calibrar) ya está
+en main (`8ccad98`, paridad bit a bit con `trigger: None`). Mata el interruptor
+(0.3–5 mm/día ya no generan flujos), pero la huella sigue saturando: los flujos
+nacen en las mismas `n_rain_agents` posiciones fijas, así que el rango dinámico
+lo fija el número de gotas, no el forzante. Prioridad acordada: (1) gatillo
+externo ✔, (2) gotas que sigan al campo de gatillo, (3) calibrar con eventos y
+no-eventos (catálogo nacional + lluvia de estaciones), (4) largo según volumen
+junto con el presupuesto de pasos. Hasta (2) y (4) los runouts NO son pronóstico
+de extensión.
 
 **Radio en el IDW del feed de estaciones (2026-10-20, `DGA_IDW_RADIUS_KM`=15)**:
 `fetch_dga.idw_field` interpolaba SIN radio, así que toda celda del dominio era
