@@ -225,7 +225,11 @@ def main():
     cmd = [runner,
            f"--lon={a.lon}", f"--lat={a.lat}", "--size-km", str(a.size_km),
            *(["--rain-mm-per-hour", ",".join(str(v) for v in hourly),
-              "--trigger-id-a", str(intercepto(a.source))] if a.trigger else
+              "--trigger-id-a", str(intercepto(a.source)),
+              # Volumen inicial = 2·I₁·E (I₁ = a, umbral I-D a 1 h): el flujo
+              # nace con el volumen que le daría el modo lluvia, y el parámetro
+              # libre sale de la calibración (acuerdo con swarm-abm, 22-oct).
+              "--trigger-volume-scale", str(2.0 * intercepto(a.source))] if a.trigger else
              ["--rain-mm-per-day", ",".join(str(v) for v in rain3)]),
            "--isotherm-m", str(iso0), "--sediment", "0.5",
            "--susceptibility", susc, "--out", out,
@@ -342,7 +346,9 @@ def main():
                             "serie_horaria": hourly_note, "serie_inicio_utc": hourly_start,
                             "e_max": stats["forcing"]["trigger"]["e_max"],
                             "hours_e_ge_1": stats["forcing"]["trigger"]["hours_e_ge_1"],
-                            "volume_scale_calibrated": False} if a.trigger else None),
+                            "volume_scale": 2.0 * intercepto(a.source),
+                            "volume_scale_rule": "2·a (volumen del modo lluvia a E=1)",
+                            "drops_per_km2_calibrated": False} if a.trigger else None),
                "iso0_m": iso0, "susceptibility": susc,
                "params_preset": a.params,
                "params_preset_iou": PRESET_IOU.get(a.params, "sin IoU documentado"),

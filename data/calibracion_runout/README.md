@@ -52,3 +52,23 @@ La forma de recuperar los eventos sin estación es una forzante grillada (IMERG
 Final semihoraria desde 2000, ya usada en el paper de nowcast con
 `scripts/extract_event_imerg.py`), con su sesgo conocido: IMERG pierde los
 chubascos convectivos de piedemonte.
+
+## Entradas para el lote de densidad (`entradas_densidad.json`)
+
+Generadas por `scripts/calibracion_runout/entradas_densidad.py`. Cinco ventanas
+que agrupan los 56 eventos con lluvia medida por temporal y cercanía (enlace a
+≤ 8 km), cada una con centro, lado, eventos, isoterma del temporal y DOS series
+horarias de 72 h que terminan el último día con evento: `serie_max` (estación a
+≤ 15 km con más lluvia en esas 72 h) y `serie_cercana` (más cercana al centro).
+
+- **Series desagregadas.** Guayacán y Eulogio Sánchez solo tienen dato diario en
+  agromet; su serie es el total de cada día × el perfil horario de La Platina
+  (campo `origen`). La intensidad horaria es TRANSFERIDA: Guayacán llega a
+  15.5 mm/h el 30-ene-2021 por el perfil, no por medición. Cada desagregada trae
+  `mm_por_hora_uniforme_diaria` (total del día / 24) como cota inferior: correr
+  las dos y reportar el rango.
+- **E máx con a\*=5.5** (perfil / uniforme): Cajón 2021 2.81 / 1.75; Cajón 2023
+  2.14 / 1.81 (dispara en ambos casos); abril 2022 2.51 / 0.90 (ambiguo);
+  El Arrayán 2021 con El Colorado 0.68 (horaria medida: NO dispara; sus 16
+  eventos son pérdidas por representatividad de la estación).
+- `trigger_volume_scale` = 2·a = 11 (acuerdo con swarm-abm, 22-oct).
