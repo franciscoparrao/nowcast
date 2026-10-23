@@ -89,4 +89,19 @@ Generada por `scripts/calibracion_runout/zona_dia.py`. Resuelve la objeción del
   día está en [ini−1, fin+1].
 - **Conteos:** 20 zonas-día `evento` (57 eventos representados; 2021-01: 12,
   2022-04: 2, 2023-06: 6) contra 53.887 `no_evento`. 124 de los 214 eventos caen
-  en celdas sin estación a 15 km y no entran.
+  en celdas sin estación a 15 km y no entran. **La suma de `n_eventos` sobre las
+  20 filas da 169, no 57:** cada evento cuenta en cada día de su ventana.
+- **Las sensibilidades no sensibilizan aquí:** en 18 de las 20 filas `evento`,
+  `n_est` = 1, así que máximo, media y estación más cercana son el mismo número.
+- **NO usar la fila zona-día como unidad del recall** (hallazgo de swarm-abm,
+  23-oct, `umbral/UMBRAL.md`): la ventana [ini−1, fin+1] mete en la clase
+  positiva días casi secos (29-ene-2021 con 2.5 mm, 27-abr-2022 con 3.1 mm), y
+  ningún umbral sobre 2.5 mm conserva el recall por construcción. La unidad
+  correcta: recall por **zona-evento** con el máximo de la variable en la
+  ventana; tasa de disparo por zona-día. Con esa unidad hay 7 zona-eventos y
+  detrás solo **4 mediciones de lluvia independientes** (Guayacán 2021 y 2023,
+  El Colorado 2021, Eulogio Sánchez 2022): no alcanzan para calibrar un umbral.
+- **Decisión declarada (23-oct):** los eventos cuya estación no vio la lluvia
+  (El Arrayán 2021 con El Colorado) se EXCLUYEN del recall en la calibración con
+  estaciones y se reportan aparte como pérdida por forzante; con forzante
+  grillada se evalúan en un análisis separado.
