@@ -135,6 +135,10 @@ def main():
                          "según el umbral I-D del modelo (variantes.intercepto), desde la serie HORARIA "
                          "del pronóstico en el punto. Apagado por defecto: trigger_volume_scale no está "
                          "calibrado y con gotas fijas la huella satura igual (2026-10-22).")
+    ap.add_argument("--trigger-drops-per-km2", type=float, default=None,
+                    help="densidad de gotas del modo gatillo (FollowField); parámetro LIBRE de swarm-abm. "
+                         "La sombra operacional usa 0.1: el primer nivel estable entre semillas del barrido "
+                         "de densidad (decisión de producto, 23-oct-2026), no una densidad física.")
     a = ap.parse_args()
 
     base_fdir = os.path.join(os.path.realpath(os.path.expanduser(a.forecast)), a.domain)
@@ -229,7 +233,9 @@ def main():
               # Volumen inicial = 2·I₁·E (I₁ = a, umbral I-D a 1 h): el flujo
               # nace con el volumen que le daría el modo lluvia, y el parámetro
               # libre sale de la calibración (acuerdo con swarm-abm, 22-oct).
-              "--trigger-volume-scale", str(2.0 * intercepto(a.source))] if a.trigger else
+              "--trigger-volume-scale", str(2.0 * intercepto(a.source)),
+              *(["--trigger-drops-per-km2", str(a.trigger_drops_per_km2)] if a.trigger_drops_per_km2 else [])]
+             if a.trigger else
              ["--rain-mm-per-day", ",".join(str(v) for v in rain3)]),
            "--isotherm-m", str(iso0), "--sediment", "0.5",
            "--susceptibility", susc, "--out", out,
@@ -348,6 +354,7 @@ def main():
                             "hours_e_ge_1": stats["forcing"]["trigger"]["hours_e_ge_1"],
                             "volume_scale": 2.0 * intercepto(a.source),
                             "volume_scale_rule": "2·a (volumen del modo lluvia a E=1)",
+                            "drops_per_km2": stats["forcing"]["trigger"].get("drops_per_km2"),
                             "drops_per_km2_calibrated": False} if a.trigger else None),
                "iso0_m": iso0, "susceptibility": susc,
                "params_preset": a.params,
@@ -393,7 +400,14 @@ def main():
     print(f"[{a.name}] footprint vs pueblo: distancia mín "
           f"{prox['min_distance_m']} m | {rings}")
     if footprint_vacio:
-        veredicto = "SIN FOOTPRINT — el ABM no movilizó material (no leer como seguro; probable modelo no aplicable en costa/plano)"
+        tg = stats["forcing"].get("trigger") if a.trigger else None
+        if tg and tg.get("hours_e_ge_1", 0) == 0:
+            # En modo gatillo, sin horas con E ≥ 1 no nace ningún flujo POR
+            # DISEÑO: la causa es la lluvia, no el modelo ni el terreno.
+            veredicto = (f"SIN FOOTPRINT — el gatillo I-D no se cruza en el punto "
+                         f"(E máx {tg['e_max']:.2f} < 1 con a={tg['id_a']})")
+        else:
+            veredicto = "SIN FOOTPRINT — el ABM no movilizó material (no leer como seguro; probable modelo no aplicable en costa/plano)"
     elif plausible:
         veredicto = "PLAUSIBLE"
     else:

@@ -113,7 +113,8 @@ fi
 #    el resto; idempotente (salta las que ya son del ciclo vigente, así que
 #    re-correr analysis_all no repite el cómputo).
 if [[ "${LOCALIDADES_ENABLED:-1}" == "1" ]]; then
-    if ! python3 "$HERE/run_localidades.py" --forecast "$FORECAST_WORKDIR/latest" >>"$LOG" 2>&1; then
+    if ! RUNOUT_SOMBRA_DENSIDAD="${RUNOUT_SOMBRA_DENSIDAD:-}" \
+            python3 "$HERE/run_localidades.py" --forecast "$FORECAST_WORKDIR/latest" >>"$LOG" 2>&1; then
         log "analysis_all: WARN run_localidades falló globalmente; watchlist y comunas quedan válidas"
     fi
 else

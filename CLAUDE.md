@@ -773,6 +773,21 @@ también en `archive_ema`. `ID_A=5.5` en sombra, sin calibrar acá. Primer ciclo
 cerca): candidata a falsa alarma de IMERG, la regla de corroboración lo acepta
 porque IMERG cuenta como respaldo por sí solo.
 
+**Runout en SOMBRA con gatillo I-D (2026-10-23, `RUNOUT_SOMBRA_DENSIDAD`=0.1)**:
+el barrido de densidad de swarm-abm (189 corridas, 56 eventos del catálogo con
+lluvia; reporte en `data/calibracion_runout/`, fuera de git) eligió por la regla
+declarada (máx lift con recall ≥0.5 a 150 m) 0.05 gotas/km², banda 0.02–0.1
+dejando un temporal fuera; la regla quedó decidida por el piso de recall (el lift
+cae siempre con la densidad) y por 16 eventos de El Arrayán que ninguna densidad
+recupera (El Colorado no vio la lluvia, E máx 0.68). Bajo 0.1 el resultado
+depende de la semilla (Cajón 2021: 1–8 aciertos de 10 entre semillas con 0.02);
+desde 0.1 el rango es ≤1. **0.1 es decisión de producto, no calibración.** Cada
+runout por localidad corre además en modo gatillo (FollowField, volumen 2·a) y se
+guarda en `~/nowcast-forecast/runouts_sombra/` sin reemplazar al producto (+~10
+s por localidad; si falla solo se cuenta). Regla declarada para la 2ª vuelta:
+mínima densidad con recall ≥0.8 sobre ventanas que disparan y rango entre
+semillas ≤1 acierto por ventana; pérdida por forzante aparte.
+
 **Runout por localidad: binario INSTALADO, no `cargo run` (2026-10-22)**:
 `runout_localidad.py` compilaba `nowcast-swarm` en caliente en cada localidad.
 swarm-abm agregó `Layers::trigger` (`8ccad98`) y el struct literal de

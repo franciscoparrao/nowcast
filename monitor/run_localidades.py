@@ -47,6 +47,11 @@ def main():
     ap.add_argument("--forecast", default=os.path.expanduser("~/nowcast-forecast/latest"))
     ap.add_argument("--runouts", default=os.path.expanduser("~/nowcast-forecast/runouts"))
     ap.add_argument("--params", default="chanaral_enhanced")
+    ap.add_argument("--sombra-densidad", type=float,
+                    default=float(os.environ.get("RUNOUT_SOMBRA_DENSIDAD") or 0) or None,
+                    help="si se da, corre además el runout en modo gatillo con esta densidad de gotas "
+                         "(sombra; no reemplaza al producto). Default: $RUNOUT_SOMBRA_DENSIDAD.")
+    ap.add_argument("--runouts-sombra", default=os.path.expanduser("~/nowcast-forecast/runouts_sombra"))
     ap.add_argument("--source", default="gfs")
     ap.add_argument("--forzar", action="store_true",
                     help="re-correr aunque el runout ya sea del ciclo vigente")
@@ -63,7 +68,7 @@ def main():
 
     print(f"[localidades] ciclo {ciclo} · {len(sel)} localidades")
     hechas = saltadas = 0
-    fallos_runout, fallos_risk = [], []
+    fallos_runout, fallos_risk, fallos_sombra = [], [], []
 
     for s in sel:
         name = s.get("name")
@@ -89,6 +94,23 @@ def main():
             tail = (r.stderr or r.stdout).strip().splitlines()[-1:] or [""]
             print(f"[localidades] {name}: runout FALLÓ — {tail[0][:120]}", file=sys.stderr)
 
+        # SOMBRA del gatillo externo (decisión 23-oct-2026): el mismo runout en
+        # modo gatillo I-D con siembra FollowField, guardado aparte para
+        # compararlo con el actual en eventos reales. Nunca reemplaza al
+        # producto ni tumba el ciclo: si falla, se cuenta y se sigue.
+        if a.sombra_densidad:
+            rs = subprocess.run(
+                ["python3", os.path.join(HERE, "runout_localidad.py"),
+                 "--name", name, "--lon", str(lon), "--lat", str(lat),
+                 "--domain", dom, "--params", a.params, "--source", a.source,
+                 "--trigger", "--trigger-drops-per-km2", str(a.sombra_densidad),
+                 "--out-root", a.runouts_sombra],
+                capture_output=True, text=True)
+            if rs.returncode != 0:
+                fallos_sombra.append(name)
+                tail = (rs.stderr or rs.stdout).strip().splitlines()[-1:] or [""]
+                print(f"[localidades] {name}: sombra gatillo FALLÓ — {tail[0][:120]}", file=sys.stderr)
+
         k = subprocess.run(
             ["python3", os.path.join(HERE, "risk_map_localidad.py"),
              "--name", name, "--lon", str(lon), "--lat", str(lat),
@@ -103,7 +125,9 @@ def main():
 
     print(f"[localidades] fin: {hechas} corridas · {saltadas} ya al día (saltadas) · "
           f"{len(fallos_runout)} runout fallidos {fallos_runout or ''} · "
-          f"{len(fallos_risk)} risk_map fallidos {fallos_risk or ''}")
+          f"{len(fallos_risk)} risk_map fallidos {fallos_risk or ''}"
+          + (f" · sombra gatillo (densidad {a.sombra_densidad}): {len(fallos_sombra)} fallidos {fallos_sombra or ''}"
+             if a.sombra_densidad else ""))
 
 
 if __name__ == "__main__":
