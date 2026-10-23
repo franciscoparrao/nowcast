@@ -72,3 +72,21 @@ horarias de 72 h que terminan el último día con evento: `serie_max` (estación
   El Arrayán 2021 con El Colorado 0.68 (horaria medida: NO dispara; sus 16
   eventos son pérdidas por representatividad de la estación).
 - `trigger_volume_scale` = 2·a = 11 (acuerdo con swarm-abm, 22-oct).
+
+## Tabla zona-día (`zona_dia.csv`), para calibrar el umbral de inicio
+
+Generada por `scripts/calibracion_runout/zona_dia.py`. Resuelve la objeción del
+22-oct: eventos y no-eventos con la MISMA unidad y el MISMO agregado.
+
+- **Unidad:** celda de 0.1° de la grilla del monitor × día. Zona = celda con al
+  menos una estación a ≤ 15 km del centro (297 zonas). Las zonas no se eligen por
+  tener eventos, y se solapan en estaciones: no son independientes entre sí.
+- **Agregado declarado:** `pp_max_mm`, el máximo diario entre las estaciones de
+  la zona, igual en las dos clases. Para sensibilidad: `pp_media_mm`,
+  `pp_cercana_mm` (estación más cercana al centro), `pp3_max_mm` (3 días) y
+  `pph_max_mm` (máximo horario; vacío donde no hay dato horario, p. ej. Guayacán).
+- **Etiqueta:** `evento` si un evento del catálogo cae dentro de la celda y el
+  día está en [ini−1, fin+1].
+- **Conteos:** 20 zonas-día `evento` (57 eventos representados; 2021-01: 12,
+  2022-04: 2, 2023-06: 6) contra 53.887 `no_evento`. 124 de los 214 eventos caen
+  en celdas sin estación a 15 km y no entran.
