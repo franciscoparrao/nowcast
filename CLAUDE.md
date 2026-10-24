@@ -773,6 +773,15 @@ también en `archive_ema`. `ID_A=5.5` en sombra, sin calibrar acá. Primer ciclo
 cerca): candidata a falsa alarma de IMERG, la regla de corroboración lo acepta
 porque IMERG cuenta como respaldo por sí solo.
 
+**Disco lleno tumbó los cuatro monitores (2026-10-23, 23:47 → 00:16)**: otros
+proyectos llenaron el disco (territorio-digital +14 GB, volcanes +12 GB en tres
+días) y los monitores fallaron con «No space left on device» 1.5 h; el vigía no
+avisó porque DETENIDO sale a las 3 h. Recuperados borrando `~/.cache` y los
+recortes Sentinel-2 propios. Ahora `watchdog.sh` avisa URGENTE si quedan menos
+de `WATCHDOG_DISK_MIN_GB`=10 GB libres (histéresis 6 h, RECUPERADO una vez;
+`selftest.py --watchdog` lo cubre), y la descarga IMERG de calibración se detiene
+con < 6 GB para no competir con la operación.
+
 **Runout en SOMBRA con gatillo I-D (2026-10-23, `RUNOUT_SOMBRA_DENSIDAD`=0.1)**:
 el barrido de densidad de swarm-abm (189 corridas, 56 eventos del catálogo con
 lluvia; reporte en `data/calibracion_runout/`, fuera de git) eligió por la regla
@@ -786,7 +795,14 @@ runout por localidad corre además en modo gatillo (FollowField, volumen 2·a) y
 guarda en `~/nowcast-forecast/runouts_sombra/` sin reemplazar al producto (+~10
 s por localidad; si falla solo se cuenta). Regla declarada para la 2ª vuelta:
 mínima densidad con recall ≥0.8 sobre ventanas que disparan y rango entre
-semillas ≤1 acierto por ventana; pérdida por forzante aparte.
+semillas ≤1 acierto por ventana; pérdida por forzante aparte. **2ª vuelta
+(24-oct, 6 semillas, 378 corridas)**: la regla v2 da 0.1 con la serie perfil
+(recall 0.97 en ventanas que disparan, lift 1.41) — el valor en sombra — y 0.2
+con la cota uniforme, por el rango entre semillas del Cajón 2021 (7–10 de 10);
+banda 0.05–0.2 dejando un temporal fuera. La diferencia 0.1/0.2 es la
+desagregación horaria TRANSFERIDA de Guayacán: no se puede zanjar sin dato
+horario allí. Umbral de inicio: con estaciones NO es identificable (4 mediciones
+independientes detrás de 57 eventos); a* operativo no se mueve con esa tabla.
 
 **Runout por localidad: binario INSTALADO, no `cargo run` (2026-10-22)**:
 `runout_localidad.py` compilaba `nowcast-swarm` en caliente en cada localidad.

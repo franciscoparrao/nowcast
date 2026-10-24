@@ -35,7 +35,7 @@ RAW = os.path.join(CUBOS, "raw")
 BBOX = (-72.1, -35.1, -69.8, -32.0)
 DIR = "https://gpm1.gesdisc.eosdis.nasa.gov/data/GPM_L3/GPM_3IMERGHH.07/{y}/{doy:03d}/"
 PAT = re.compile(r"3B-HHR\.MS\.MRG\.3IMERG\.\d{8}-S\d{6}-E\d{6}\.\d{4}\.V[0-9A-Z]+\.HDF5")
-MIN_LIBRE_GB = 3.0
+MIN_LIBRE_GB = 6.0  # margen para que la operación (monitores, pronóstico) nunca quede sin disco
 CURVAS = {"a5.5": 5.5, "caine": 14.82}
 B = 0.39
 

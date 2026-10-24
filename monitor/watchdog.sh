@@ -41,6 +41,29 @@ MON_H="${WATCHDOG_MONITOR_HOURS:-3}"     # ciclo de 30 min; arranque en frío ~4
 FC_H="${WATCHDOG_FORECAST_HOURS:-14}"    # ciclo de 6 h: dos ciclos perdidos
 
 # --- descubrimiento de objetivos ------------------------------------------------
+# --- disco ------------------------------------------------------------------
+# El 23-oct-2026 (23:47) otros proyectos llenaron el disco y los cuatro monitores
+# fallaron con «No space left on device» durante 1.5 h sin que nadie se
+# enterara: el aviso DETENIDO solo sale a las WATCHDOG_MONITOR_HOURS. Esto avisa
+# ANTES, por espacio libre. WATCHDOG_DISK_MIN_GB=0 lo apaga.
+DISK_MIN_GB="${WATCHDOG_DISK_MIN_GB:-10}"
+if [[ "$DISK_MIN_GB" != "0" ]]; then
+    free_gb=$(df -P -B1G "${WATCHDOG_DISK_PATH:-$HOME}" | awk 'NR==2 {print $4}')
+    if [[ "$free_gb" =~ ^[0-9]+$ ]] && (( free_gb < DISK_MIN_GB )); then
+        touch "$WD_DIR/disk_low"
+        log "DISCO bajo: ${free_gb} GB libres < ${DISK_MIN_GB} GB"
+        notify "nowcast: DISCO casi lleno" \
+            "Quedan ${free_gb} GB libres en $(hostname) (umbral ${DISK_MIN_GB} GB). Con el disco lleno los monitores y el pronóstico fallan (pasó el 23-oct-2026). Ver qué creció: du -xsh ~/proyectos/* | sort -h" \
+            urgent "disk_low.hyst" 6
+    elif [[ -f "$WD_DIR/disk_low" ]]; then
+        notify "nowcast: disco RECUPERADO" "Hay ${free_gb} GB libres en $(hostname)." default
+        rm -f "$WD_DIR/disk_low" "$NOTIFY_STATE_DIR/disk_low.hyst"
+        log "ok disco: ${free_gb} GB libres (recuperado)"
+    else
+        log "ok disco: ${free_gb} GB libres"
+    fi
+fi
+
 timer_on() { systemctl --user is-enabled -q "$1" 2>/dev/null; }
 
 # WORK_DIR de un config de dominio, sin contaminar este shell.

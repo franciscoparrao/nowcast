@@ -1141,7 +1141,8 @@ def watchdog_selftest():
     Motivo: 23 días con monitor y pronóstico caídos sin que se notara. Casos:
     fresco → calla; viejo → URGENTE entregado; segunda pasada → histéresis;
     sin last_ok pero visto hace mucho → también DETENIDO; vuelve → RECUPERADO
-    una sola vez. Canal local, nunca el ntfy real.
+    una sola vez. Disco bajo el umbral → URGENTE con histéresis y RECUPERADO
+    una vez (2026-10-24). Canal local, nunca el ntfy real.
     """
     import http.server
     import subprocess
@@ -1168,11 +1169,14 @@ def watchdog_selftest():
     ok_fc = os.path.join(wd, "fc_last_ok")   # nunca se crea: caso "sin last_ok"
     ahora = int(time.time())
 
-    def correr():
+    def correr(disco_min_gb="0"):
+        # Disco apagado por defecto: la alarma depende del disco REAL de la
+        # máquina y se mezclaría con los casos de servicios.
         antes = len(recibidos)
         env = {**os.environ, "LOCAL_CONFIG": "/nonexistent", "WATCHDOG_DIR": wd,
                "NTFY_TOPIC": "selftest", "NTFY_URL": f"http://127.0.0.1:{srv.server_address[1]}",
-               "WATCHDOG_TARGETS": f"monitor@x|{ok_mon}|3;forecast|{ok_fc}|14"}
+               "WATCHDOG_TARGETS": f"monitor@x|{ok_mon}|3;forecast|{ok_fc}|14",
+               "WATCHDOG_DISK_MIN_GB": disco_min_gb}
         # config.env deja NTFY_TOPIC vacío: se inyecta DESPUÉS vía un config propio
         cfg = os.path.join(wd, "cfg.env")
         with open(cfg, "w") as f:
@@ -1203,6 +1207,15 @@ def watchdog_selftest():
     caso("monitor vuelve → RECUPERADO una vez", correr(),
          [("default", "nowcast: monitor@x RECUPERADO")])
     caso("…y no lo repite", [r for r in correr() if "monitor" in r[1]], [])
+    # Disco (2026-10-24): umbral imposible de cumplir → URGENTE; luego histéresis;
+    # umbral de 1 GB → RECUPERADO una vez. Solo se miran los avisos de disco.
+    disco = lambda got: [r for r in got if "disco" in r[1].lower()]
+    caso("disco bajo el umbral → URGENTE", disco(correr("1000000")),
+         [("urgent", "nowcast: DISCO casi lleno")])
+    caso("disco, segunda pasada → histéresis", disco(correr("1000000")), [])
+    caso("disco sobre el umbral → RECUPERADO una vez", disco(correr("1")),
+         [("default", "nowcast: disco RECUPERADO")])
+    caso("…y no lo repite (disco)", disco(correr("1")), [])
     srv.shutdown()
     print(f"\n[selftest watchdog] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
     return 0 if not fallos else 1
