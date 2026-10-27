@@ -40,6 +40,7 @@ import rasterio
 from rasterio.windows import from_bounds
 from pyproj import Transformer
 
+from lib_raster import decode_hazard30
 from susc_overlay import DOMAIN_BASINS, raster_coverage_warning
 from runout_localidad import pick_susceptibility, point_value
 
@@ -356,7 +357,7 @@ def basin_hazard_tif(forecast_dir, domain, lon, lat):
             b = src.bounds
             if not (b.left <= x <= b.right and b.bottom <= y <= b.top):
                 continue
-            v = list(src.sample([(x, y)]))[0][0]
+            v = decode_hazard30(list(src.sample([(x, y)]))[0][:1])[0]
             if not np.isfinite(v):
                 continue
             cx, cy = (b.left + b.right) / 2, (b.bottom + b.top) / 2
@@ -408,10 +409,11 @@ def main():
         x0, y0 = t.transform(a.lon, a.lat)
         half = a.window_km * 1000 / 2
         win = from_bounds(x0 - half, y0 - half, x0 + half, y0 + half, src.transform)
-        hz = src.read(1, window=win)
+        hz = decode_hazard30(src.read(1, window=win))
         win_transform = src.window_transform(win)
         crs = src.crs
         profile = src.profile.copy()
+    profile.pop("predictor", None)  # el cruce viene en uint8 (predictor 2)
     profile.update(height=hz.shape[0], width=hz.shape[1], transform=win_transform,
                     dtype="float32", nodata=np.nan)
     out_tif = os.path.join(out, "hazard_x_susc_recorte.tif")

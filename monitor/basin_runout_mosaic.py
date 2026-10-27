@@ -25,6 +25,8 @@ import numpy as np
 import rasterio
 from rasterio.warp import reproject, Resampling
 
+from lib_raster import decode_hazard30
+
 RUNOUTS = os.path.expanduser("~/nowcast-forecast/runouts")
 
 
@@ -101,7 +103,7 @@ def main():
     INK, PAPER, RULE = "#1b232c", "#f2f0e8", "#c9c3b0"
 
     with rasterio.open(hz_path) as src:
-        hz = src.read(1)
+        hz = decode_hazard30(src.read(1))
 
     # Los rótulos y el encuadre salían de una lista FIJA de los 3 pueblos del
     # Huasco (2026-07-18): al generalizar el script a Limarí y Choapa, esos

@@ -114,6 +114,7 @@ DOMAIN_BASINS = {
 # ICON: vecino-mas-cercano, ~13 km nativo sin diluir -> intercepto global sin
 # descuento (ver nota de módulo). Mismo criterio en comuna_impact.py.
 from variantes import archivo_max  # noqa: E402  (una sola copia de la regla)
+from lib_raster import write_hazard30  # noqa: E402  (cruce 30 m en uint8)
 
 HAZARD_VARIANT_BY_SOURCE = {m: archivo_max(m) for m in ("gfs", "ecmwf", "icon")}
 HAZARD_COMBINED = "hazard_max_worst_available.tif"
@@ -410,14 +411,10 @@ def main():
                         resampling=Resampling.bilinear, dst_nodata=np.nan,
                     )
             cross30 = (hz30 * np.clip(susc30, 0.0, 1.0)).astype("float32")
-            # Bloque fijo: el perfil heredado trae el blocksize del origen y, si
-            # ese ráster viene en franjas (no en mosaico), GDAL rechaza
-            # tiled=True con "blocks must be multiples of 16".
-            p30.update(dtype="float32", nodata=np.nan, compress="deflate",
-                       predictor=3, tiled=True, blockxsize=256, blockysize=256)
+            # uint8 cuantizado (×250, 255 = sin dato; ±0.002): 7× más liviano
+            # que float32. Los lectores decodifican con lib_raster.decode_hazard30.
             out30 = os.path.join(ddir, f"hazard_x_susc_30m_{basin}.tif")
-            with rasterio.open(out30, "w", **p30) as dst:
-                dst.write(cross30, 1)
+            write_hazard30(out30, cross30, p30)
             n_hot = int((cross30 > 0.5).sum())
             # área real de la celda desde el transform (30 m u 90 m según cuenca)
             cell_km2 = abs(p30["transform"].a * p30["transform"].e) * 1e-6

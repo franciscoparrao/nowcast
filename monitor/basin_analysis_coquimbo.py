@@ -24,6 +24,8 @@ import rasterio
 from rasterio.warp import reproject, Resampling
 from pyproj import Transformer
 
+from lib_raster import decode_hazard30
+
 TOWNS = {
     # nombre -> (lon, lat, poblacion_urbana, cuenca)
     "Coquimbo": (-71.31288, -29.97404, 226042, "Elqui"),
@@ -121,8 +123,9 @@ def main():
     for label, p in sources:
         with rasterio.open(p) as s:
             local = np.full((height, width), np.nan, "float32")
-            reproject(source=rasterio.band(s, 1), destination=local,
-                      dst_transform=canvas_transform, dst_crs=ref_crs,
+            reproject(source=decode_hazard30(s.read(1)), destination=local,
+                      src_transform=s.transform, src_crs=s.crs, src_nodata=np.nan,
+                      dst_transform=canvas_transform, dst_crs=ref_crs, dst_nodata=np.nan,
                       resampling=Resampling.nearest)
         mindist = np.full((height, width), np.inf, "float32")
         for name in SOURCE_TOWNS[label]:
@@ -133,6 +136,7 @@ def main():
 
     out_tif = os.path.join(out, "hazard_x_susc_regional.tif")
     prof = dict(ref_profile)
+    prof.pop("predictor", None)  # la fuente viene en uint8 (predictor 2)
     prof.update(height=height, width=width, transform=canvas_transform, dtype="float32",
                nodata=np.nan, tiled=True, blockxsize=256, blockysize=256)
     with rasterio.open(out_tif, "w", **prof) as dst:

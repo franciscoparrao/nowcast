@@ -428,6 +428,18 @@ decimales → 3.3 MB, SOLO al escribir: los picos se calculan con la geometría
 completa y el `comuna_impact.json` sale idéntico. Los consumidores leen `latest/`
 (`select_watchlist` cruza por CUT, no por geometría).
 
+**Cruces de 30 m en uint8 y poda activa (2026-10-25/27)**: `hazard_x_susc_30m_*.tif`
+era el 98 % de cada ciclo (1.09 GB en float32, ~5.5 GB/día) y la poda corría en
+modo REPORT, sin borrar. Ahora (1) drop-in local
+`~/.config/systemd/user/nowcast-forecast.service.d/prune.conf` con
+`PRUNE_MODE=apply` y `PRUNE_DIAS_30M=2`; (2) `susc_overlay.py` los escribe en
+uint8 (×250, 255 = sin dato, scale 0.004 en el GeoTIFF) vía
+`lib_raster.write_hazard30`: Atacama 230 → 8 MB en un día seco, ~7-17× en
+cuencas con señal. Error ≤0.002: los umbrales no se mueven, pero las
+estadísticas de un día SECO pierden resolución (Huasco: mediana 0.0008 → 0).
+**Todo lector pasa por `lib_raster.decode_hazard30`** (acepta también los
+float32 viejos); un `src.read(1)` crudo leería 0-250 como probabilidad.
+
 **Bitácora: `~/nowcast-forecast/informes/index.html`** (2026-09-28,
 `monitor/report/build_index.py`, paso 6b de `analysis_all.sh`, <1 s): una página
 autónoma (fuentes y tokens importados de `build_registro`, sin copias) con el

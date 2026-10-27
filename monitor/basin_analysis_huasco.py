@@ -30,6 +30,8 @@ import numpy as np
 import rasterio
 from pyproj import Transformer
 
+from lib_raster import decode_hazard30
+
 TOWNS = {
     "Vallenar": (-70.76517, -28.5774, 44168),
     "Freirina": (-71.07987, -28.50991, 3061),
@@ -58,7 +60,7 @@ def main():
     os.makedirs(out, exist_ok=True)
 
     with rasterio.open(hz_path) as src:
-        hz = src.read(1)
+        hz = decode_hazard30(src.read(1))
         b = src.bounds
         crs = src.crs
         t = Transformer.from_crs("EPSG:4326", crs, always_xy=True)

@@ -16,6 +16,13 @@ antes de reutilizarlo; lo inválido se borra con aviso y el fetcher lo vuelve a
 bajar si la fuente aún lo sirve (o lo rellena como hueco MARCADO si no).
 
 Uso: `write_geotiff`, `write_json`, `valid_tif`, `purge_invalid`.
+
+CRUCES DE 30 m EN uint8 (2026-10-27). `hazard_x_susc_30m_*.tif` pesaba 1.09 GB
+por ciclo en float32 (~5.5 GB/día). Se guarda cuantizado: valor × HAZ30_SCALE
+redondeado, 255 = sin dato, con scale/offset en el GeoTIFF para que un GIS lea
+la probabilidad. Error máximo 1/(2·250) = 0.002, el mismo del paquete web;
+medido en Rapel: 63.1 → 9.2 MB. TODO lector pasa por `decode_hazard30`, que
+también acepta los float32 anteriores al cambio.
 `python3 lib_raster.py --selftest` (sin red).
 """
 import glob
@@ -122,6 +129,57 @@ def purge_invalid(dir_, pattern="*.tif", tag="[lib_raster]"):
     return removed
 
 
+HAZ30_SCALE = 250
+HAZ30_NODATA = 255
+
+
+def encode_hazard30(arr):
+    """float en [0,1] con NaN → uint8 (round(v·250), NaN → 255)."""
+    import numpy as np
+    a = np.asarray(arr, dtype="float32")
+    q = np.rint(np.clip(np.nan_to_num(a, nan=0.0), 0.0, 1.0) * HAZ30_SCALE).astype("uint8")
+    q[~np.isfinite(a)] = HAZ30_NODATA
+    return q
+
+
+def decode_hazard30(arr):
+    """Inversa de `encode_hazard30` → float32 con NaN. Un arreglo float (los
+    cruces float32 anteriores al 2026-10-27) se devuelve tal cual."""
+    import numpy as np
+    a = np.asarray(arr)
+    if a.dtype.kind == "f":
+        return a.astype("float32", copy=False)
+    out = a.astype("float32") / HAZ30_SCALE
+    out[a == HAZ30_NODATA] = np.nan
+    return out
+
+
+def hazard30_profile(profile):
+    """Perfil de escritura uint8 de un cruce de 30 m a partir del de la
+    susceptibilidad (bloque fijo: el heredado puede venir en franjas)."""
+    p = dict(profile)
+    p.pop("predictor", None)
+    p.update(dtype="uint8", nodata=HAZ30_NODATA, compress="deflate", predictor=2,
+             tiled=True, blockxsize=256, blockysize=256)
+    return p
+
+
+def write_hazard30(path, arr, profile):
+    """Escribe un cruce de 30 m cuantizado, atómico, con scale/offset."""
+    import rasterio
+    tmp = _tmp_name(path)
+    try:
+        with rasterio.open(tmp, "w", **hazard30_profile(profile)) as dst:
+            dst.write(encode_hazard30(arr), 1)
+            dst.scales = (1.0 / HAZ30_SCALE,)
+            dst.offsets = (0.0,)
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+
+
 def selftest():
     import tempfile
     import numpy as np
@@ -171,6 +229,23 @@ def selftest():
               and read_json(os.path.join(td, "nada.json"), 7) == 7)
         print(f"  {'ok  ' if ok else 'FALLA'} json: escritura atómica y lectura tolerante a vacío/ausente")
         fallos += [] if ok else ["json"]
+        # (f) cruce 30 m uint8: ida y vuelta ≤0.002, NaN preservado, legado float
+        import numpy as np
+        h30 = np.array([[0.0, 0.5, 1.0, np.nan], [0.123, 0.999, 1.3, -0.1], [0.002, 0.25, 0.75, 0.42]],
+                       "float32")
+        p30 = os.path.join(td, "hazard_x_susc_30m_x.tif")
+        write_hazard30(p30, h30, prof)
+        with rasterio.open(p30) as d:
+            raw = d.read(1)
+            back = decode_hazard30(raw)
+            meta_ok = d.dtypes[0] == "uint8" and d.scales[0] == 1.0 / HAZ30_SCALE
+        ref = np.clip(h30, 0, 1)
+        fin = np.isfinite(ref)
+        ok = (meta_ok and np.isnan(back[0, 3]) and bool(np.all(np.isfinite(back[fin])))
+              and float(np.nanmax(np.abs(back[fin] - ref[fin]))) <= 0.5 / HAZ30_SCALE + 1e-6
+              and np.array_equal(decode_hazard30(h30), h30, equal_nan=True))
+        print(f"  {'ok  ' if ok else 'FALLA'} cruce 30 m uint8: error ≤0.002, NaN↔255, clamp, legado float32")
+        fallos += [] if ok else ["hazard30"]
     print(f"\n[selftest lib_raster] {'TODO OK' if not fallos else f'FALLAS: {fallos}'}")
     return 0 if not fallos else 1
 
