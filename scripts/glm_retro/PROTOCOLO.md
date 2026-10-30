@@ -47,3 +47,18 @@ cuánto adelanto?
 - Con un mes y un catálogo de prensa no se calibra un umbral operacional.
 - Un evento sin rayos puede ser frontal o puede ser hueco del GLM; se separan
   por mecanismo informado, no por inferencia.
+
+## Anotaciones antes de correr el cruce (2026-10-30, sin haber visto resultados)
+- Catálogo congelado: `catalogo_eventos_2026-10.csv` sha256 97d791ac8f846907…, 104 filas, 93
+  con coordenadas; `catalogo_noeventos_2026-10.csv` sha256 530f761e05912024…. Está en
+  `.gitignore` (`/data/*.csv`), por eso el hash va aquí.
+- Las 11 filas sin coordenadas (agregadas de varias comunas) quedan fuera del
+  cruce. Las coordenadas son en su mayoría del centro de la comuna: el radio de
+  15 km no se agranda para compensar.
+- `hora_confianza` trae, además de exacta/aprox, «tarde», «noche», «mañana» y
+  «día». Solo exacta y aprox llevan hora; el resto se cruza por fecha (regla 3).
+  Varias horas «aprox» son de publicación de la nota, no del evento: el adelanto
+  que salga de ellas es una COTA SUPERIOR. Caso conocido: Morrillos figura a
+  las 16:25 (hora de la actualización), pero la lluvia fue de 15:09 a 16:09.
+- Mecanismo «convectivo» = el texto de mecanismo o tipo menciona convección,
+  tormenta, granizo o eléctrica; todo lo demás va a «frontal/sin dato».
