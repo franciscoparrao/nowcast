@@ -1321,11 +1321,13 @@ products); no damage has been reported and it is not yet classified. The same
 afternoon a twenty-minute hail storm flooded 21 houses in Curacaut\'in, 600\,km
 to the south, where no gauge exists within 45\,km: GOES QPE saw 3.5\,mm in the
 city cell, and IMERG Early did resolve the cell (3.6\,mm in 30\,min), so that the
-hazard crossed one hour after the event, but that product is published some four
+hazard crossed at 16:30 local time, but that product is published some four
 hours late. In both convective cases the geostationary lightning mapper on the
 same satellite \citep{goodman2013} registered the cell first: 233 flashes over
 the piedmont with the peak thirty minutes before the Las Condes flow, and 118
-flashes within 5\,km of Curacaut\'in from an hour before the flooding. The chain
+flashes within 5\,km of Curacaut\'in, with the cell over the town from 14:40 to
+15:40 local time. The only published time for the flooding is an approximate
+17:00 situation report, so the lead there cannot be measured from public records. The chain
 now carries lightning as a diagnostic rather than a forcing, freezes the evidence of
 every alert automatically, and weighs a single-feed crossing by which feed sustains
 it: over the last three hours of the alert streak and in the cells above the alert
@@ -1346,7 +1348,14 @@ discrimination (Table~\ref{tab:antecedent}); the controlled experiment measures 
 the deformation critical rate are not yet calibrated. (vi) The snowmelt, InSAR-deformation
 and debris-flow-runout adapters (Section~5.9) exercise the architecture but are not
 validated predictions; only the on-demand coupling's compute saving is quantified
-(Section~2.5).
+(Section~2.5). For the runout model the gap is measured, not assumed: calibrated on a
+single storm (Atacama, March 2015), its footprint does not respond to rainfall. One
+preset returns the same footprint from 0.3 to 200\,mm/day, and the other switches
+from no flow to a saturated footprint between 0.3 and 1\,mm/day, because flows are
+seeded at fixed sites once hourly rainfall passes a threshold that one wet event
+cannot identify. A variant seeded by the I--D exceedance field runs in shadow in the
+forecast chain while its drop density is calibrated against dated events; until then
+runout footprints are terrain maps conditional on rain, not forecasts of extent.
 Addressing (i), (ii) and a day-resolution inventory would convert the present
 diagnosis into a validated operational claim.
 

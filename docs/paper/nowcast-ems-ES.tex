@@ -1496,12 +1496,14 @@ ha reportado daño y aún no está clasificado. Esa misma tarde una granizada de
 veinte minutos inundó 21 viviendas en Curacautín, 600\,km al sur, donde no existe
 pluviómetro en 45\,km a la redonda: el QPE de GOES vio 3.5\,mm en la celda de la
 ciudad, e IMERG Early sí resolvió la celda (3.6\,mm en 30\,min), de modo que el
-peligro cruzó una hora después del evento, pero ese producto se publica con unas
+peligro cruzó a las 16:30 hora local, pero ese producto se publica con unas
 cuatro horas de retraso. En los dos casos convectivos el mapeador geoestacionario
 de rayos del mismo satélite \citep{goodman2013} registró la celda primero: 233
 descargas sobre el piedemonte con el peak treinta minutos antes del flujo de Las
-Condes, y 118 descargas a menos de 5\,km de Curacautín desde una hora antes de la
-inundación. La cadena ahora lleva los rayos como diagnóstico y no como forzante,
+Condes, y 118 descargas a menos de 5\,km de Curacautín, con la celda sobre la ciudad de
+14:40 a 15:40 hora local. La única hora publicada de la inundación es un reporte
+de situación de las 17:00 aproximadamente, así que ahí el adelanto no se puede
+medir con registros públicos. La cadena ahora lleva los rayos como diagnóstico y no como forzante,
 congela la evidencia de cada alerta automáticamente y pondera un cruce de un solo feed
 según cuál feed lo sostiene: en las últimas tres horas de la racha de alerta y en las
 celdas sobre el nivel de alerta, un feed sostiene el cruce si acumula al menos 1\,mm y,
@@ -1521,6 +1523,15 @@ multi-gatillo y la tasa crítica de deformación aún no están calibrados. (vi)
 adaptadores de deshielo, deformación InSAR y runout de flujo de detritos
 (Sección~5.9) ejercitan la arquitectura pero no son predicciones validadas; solo el
 ahorro de cómputo del acoplamiento bajo demanda está cuantificado (Sección~2.5).
+Para el modelo de runout la brecha está medida, no supuesta: calibrado en una sola
+tormenta (Atacama, marzo de 2015), su huella no responde a la lluvia. Un preset
+devuelve la misma huella de 0.3 a 200\,mm/día, y el otro pasa de ningún flujo a una
+huella saturada entre 0.3 y 1\,mm/día, porque los flujos nacen en sitios fijos
+cuando la lluvia horaria supera un umbral que un solo evento lluvioso no permite
+identificar. Una variante sembrada por el campo de excedencia I--D corre en sombra
+en la cadena de pronóstico mientras su densidad de gotas se calibra contra eventos
+fechados; hasta entonces las huellas de runout son mapas de terreno condicionados a
+que llueva, no pronósticos de extensión.
 Abordar (i), (ii) y un inventario con resolución de día convertiría el presente
 diagnóstico en una afirmación operacional validada.
 
