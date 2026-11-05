@@ -71,7 +71,7 @@ solo donde el nowcast barato alerta. Usamos el motor como instrumento
 experimental sobre cuencas chilenas, manteniendo fijo el modelo y variando la
 resolución de la forzante. Un backtest de 157 deslizamientos fechados gatillados
 por lluvia en la cuenca del Río Maipo muestra que el umbral global de
-intensidad--duración de Caine (1980) dispara en solo 7 de 13\,880 días, ninguno
+intensidad--duración de Caine (1980) dispara en solo 36 de 13\,880 días, en 12 meses, ninguno
 coincidente con un evento registrado (probabilidad de detección, POD $=0$),
 mientras que un intercepto regional calibrado transfiere en validación por
 partición (POD de validación $\approx 0.50$) pero no se distingue de un nulo que conserva la estacionalidad sobre los 19 meses con evento del registro. Distribuir esa forzante diaria
@@ -617,10 +617,10 @@ pares.
 \label{sec:lumped}
 
 Sobre 13\,880 pasos diarios (1979--2016) y 157 eventos fechados gatillados por
-lluvia, el umbral global de Caine ($a=14.82$) se cruza en solo \textbf{7 de
-13\,880 días} con forzante diaria CR2MET (POD $=0$): a 24\,h de duración la curva queda en $I_{\mathrm{crit}}=4.29$\,mm\,h$^{-1}$, un
-total diario de 103\,mm, que solo esos siete días alcanzan, y ninguno cae en un mes
-con evento. Un
+lluvia, el umbral global de Caine ($a=14.82$) se cruza en solo \textbf{36 de
+13\,880 días}, en 12 meses, con forzante diaria CR2MET (POD $=0$): a 24\,h de duración la curva queda en $I_{\mathrm{crit}}=4.29$\,mm\,h$^{-1}$, un
+total diario de 103\,mm, que solo siete días alcanzan; los demás cruces vienen de
+ventanas de varios días, y ninguno de los 36 cae en un mes con evento. Un
 intercepto regional $a^\star\approx5.5$\,mm\,h$^{-1}$ maximiza el CSI tanto en el
 período completo como en los años impares, y la validación en años pares da POD
 $\approx 0.50$ (Fig.~\ref{fig:idsweep}); pero el objetivo es plano (CSI 0.06--0.08
@@ -655,7 +655,7 @@ distribuido y el experimento controlado.
 \toprule
 Configuración & POD & FAR & nota \\
 \midrule
-Caine global, $a=14.82$ & 0.00 & 1.00 & dispara 7/13\,880 d, ninguno en mes de evento \\
+Caine global, $a=14.82$ & 0.00 & 1.00 & dispara 36/13\,880 d (12 meses), ninguno en mes de evento \\
 Regional $a^\star=5.5$ (período completo) & 0.53 [0.32, 0.73] & 0.92 [0.85, 0.95] & calibración max-CSI; 19 meses con evento, Wilson 95\,\% \\
 Regional $a^\star=5.5$ (partición) & 0.50 & 0.93 & calibra impares $\to$ valida pares \\
 $a^\star=5.5$, tol. $\pm0/\pm1/\pm2/\pm3$\,meses & \multicolumn{2}{c}{POD 0.21/0.53/0.58/0.68} & sube como los nulos de abajo \\
@@ -702,8 +702,8 @@ dependen de la elección de curva.
 
 Repitiendo el backtest con lluvia CR2MET \emph{distribuida} sobre una grilla
 $15\times18$ (270 celdas, 123\,120 celdas-mes, 884 en la huella de eventos: la celda
-de cada evento y las ocho que la rodean, en el mes del evento y los dos adyacentes, lo
-que ubica los 157 eventos en 129 celdas), la
+de cada evento y las ocho que la rodean, en el mes del evento y los dos adyacentes, los
+157 eventos caen en 40 celdas y sus huellas abarcan 129), la
 susceptibilidad RandomForest \emph{real} agregada a esa grilla por promedio de área, y verificación
 espacial, se obtiene esencialmente \textbf{ninguna discriminación}
 (Tabla~\ref{tab:auc}): el ROC-AUC es 0.463 para una línea base agrupada de media de
@@ -990,7 +990,7 @@ el tiempo de cruce del umbral que la forzante diaria no puede.
 
 Como chequeo espacial de falsas alarmas, corrimos el gatillo I--D idéntico por
 celda sobre la escena IMERG completa de cada evento. El núcleo de tormenta
-documentado es en todos los casos la celda más extrema (percentil 96.7--100 de
+documentado está en todos los casos entre las celdas más extremas (percentil 96.7--100 de
 excedencia peak), pero el gatillo cruza la curva sobre una huella amplia: 30\,\% de
 la escena de Atacama, 6\,\% en el Cajón del Maipo, y la totalidad del recuadro
 (pequeño, frontal) de Villa Santa Lucía, de modo que el cruce no es espacialmente
@@ -1543,7 +1543,7 @@ interfaz de forzante intercambiable y un gatillo componible, con proveedores
 nativos para lluvia--escorrentía, deshielo, inundación de aguas someras, runout de
 flujo de detritos basado en agentes, un sustrato geoespacial y deformación InSAR, y
 atribución exacta en forma cerrada de cada alerta. Usado como instrumento
-experimental sobre cuencas chilenas, arroja un diagnóstico que, argumentamos, generaliza: lo que la forzante sub-diaria le compra a un gatillo intensidad--duración es timing intra-diario en todos los casos y detección solo para ráfagas breves, mientras que el error de magnitud del producto de lluvia, y en operación el sensor, mandan en el resto. Un umbral I--D global se alcanza en 7 de
+experimental sobre cuencas chilenas, arroja un diagnóstico que, argumentamos, generaliza: lo que la forzante sub-diaria le compra a un gatillo intensidad--duración es timing intra-diario en todos los casos y detección solo para ráfagas breves, mientras que el error de magnitud del producto de lluvia, y en operación el sensor, mandan en el resto. Un umbral I--D global se alcanza en 36 de
 13\,880 días y nunca en un mes con evento registrado; un umbral regional calibrado
 transfiere por partición pero no se distingue de un nulo estacional y, distribuido a resolución diaria, no discrimina las ubicaciones de
 eventos (AUC $\approx 0.48$); el gatillo idéntico sobre forzante satelital

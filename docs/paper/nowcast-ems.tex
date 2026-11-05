@@ -45,7 +45,7 @@ on demand only where the cheap nowcast alerts. We use the engine as an
 experimental instrument over Chilean basins, holding the model fixed and varying
 the resolution of the forcing. A backtest of 157 dated rainfall-triggered
 landslides in the R\'io Maipo basin shows that the global Caine (1980)
-intensity--duration threshold fires on only 7 of 13\,880 days, none coinciding with a
+intensity--duration threshold fires on only 36 of 13\,880 days, in 12 months, none coinciding with a
 recorded event (probability of
 detection, POD $=0$), whereas a calibrated regional intercept transfers
 split-sample (validation POD $\approx 0.50$) but is not distinguishable from a seasonality-preserving null over the 19 event-months of the record. Distributing that daily forcing
@@ -516,10 +516,10 @@ evaluated on even years.
 \label{sec:lumped}
 
 Over 13\,880 daily steps (1979--2016) and 157 dated rainfall-triggered events, the
-global Caine threshold ($a=14.82$) is crossed on only \textbf{7 of 13\,880 days} on CR2MET daily forcing
+global Caine threshold ($a=14.82$) is crossed on only \textbf{36 of 13\,880 days}, in 12 months, on CR2MET daily forcing
 (POD $=0$): at 24\,h duration the curve sits at $I_{\mathrm{crit}}=4.29$\,mm\,h$^{-1}$, a daily
-total of 103\,mm, which only those seven days reach, and none of them falls in an
-event month. A regional intercept $a^\star\approx5.5$\,mm\,h$^{-1}$
+total of 103\,mm, which only seven days reach; the other crossings come from
+multi-day windows, and none of the 36 falls in an event month. A regional intercept $a^\star\approx5.5$\,mm\,h$^{-1}$
 maximises CSI on the full period and on the odd years alike, and the even-year
 validation gives POD $\approx 0.50$ (Fig.~\ref{fig:idsweep}); but the objective is
 flat (CSI 0.06--0.08 over $a=2$--13\,mm\,h$^{-1}$), so $a^\star$ is weakly
@@ -552,7 +552,7 @@ the controlled experiment take up.
 \toprule
 Configuration & POD & FAR & note \\
 \midrule
-Caine global, $a=14.82$ & 0.00 & 1.00 & fires 7/13\,880 d, none on event month \\
+Caine global, $a=14.82$ & 0.00 & 1.00 & fires 36/13\,880 d (12 months), none on event month \\
 Regional $a^\star=5.5$ (full period) & 0.53 [0.32, 0.73] & 0.92 [0.85, 0.95] & max-CSI calibration; 19 event-months, Wilson 95\,\% \\
 Regional $a^\star=5.5$ (split-sample) & 0.50 & 0.93 & calibrate odd $\to$ validate even \\
 $a^\star=5.5$, tol. $\pm0/\pm1/\pm2/\pm3$\,mo & \multicolumn{2}{c}{POD 0.21/0.53/0.58/0.68} & rises like the nulls below \\
@@ -598,7 +598,7 @@ results do not hinge on the choice of curve either.
 Repeating the backtest with \emph{distributed} CR2MET rainfall over a
 $15\times18$ grid (270 cells, 123\,120 cell-months, 884 in the event footprint: the
 cell of each event and the eight around it, in the event month and the two adjacent
-ones, which places the 157 events in 129 cells),
+ones; the 157 events fall in 40 cells and their footprints span 129),
 the \emph{real} RandomForest susceptibility aggregated to that grid by area average, and spatial
 verification, yields essentially \textbf{no discrimination}
 (Table~\ref{tab:auc}): ROC-AUC is 0.463 for a lumped basin-mean baseline
@@ -860,8 +860,8 @@ so these are not formal lead-time skill scores but a demonstration that sub-dail
 forcing resolves the threshold-crossing time that daily forcing cannot.
 
 As a spatial false-alarm check, we ran the identical per-cell I--D trigger over each
-event's full IMERG scene. The documented storm core is in every case the most
-extreme cell (96.7--100th percentile of peak exceedance), but the trigger crosses
+event's full IMERG scene. The documented storm core is in every case among the most
+extreme cells (96.7--100th percentile of peak exceedance), but the trigger crosses
 the curve over a broad footprint, 30\,\% of the Atacama scene, 6\,\% at Caj\'on del
 Maipo, and the entire (small, frontal) Villa Santa Luc\'ia box, so the crossing is
 not spatially sparse within these storm-centred scenes. This locates the \emph{peak}
@@ -1366,7 +1366,7 @@ susceptibility into a time-varying hazard through a single interchangeable forci
 interface and a composable trigger, with native providers for rainfall--runoff,
 snowmelt, shallow-water inundation, agent-based debris-flow runout, a geospatial
 substrate and InSAR deformation, and exact closed-form attribution of every alert.
-Used as an experimental instrument over Chilean basins, it yields a diagnosis that, we argue, generalises: what sub-daily forcing buys an intensity--duration trigger is intra-day timing in every case and detection only for short bursts, while the magnitude error of the rainfall product, and in operation the sensor, bind elsewhere. A global I--D threshold is reached on 7 of 13\,880 days and never on a recorded event month. A calibrated regional threshold transfers split-sample but is not distinguishable from a seasonal null, and at daily resolution and distributed over the basin it does not discriminate event locations (AUC $\approx 0.48$). The identical trigger on half-hourly satellite forcing places
+Used as an experimental instrument over Chilean basins, it yields a diagnosis that, we argue, generalises: what sub-daily forcing buys an intensity--duration trigger is intra-day timing in every case and detection only for short bursts, while the magnitude error of the rainfall product, and in operation the sensor, bind elsewhere. A global I--D threshold is reached on 36 of 13\,880 days and never on a recorded event month. A calibrated regional threshold transfers split-sample but is not distinguishable from a seasonal null, and at daily resolution and distributed over the basin it does not discriminate event locations (AUC $\approx 0.48$). The identical trigger on half-hourly satellite forcing places
 the threshold crossing at a timestamp hours ahead of the documented flows on the same day across three
 climatically distinct events, and a single-factor decomposition separates what that
 gain owes to the rainfall product from what it owes to its resolution, which turns
