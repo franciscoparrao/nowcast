@@ -14,7 +14,7 @@ Type=oneshot
 # monitor@araucania (380xxx/390xxx; Angol 370067 no entrega datos).
 # Desde el 2026-10-19 también las cinco EMAs DMC de O'Higgins (340xxx), sin
 # monitor en vivo todavía, por las alertas de remoción en masa del 20-oct.
-ExecStart=%h/proyectos/nowcast/monitor/archive_ema.py --code 330077,330112,330122,330019,380063,380018,380032,380013,380033,380029,390028,390056,340045,340048,340066,340093,340115
+ExecStart=%h/proyectos/nowcast/monitor/archive_ema.py --code 330077,330112,330122,330019,380063,380018,380032,380013,380033,380029,390028,390056,340045,340048,340066,340093,340115,290004,290013,300024,300034,300046,300047,310023,310024,310040,310044,260010,270008,270009,270022,280010,280028
 Environment=DMC_USUARIO=
 Environment=DMC_TOKEN=
 # Las credenciales reales salen de monitor/config.local.env, que el script lee
