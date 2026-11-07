@@ -53,8 +53,8 @@ over the basin and weighting by a real machine-learning susceptibility raster
 does not improve discrimination. The area under the ROC curve is indistinguishable
 from random (AUC $\approx 0.48$; month-block bootstrap 95\,\% CI spans 0.5): at
 5\,km daily resolution the gridded rainfall at event cell-months is no higher
-than average, and a supervised baseline trained on the same daily features fares
-no better (cross-validated AUC $\le 0.56$). Diagnostics show that null accuses the
+than average, and a supervised baseline trained on the same daily features reaches
+a cross-validated AUC of only about 0.6. Diagnostics show that null accuses the
 target as much as the forcing --- recorded events sit at the 46th percentile of
 their own cell's history and dilating the label in time and space does not recover
 signal --- so we do not rest the resolution claim on it. A controlled experiment whose labels come from an
@@ -482,7 +482,8 @@ together) so that within-month spatial autocorrelation, the dominant structure
 when one storm wets many cells, is not mistaken for independent information. As a
 model-agnostic check, we also train supervised baselines (logistic regression and
 gradient boosting \citep{friedman2001}) on per-cell-month susceptibility and rainfall features,
-evaluated by year-blocked \texttt{GroupKFold} cross-validation, chosen over a
+evaluated by cross-validation over five folds of consecutive years, with the
+spread over 50 random year-to-fold assignments reported beside it, chosen over a
 plain random split to avoid leaking within-year spatial autocorrelation across
 folds \citep{roberts2016}.
 
@@ -659,15 +660,16 @@ distributed $\times$ real susc.    & 0.485 & $[0.403, 0.565]$ & 0.34 \\
 A supervised baseline confirms this is a property of the data, not of our
 trigger. Logistic regression and gradient boosting trained on per-cell-month
 features (susceptibility; monthly total; maximum 1-day and 7-day rainfall;
-previous-month total), evaluated with year-blocked \texttt{GroupKFold}, reach a
-cross-validated AUC of only 0.56 and 0.52, barely above random. A single-feature
+previous-month total), reach a cross-validated AUC of 0.601 and 0.552 with folds
+of consecutive years (95\,\% range 0.548--0.605 and 0.468--0.591 over 50 random
+year-to-fold assignments), modest and mostly the static susceptibility's. A single-feature
 analysis locates the little signal that exists: it comes from the static
 susceptibility (AUC 0.55, itself an optimistic upper bound since this raster was
 trained on the same inventory, Section~3) and weak antecedent wetness (0.52),
 whereas every rainfall-intensity feature is at or below random (max 7-day 0.49,
-max 1-day 0.46, monthly total 0.46). The daily rainfall therefore carries essentially no
+max 1-day 0.46, monthly total 0.46). The daily rainfall therefore carries little
 information about where and when these landslides occurred, and a flexible model
-cannot recover a signal the daily product does not contain. Our engine's 0.485
+recovers little beyond the susceptibility. Our engine's 0.485
 even dips slightly below susceptibility alone, because multiplying susceptibility
 by a near-random daily-rainfall factor dilutes it: at this resolution the daily
 trigger is worse than none.

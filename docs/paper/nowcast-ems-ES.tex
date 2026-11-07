@@ -80,8 +80,8 @@ automático no mejora la discriminación. El área bajo la curva ROC es
 indistinguible del azar (AUC $\approx 0.48$; el IC al 95\,\% por bootstrap de
 bloques mensuales cruza 0.5): a resolución diaria de 5\,km la lluvia grillada en
 las celdas-mes de evento no es mayor que el promedio, y una línea base supervisada
-entrenada sobre los mismos atributos diarios no lo hace mejor (AUC con validación
-cruzada $\le 0.56$). Los diagnósticos muestran que ese resultado nulo acusa al
+entrenada sobre los mismos atributos diarios alcanza un AUC con validación
+cruzada de solo cerca de 0.6. Los diagnósticos muestran que ese resultado nulo acusa al
 objetivo tanto como a la forzante --- los eventos registrados caen en el
 percentil 46 de la historia de su propia celda y dilatar la etiqueta en tiempo y
 espacio no recupera señal --- así que no apoyamos en él la afirmación sobre
@@ -580,8 +580,9 @@ que la autocorrelación espacial dentro del mes, la estructura dominante cuando 
 tormenta moja muchas celdas, no se confunda con información independiente. Como
 chequeo agnóstico al modelo, también entrenamos líneas base supervisadas (regresión
 logística y gradient boosting \citep{friedman2001}) sobre atributos de
-susceptibilidad y lluvia por celda-mes, evaluadas por validación cruzada
-\texttt{GroupKFold} bloqueada por año, elegida por sobre una partición aleatoria
+susceptibilidad y lluvia por celda-mes, evaluadas por validación cruzada con
+cinco pliegues de años consecutivos, junto con la dispersión sobre 50 repartos
+aleatorios de años a pliegues, elegida por sobre una partición aleatoria
 simple para evitar filtrar autocorrelación espacial intra-anual entre pliegues
 \citep{roberts2016}.
 
@@ -771,16 +772,17 @@ distribuida $\times$ susc.\ real    & 0.485 & $[0.403, 0.565]$ & 0.34 \\
 Una línea base supervisada confirma que esto es una propiedad de los datos y no de
 nuestro gatillo. Regresión logística y gradient boosting entrenados sobre atributos
 por celda-mes (susceptibilidad; total mensual; lluvia máxima de 1 día y de 7 días;
-total del mes anterior), evaluados con \texttt{GroupKFold} bloqueado por año,
-alcanzan un AUC de validación cruzada de solo 0.56 y 0.52, apenas por encima del
-azar. Un análisis de atributo único ubica la poca señal que existe: viene de la
+total del mes anterior), alcanzan un AUC de validación cruzada de 0.601 y 0.552
+con pliegues de años consecutivos (rango de 95\,\% 0.548--0.605 y 0.468--0.591
+sobre 50 repartos aleatorios de años a pliegues), modesto y en su mayoría debido a
+la susceptibilidad estática. Un análisis de atributo único ubica la poca señal que existe: viene de la
 susceptibilidad estática (AUC 0.55, ella misma una cota superior optimista dado que
 este ráster fue entrenado sobre el mismo inventario, Sección~3) y de una débil
 humedad antecedente (0.52), mientras que todo atributo de intensidad de lluvia está
 en o por debajo del azar (máx 7 días 0.49, máx 1 día 0.46, total mensual 0.46). La
-lluvia diaria no lleva por tanto esencialmente ninguna información sobre dónde y
-cuándo ocurrieron estos deslizamientos, y un modelo flexible no puede recuperar una
-señal que el producto diario no contiene. El 0.485 de nuestro motor incluso cae
+lluvia diaria lleva por tanto poca información sobre dónde y cuándo ocurrieron
+estos deslizamientos, y un modelo flexible recupera poco más allá de la
+susceptibilidad. El 0.485 de nuestro motor incluso cae
 levemente por debajo de la susceptibilidad sola, porque multiplicar la
 susceptibilidad por un factor de lluvia diaria casi aleatorio la diluye: a esta
 resolución el gatillo diario es peor que ninguno.

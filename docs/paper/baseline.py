@@ -4,7 +4,7 @@
 If a discriminative model TRAINED on the daily features (susceptibility + rainfall
 statistics) also fails to separate event cell-months under honest cross-
 validation, the signal is absent from the daily data, not merely from our I-D
-trigger. Year-blocked GroupKFold avoids leakage from temporal autocorrelation.
+trigger. Year-blocked folds avoid leakage from temporal autocorrelation.
 Run from repo root with the system python (numpy/pandas/sklearn).
 """
 import numpy as np
@@ -12,7 +12,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
-from sklearn.model_selection import GroupKFold, cross_val_predict
+from sklearn.model_selection import cross_val_predict
 from sklearn.metrics import roc_auc_score
 
 NC = 270  # cells (15x18)
@@ -54,18 +54,57 @@ X = np.column_stack([
 feat = ["susceptibility", "month_total", "max_1d", "max_7d", "antecedent"]
 print(f"{X.shape[0]} cell-months, {int(y.sum())} positive, {len(np.unique(year))} year groups\n")
 
-cv = GroupKFold(n_splits=5)
+# --- folds: fixed by construction, not by a sort --------------------------
+# Every year holds exactly 270 x 12 = 3240 cell-months, so GroupKFold's
+# size-balancing faces a 38-way tie and the split was decided by numpy's
+# argsort tie-breaking: numpy 1.26.4 gave CV AUC 0.560 / 0.521 and numpy 2.5.3
+# gave 0.583 / 0.536 with the same sklearn 1.8.0 and scipy 1.17.1 (2026-11-04).
+# The primary split is now five blocks of consecutive years; the spread over
+# N_REP random year-to-fold assignments (Python's `random`, whose stream does
+# not depend on numpy) is reported beside it as the fold-assignment range.
+import random
+K, N_REP, SEED = 5, 50, 20261105
+years = np.unique(year)
+
+
+def folds_from(assign):
+    """assign: year -> fold. Returns sklearn-style (train, test) index pairs."""
+    f = np.array([assign[v] for v in year])
+    return [(np.where(f != k)[0], np.where(f == k)[0]) for k in range(K)]
+
+
+blocks = {v: i * K // len(years) for i, v in enumerate(years)}
+rng = random.Random(SEED)
+reps = []
+for _ in range(N_REP):
+    ys = [int(v) for v in years]
+    rng.shuffle(ys)
+    reps.append({v: i % K for i, v in enumerate(ys)})
+
 models = {
     "logistic regression": make_pipeline(StandardScaler(),
         LogisticRegression(class_weight="balanced", max_iter=2000)),
+    # random_state fixes the internal early-stopping split (on for >10k rows)
     "gradient boosting": HistGradientBoostingClassifier(
-        class_weight="balanced", max_depth=3, learning_rate=0.05, max_iter=300),
+        class_weight="balanced", max_depth=3, learning_rate=0.05, max_iter=300,
+        random_state=0),
 }
-print(f"{'baseline (year-blocked CV)':<26} {'CV AUC':>7}")
-for name, mdl in models.items():
-    proba = cross_val_predict(mdl, X, y, cv=cv, groups=year,
+
+
+def cv_auc(mdl, assign):
+    proba = cross_val_predict(mdl, X, y, cv=folds_from(assign),
                               method="predict_proba")[:, 1]
-    print(f"{name:<26} {roc_auc_score(y, proba):7.3f}")
+    return roc_auc_score(y, proba)
+
+
+print(f"{'baseline (year-blocked CV)':<26} {'blocks':>7}   "
+      f"{'random year-to-fold assignments (n=' + str(N_REP) + ')':>44}")
+print(f"{'':<26} {'':>7}   {'min':>6} {'p2.5':>6} {'median':>6} {'p97.5':>6} {'max':>6}")
+for name, mdl in models.items():
+    a0 = cv_auc(mdl, blocks)
+    r = np.array([cv_auc(mdl, a) for a in reps])
+    q = np.percentile(r, [0, 2.5, 50, 97.5, 100])
+    print(f"{name:<26} {a0:7.3f}   " + " ".join(f"{v:6.3f}" for v in q))
 
 # single strongest feature, for reference
 print(f"\n{'single-feature AUC (in-sample)':<26}")
