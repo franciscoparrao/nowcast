@@ -663,6 +663,20 @@ provisionales y hay que medir en más ráfagas si todas tienen rayos. Activo en
 (aviso sobre umbral, silencio bajo umbral, histéresis, reinicio en cero, aviso
 de dominio; el peligro I-D sigue quiet).
 
+**GLM retrospectivo de octubre contra catálogo de prensa (2026-11-08,
+`scripts/glm_retro/`, protocolo versionado ANTES de ver resultados)**: 1-29 oct,
+93 eventos con coordenadas, aviso = ≥25 descargas/60 min en 3×3 celdas 0.1°
+sobre tierra chilena. Detecta 32 de 33 eventos convectivos y 16 de 60
+frontales; solo 16 de 129 episodios (12 %) tienen evento, 16 de 73 urbanos
+(22 %); adelanto mediano 80 min (n=13, horas de prensa: cota superior). OJO al
+leerlo: los episodios con evento son grandes (mediana 56 celdas, 3 h, 524
+descargas; uno cubre 392 celdas y 10 h) y los sin evento chicos (9 celdas, 1 h,
+22 descargas) → un umbral por tamaño/descargas del episodio probablemente
+separa mejor que N; y el «convectivo» del catálogo viene de notas que hablan de
+tormenta eléctrica, así que su POD ~1 es en parte circular. Las falsas alarmas
+se concentran en 35-40 °S, donde el catálogo es más pobre. Datos en
+`~/nowcast-forecast/glm_retro/` (fuera de git).
+
 **Histéresis por CRUCE en el monitor (2026-10-12)**: `monitor.sh` avisaba el
 ESTADO del dominio (marca `state/alert` re-estampada cada `REALERT_HOURS`=6
 mientras hubiera algún paso en alerta en la ventana), aunque el comentario
