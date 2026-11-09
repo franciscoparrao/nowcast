@@ -62,3 +62,10 @@ cuánto adelanto?
   las 16:25 (hora de la actualización), pero la lluvia fue de 15:09 a 16:09.
 - Mecanismo «convectivo» = el texto de mecanismo o tipo menciona convección,
   tormenta, granizo o eléctrica; todo lo demás va a «frontal/sin dato».
+
+## Anotación antes de correr el cruce (2026-11-08, sin haber visto resultados)
+- El catálogo se armó la mañana del 30-oct y no cubre el 30 ni el 31. El GLM sí
+  (31 días completos, 0 archivos fallidos; el 30-oct se volvió a bajar entero).
+  Contar episodios sin catálogo inflaría las falsas alarmas por construcción.
+  Análisis principal: 1 al 29 de octubre (hora UTC del bloque). El mes completo
+  se reporta aparte, rotulado como tal.
