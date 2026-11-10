@@ -1,0 +1,66 @@
+{
+ "evento": {
+  "pasos": 288,
+  "esperados": 288,
+  "celdas_imerg": 4,
+  "cinco_dias_hasta_max_24h": {
+   "total_mm": 162.23,
+   "pasos": 240,
+   "frac_2dias": 0.625
+  },
+  "max_24h_mm": 89.4,
+  "fin_24h": "20260731T1700",
+  "max_5d_mm": 167.48,
+  "inicio_5d": "20260726T1330",
+  "fin_5d": "20260731T1300",
+  "frac_2dias_en_5d": 0.605
+ },
+ "celdas_cr2met": 12,
+ "inviernos": "1991-2020 MJJAS",
+ "ventana_24h": {
+  "percentil": 99.98,
+  "igualado": 1,
+  "n": 4590,
+  "veces_por_invierno": 0.03
+ },
+ "ventana_5d_max": {
+  "percentil": 99.66,
+  "igualado": 15,
+  "n": 4470,
+  "veces_por_invierno": 0.5
+ },
+ "ventana_5d_hasta_max_24h": {
+  "percentil": 99.53,
+  "igualado": 21,
+  "n": 4470,
+  "veces_por_invierno": 0.7
+ },
+ "monitor_en_vivo": {
+  "evento": {
+   "pasos": 92,
+   "esperados": null,
+   "celdas_imerg": 4,
+   "cinco_dias_hasta_max_24h": {
+    "total_mm": 89.31,
+    "pasos": 81,
+    "frac_2dias": 1.0
+   },
+   "max_24h_mm": 81.79,
+   "fin_24h": "20260731T1300",
+   "max_5d_mm": 89.34,
+   "inicio_5d": "20260729T2100",
+   "fin_5d": "20260731T1830",
+   "frac_2dias_en_5d": 1.0
+  },
+  "ventana_24h": {
+   "percentil": 99.96,
+   "igualado": 2,
+   "n": 4590
+  },
+  "ventana_total_como_5d": {
+   "percentil": 95.7,
+   "igualado": 192,
+   "n": 4470
+  }
+ }
+}
