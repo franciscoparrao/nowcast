@@ -676,6 +676,15 @@ separa mejor que N; y el «convectivo» del catálogo viene de notas que hablan 
 tormenta eléctrica, así que su POD ~1 es en parte circular. Las falsas alarmas
 se concentran en 35-40 °S, donde el catálogo es más pobre. Datos en
 `~/nowcast-forecast/glm_retro/` (fuera de git).
+EXPLORATORIO (`exploratorio_tamano.py`, no estaba en el protocolo): exigir que el
+episodio junte X descargas antes de avisar sube la fracción con evento de 12 % a
+27 % (X=100) o 33 % (X=200) conservando 41 de 48 eventos y el adelanto mediano
+(~80 min); X=400 sube a 41 % pero el adelanto cae a 40 min. La regla de
+selección por quincenas eligió X=800 en 1-15 oct (4/5) y NO transfirió a 16-29
+(1/3, 11 de 30 eventos): con 5 y 3 episodios el umbral alto es ruido. X=100-200
+mejora en las dos quincenas (24-29 % y 30-38 %), pero ese número se miró
+después de ver los datos. Para el monitor: candidato a regla de aviso por
+episodio, no calibrado; medir en noviembre antes de usarlo.
 
 **Histéresis por CRUCE en el monitor (2026-10-12)**: `monitor.sh` avisaba el
 ESTADO del dominio (marca `state/alert` re-estampada cada `REALERT_HOURS`=6
