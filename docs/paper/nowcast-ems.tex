@@ -300,7 +300,7 @@ cheap nowcast already alerted. The saving is the point and is quantifiable:
 because the shallow-water solver integrates to a fixed physical time with
 CFL-limited steps, its cost is ${\sim}O(\mathrm{cells})$, so confining it to an
 alerted tile spanning 31\,\% of a coarse domain runs $3.8\times$ faster than
-solving the full domain (1.19\,s to 0.31\,s; a strictly linear cost would predict $3.2\times$) while returning \emph{bit-identical}
+solving the full domain (1.19\,s to 0.31\,s in one measurement, see Section~2.8; a strictly linear cost would predict $3.2\times$) while returning \emph{bit-identical}
 depths in the inundated region, the flood being contained within the tile. The
 on-demand restriction is therefore free in accuracy, and the cheap
 susceptibility$\times$trigger screen is what keeps the alerted area, and hence the
@@ -352,7 +352,12 @@ and the shared prefix buffer makes the loop memory-bandwidth-bound rather than
 compute-bound. The $O(\mathrm{cells}\times\mathrm{steps})$ prefix buffer
 (${\sim}1.4$~GB at the largest size above) is the practical memory limit,
 mitigated by chunking the time axis; that same memory pressure, not a lack of
-parallel work, is what caps the multi-thread speed-up.
+parallel work, is what caps the multi-thread speed-up. All timings in this section,
+and the on-demand figure of Section~2.5, come from single measurements on that
+laptop, a shared machine not isolated from other workloads; they illustrate the
+scaling and are not benchmarks. Repeated under background load, the on-demand
+speed-up ranged from $3.8\times$ to $5.8\times$, while the 31\,\% tile and the
+bit-identical depths did not change.
 
 \begin{table}[ht]
 \centering

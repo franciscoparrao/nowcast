@@ -379,7 +379,7 @@ donde el nowcast barato ya alertó. El ahorro es el punto y es cuantificable: co
 el solver de aguas someras integra hasta un tiempo físico fijo con pasos limitados
 por CFL, su costo es ${\sim}O(\mathrm{celdas})$, de modo que confinarlo a un
 recuadro alertado que abarca el 31\,\% de un dominio grueso corre $3.8\times$ más
-rápido que resolver el dominio completo (de 1.19\,s a 0.31\,s; un costo estrictamente lineal predeciría $3.2\times$) devolviendo
+rápido que resolver el dominio completo (de 1.19\,s a 0.31\,s en una medición, ver Sección~2.8; un costo estrictamente lineal predeciría $3.2\times$) devolviendo
 profundidades \emph{bit-idénticas} en la región inundada, al estar la crecida
 contenida dentro del recuadro. La restricción bajo demanda es por tanto gratuita
 en exactitud, y el tamiz barato susceptibilidad$\times$gatillo es lo que mantiene
@@ -443,7 +443,12 @@ bucle limitado por ancho de banda de memoria y no por cómputo. El buffer de
 prefijos $O(\mathrm{celdas}\times\mathrm{pasos})$ (${\sim}1.4$~GB en el tamaño
 mayor de arriba) es el límite práctico de memoria, mitigado troceando el eje
 temporal; esa misma presión de memoria, y no la falta de trabajo paralelizable, es
-lo que topa la aceleración multi-hilo.
+lo que topa la aceleración multi-hilo. Todos los tiempos de esta sección, y la cifra
+del acople bajo demanda de la Sección~2.5, vienen de mediciones únicas en ese
+portátil, una máquina compartida y no aislada de otras cargas; ilustran el escalamiento
+y no son benchmarks. Repetida con carga de fondo, la aceleración del acople bajo
+demanda varió de $3.8\times$ a $5.8\times$, mientras que el recuadro del 31\,\% y las
+profundidades bit-idénticas no cambiaron.
 
 \begin{table}[ht]
 \centering
