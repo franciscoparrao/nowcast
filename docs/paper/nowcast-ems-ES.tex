@@ -43,14 +43,28 @@
 de geoamenazas, y qué le compra la resolución de la lluvia a un gatillo
 intensidad--duración}
 
-\author[1]{Francisco Parra\corref{cor1}}
+% Coautores, filiaciones y ORCID tomados de spatial-sampling/paper/main.tex
+% (ORCID verificados contra pub.orcid.org el 2026-09-25). 2026-11-17.
+\author[1]{Francisco Parra\corref{cor1}\fnref{orcid1}}
 \ead{francisco.parra.o@usach.cl}
 \cortext[cor1]{Autor de correspondencia}
+\fntext[orcid1]{ORCID: 0009-0006-0435-1854}
+\author[2]{Verónica Gil-Costa\fnref{orcid2}}
+\fntext[orcid2]{ORCID: 0000-0003-4637-9725}
+\author[1]{Carolina Bonacic\fnref{orcid3}}
+\fntext[orcid3]{ORCID: 0000-0002-8076-6537}
+\author[1]{Mauricio Marín\fnref{orcid4}}
+\fntext[orcid4]{ORCID: 0000-0003-0662-7149}
 
 \affiliation[1]{organization={Departamento de Ingeniería Informática,
             Universidad de Santiago de Chile},
             city={Santiago},
             country={Chile}}
+\affiliation[2]{organization={Departamento de Informática, Facultad de Ciencias
+            Físico Matemáticas y Naturales, Universidad Nacional de San Luis --
+            CONICET},
+            city={San Luis},
+            country={Argentina}}
 
 \begin{abstract}
 Los mapas de susceptibilidad a deslizamientos y crecidas son estáticos: factores
@@ -1452,7 +1466,7 @@ operacional calibrado, y una cadena operacional como LHASA es el tipo de sistema
 que sus salidas alimentarían o contra el que serían comparadas (Sección~\ref{sec:multievent}).
 Ninguna agencia consume hoy sus alertas: en Chile las alertas tempranas preventivas
 las declara por comuna el servicio nacional de desastres (SENAPRED), y la salida de
-$0.1^{\circ}$ del motor llega a comunas solo en la cadena en sombra del autor, así que
+$0.1^{\circ}$ del motor llega a comunas solo en la cadena en sombra del primer autor, así que
 convertirla en un insumo de esa decisión es una cuestión de calibración y de
 gobernanza que este paper no resuelve.
 
@@ -1595,7 +1609,7 @@ es necesario porque Cargo resuelve todos los miembros de un workspace antes de
 compilar cualquiera, así que una compilación directa en la raíz del snapshot ya
 exigiría los repositorios hermanos; el script compila el núcleo en un workspace
 propio y corre sus tests y los ejemplos del paper. Los crates proveedores son distintos: cada uno
-envuelve un motor hermano de la familia Rust de geoamenazas del autor mediante una
+envuelve un motor hermano de la familia Rust de geoamenazas del primer autor mediante una
 dependencia \emph{por ruta} a un repositorio fuera de este snapshot, de modo que la
 vía de crecidas de la Sección~5.8 (GR4J sobre CAMELS-CL Itata, ROC-AUC 0.90, en
 \texttt{nowcast-rainflow}), las demostraciones de acoplamiento de la Sección~5.9 y
@@ -1658,28 +1672,35 @@ decisión de someter el artículo para publicación.
 
 \section*{Agradecimientos}
 
-El autor agradece al Proyecto 062619MC\_POSTDOC de la Vicerrectoría de
-Investigación, Innovación y Creación, Universidad de Santiago de Chile. El autor
-agradece asimismo al CR2 (Center for Climate and Resilience Research) por CR2MET,
+Los autores agradecen al Proyecto 062619MC\_POSTDOC de la Vicerrectoría de
+Investigación, Innovación y Creación, Universidad de Santiago de Chile. Los autores
+agradecen asimismo al CR2 (Center for Climate and Resilience Research) por CR2MET,
 a la NASA por GPM IMERG y a SERNAGEOMIN por el inventario de deslizamientos.
 
 \section*{Declaración sobre IA generativa y tecnologías asistidas por IA en el proceso de escritura}
 
-Durante la preparación de este trabajo el autor usó Anthropic Claude, un modelo de
+Durante la preparación de este trabajo el autor de correspondencia usó Anthropic Claude, un modelo de
 lenguaje de gran tamaño, para asistir en la redacción y edición del texto del
 manuscrito y en la implementación del software y el análisis exploratorio. Después
-de usar esta herramienta, el autor revisó y editó el contenido según fue necesario
-y asume plena responsabilidad por el contenido de la publicación.
+de usar esta herramienta, los autores revisaron y editaron el contenido según fue necesario
+y asumen plena responsabilidad por el contenido de la publicación.
 
 \section*{Declaración de contribución de autoría CRediT}
 
+% Roles según la convención del mismo equipo (spatial-sampling, paper4).
+% CONFIRMAR con cada coautor antes de someter.
 \textbf{Francisco Parra}: Conceptualización, Metodología, Software, Validación,
 Análisis formal, Investigación, Curación de datos, Escritura --- borrador original,
 Escritura --- revisión y edición, Visualización.
+\textbf{Verónica Gil-Costa}: Metodología, Validación, Supervisión,
+Escritura --- revisión y edición.
+\textbf{Carolina Bonacic}: Metodología, Validación, Escritura --- revisión y edición.
+\textbf{Mauricio Marín}: Conceptualización, Recursos, Obtención de financiamiento,
+Administración del proyecto, Supervisión, Escritura --- revisión y edición.
 
 \section*{Declaración de intereses en competencia}
 
-El autor declara que no tiene intereses financieros ni relaciones personales en
+Los autores declaran que no tienen intereses financieros ni relaciones personales en
 competencia conocidos que pudieran haber influido en el trabajo reportado en este
 paper.
 

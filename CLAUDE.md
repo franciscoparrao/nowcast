@@ -1004,10 +1004,13 @@ OA puro. Esa restricción decide el venue más que el fit; si aparece
 financiamiento de APC, GMD (Q1 39/259) vuelve al tablero. Razonamiento completo
 en `~/vault/journals/_matches/2026-08-26_14-30_nowcast-cageo.md`.
 
-**Bloqueante de rendición, no editorial:** las bases DICYT (10.3.1) exigen que el
-IR **Mauricio Marín** sea coautor. Hoy el manuscrito tiene un solo autor. Cuando
-entre, hay que repartir la sección CRediT. Verificar siempre con
-`/firma-postdoc check docs/paper/nowcast-ems.tex` (hoy pasa 6/7).
+**Coautoría (2026-11-17):** Parra, Gil-Costa (UNSL–CONICET, Argentina), Bonacic y
+Marín (USACH), con ORCID y filiaciones de `spatial-sampling` (verificados en ORCID
+el 2026-09-25). `/firma-postdoc check docs/paper/nowcast-ems.tex` pasa 7/7 (en el
+.tex en español marca «sin Funding» porque la sección se llama Financiamiento:
+falsa alarma). **Los roles CRediT de los coautores siguen la convención del equipo
+y están marcados CONFIRMAR en el .tex: hay que confirmarlos con cada uno antes de
+someter**, igual que su acuerdo con la versión final.
 
 ### Traducción al español (`nowcast-ems-ES.tex`) — ARTEFACTO DERIVADO
 

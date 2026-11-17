@@ -19,14 +19,28 @@
 \title{nowcast: a forcing-agnostic Rust engine for dynamic geohazard
 nowcasting, and what rainfall resolution buys an intensity--duration trigger}
 
-\author[1]{Francisco Parra\corref{cor1}}
+% Coautores, filiaciones y ORCID tomados de spatial-sampling/paper/main.tex
+% (ORCID verificados contra pub.orcid.org el 2026-09-25). 2026-11-17.
+\author[1]{Francisco Parra\corref{cor1}\fnref{orcid1}}
 \ead{francisco.parra.o@usach.cl}
 \cortext[cor1]{Corresponding author}
+\fntext[orcid1]{ORCID: 0009-0006-0435-1854}
+\author[2]{Ver\'onica Gil-Costa\fnref{orcid2}}
+\fntext[orcid2]{ORCID: 0000-0003-4637-9725}
+\author[1]{Carolina Bonacic\fnref{orcid3}}
+\fntext[orcid3]{ORCID: 0000-0002-8076-6537}
+\author[1]{Mauricio Mar\'in\fnref{orcid4}}
+\fntext[orcid4]{ORCID: 0000-0003-0662-7149}
 
 \affiliation[1]{organization={Departamento de Ingenier\'ia Inform\'atica,
             Universidad de Santiago de Chile},
             city={Santiago},
             country={Chile}}
+\affiliation[2]{organization={Departamento de Inform\'atica, Facultad de Ciencias
+            F\'isico Matem\'aticas y Naturales, Universidad Nacional de San Luis --
+            CONICET},
+            city={San Luis},
+            country={Argentina}}
 
 \begin{abstract}
 Landslide and flood susceptibility maps are static: fixed predisposing factors
@@ -1284,7 +1298,7 @@ an operational chain like LHASA is the kind of system its outputs would feed or 
 benchmarked against (Section~\ref{sec:multievent}). No agency consumes its alerts today:
 in Chile preventive early alerts are declared per commune by the national disaster
 service (SENAPRED), and the engine's $0.1^{\circ}$ output reaches communes only in the
-author's shadow chain, so turning it into an input to that decision is a question of
+first author's shadow chain, so turning it into an input to that decision is a question of
 calibration and governance that this paper does not settle.
 
 \section{Limitations and future work}
@@ -1414,7 +1428,7 @@ The script is needed because Cargo resolves every member of a workspace before
 building any of them, so a plain build at the snapshot root would already require
 the sibling repositories; it builds the core in a workspace of its own and runs its
 tests and the paper's examples. The provider crates are different: each wraps
-a sibling engine of the author's Rust geohazard family through a \emph{path}
+a sibling engine of the first author's Rust geohazard family through a \emph{path}
 dependency to a repository outside this snapshot, so the flood path of
 Section~5.8 (GR4J on CAMELS-CL Itata, ROC-AUC 0.90, in
 \texttt{nowcast-rainflow}), the coupling demonstrations of Section~5.9 and the
@@ -1474,29 +1488,37 @@ decision to submit the article for publication.
 
 \section*{Acknowledgements}
 
-The author acknowledges Project 062619MC\_POSTDOC of the Vicerrector\'ia de
+The authors acknowledge Project 062619MC\_POSTDOC of the Vicerrector\'ia de
 Investigaci\'on, Innovaci\'on y Creaci\'on, Universidad de Santiago de Chile.
-The author also thanks the CR2 (Center for Climate and
+The authors also thank the CR2 (Center for Climate and
 Resilience Research) for CR2MET, NASA for GPM IMERG, and SERNAGEOMIN for the
 landslide inventory.
 
 \section*{Declaration of generative AI and AI-assisted technologies in the writing process}
 
-During the preparation of this work the author used Anthropic Claude, a large
+During the preparation of this work the corresponding author used Anthropic Claude, a large
 language model, to assist with drafting and editing the manuscript text and with
 the software implementation and exploratory analysis. After using this tool the
-author reviewed and edited the content as needed and takes full responsibility for
+authors reviewed and edited the content as needed and take full responsibility for
 the content of the publication.
 
 \section*{CRediT authorship contribution statement}
 
+% Roles según la convención del mismo equipo (spatial-sampling, paper4).
+% CONFIRMAR con cada coautor antes de someter: CRediT declara contribuciones
+% que ocurrieron en ESTE trabajo, no en el anterior.
 \textbf{Francisco Parra}: Conceptualization, Methodology, Software, Validation,
 Formal analysis, Investigation, Data curation, Writing --- original draft,
 Writing --- review \& editing, Visualization.
+\textbf{Ver\'onica Gil-Costa}: Methodology, Validation, Supervision,
+Writing --- review \& editing.
+\textbf{Carolina Bonacic}: Methodology, Validation, Writing --- review \& editing.
+\textbf{Mauricio Mar\'in}: Conceptualization, Resources, Funding acquisition,
+Project administration, Supervision, Writing --- review \& editing.
 
 \section*{Declaration of competing interest}
 
-The author declares that he has no known competing financial interests or
+The authors declare that they have no known competing financial interests or
 personal relationships that could have appeared to influence the work reported in
 this paper.
 
