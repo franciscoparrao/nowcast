@@ -66,20 +66,23 @@ We believe the manuscript fits the journal for the following reasons:
     field to daily resolution collapses the catch rate on burst-driven failures
     from 0.46 to 0.00 while leaving accumulation-driven failures untouched.
 
-    \item \textbf{A validated counterpart at high resolution.} With half-hourly
-    GPM IMERG forcing the same trigger pins the threshold crossing to a timestamp
-    hours ahead of three documented debris flows in opposite Chilean climates. A
+    \item \textbf{A timing result at high resolution, stated as such.} With
+    half-hourly GPM IMERG forcing the same trigger places the threshold crossing
+    at a timestamp hours ahead of three documented debris flows in opposite
+    Chilean climates; without an event onset hour and an off-event crossing rate
+    these are timing demonstrations, not skill scores. A
     single-factor decomposition separates the rainfall product from its
     resolution, and an intercept-sensitivity analysis shows the contrast does not
-    depend on the threshold chosen. A discharge path validated against observed
-    streamflow discriminates floods out of sample (ROC-AUC 0.90).
+    depend on the threshold chosen. A discharge path checked against observed
+    streamflow discriminates floods out of sample (ROC-AUC 0.90), but no better
+    than a 3-day rainfall sum or persistence.
 
     \item \textbf{Reproducibility.} The engine, its backtesting framework and
-    all thirty-six examples are open source (MIT/Apache-2.0) at
+    all its examples are open source (MIT/Apache-2.0) at
     \url{https://github.com/franciscoparrao/nowcast}, archived as version 0.2.0
-    at \url{https://doi.org/10.5281/zenodo.23198956}, with a script that
-    reproduces Sections~5.1--5.7 from the data-extraction scripts included in
-    the repository. The Software Availability section states precisely which
+    at \url{https://doi.org/10.5281/zenodo.23198956}. The 24 examples of the
+    core crate build and run offline and, with the data-extraction scripts
+    included in the repository, regenerate Sections~5.1--5.7. The Software Availability section states precisely which
     results reproduce from the archived snapshot alone.
 \end{enumerate}
 
