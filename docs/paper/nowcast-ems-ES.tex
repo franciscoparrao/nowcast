@@ -67,68 +67,14 @@ intensidad--duración}
             country={Argentina}}
 
 \begin{abstract}
-Los mapas de susceptibilidad a deslizamientos y crecidas son estáticos: factores
-predisponentes fijos combinados por modelos físicos o de aprendizaje automático.
-Convertir la susceptibilidad en un \emph{nowcast} operacional exige modularla en
-el tiempo con la forzante dinámica que gatilla la falla, como la lluvia, el
-deshielo, el caudal ruteado o la deformación del terreno. Presentamos
-\textbf{nowcast}, un motor Rust de dependencias mínimas que escribe el peligro
-variable en el tiempo como un campo de susceptibilidad multiplicado por un factor
-de gatillo, detrás de una única interfaz de forzante intercambiable. La lógica de
-peligro queda así desacoplada de la fuente de datos y de la familia de gatillos.
-El motor incluye proveedores nativos que envuelven modelos Rust hermanos para
-lluvia--escorrentía, deshielo, inundación 2-D de aguas someras, un modelo de
-flujos de detritos basado en agentes, un sustrato ráster geoespacial y
-deformación PS-InSAR/SBAS. Los gatillos son componibles (intensidad--duración de
-lluvia, caudal, tasa de deformación), y el refinamiento físico corre bajo demanda
-solo donde el nowcast barato alerta. Usamos el motor como instrumento
-experimental sobre cuencas chilenas, manteniendo fijo el modelo y variando la
-resolución de la forzante. Un backtest de 157 deslizamientos fechados gatillados
-por lluvia en la cuenca del Río Maipo muestra que el umbral global de
-intensidad--duración de Caine (1980) dispara en solo 36 de 13\,880 días, en 12 meses, ninguno
-coincidente con un evento registrado (probabilidad de detección, POD $=0$),
-mientras que un intercepto regional calibrado transfiere en validación por
-partición (POD de validación $\approx 0.50$) pero no se distingue de un nulo que conserva la estacionalidad sobre los 19 meses con evento del registro. Distribuir esa forzante diaria
-sobre la cuenca y ponderarla por un ráster de susceptibilidad real de aprendizaje
-automático no mejora la discriminación. El área bajo la curva ROC es
-indistinguible del azar (AUC $\approx 0.48$; el IC al 95\,\% por bootstrap de
-bloques mensuales cruza 0.5): a resolución diaria de 5\,km la lluvia grillada en
-las celdas-mes de evento no es mayor que el promedio, y una línea base supervisada
-entrenada sobre los mismos atributos diarios alcanza un AUC con validación
-cruzada de solo cerca de 0.6. Los diagnósticos muestran que ese resultado nulo acusa al
-objetivo tanto como a la forzante --- los eventos registrados caen en el
-percentil 46 de la historia de su propia celda y dilatar la etiqueta en tiempo y
-espacio no recupera señal --- así que no apoyamos en él la afirmación sobre
-resolución. Un experimento controlado cuyas etiquetas provienen de un mecanismo
-de falla \emph{independiente}, y no de la regla bajo prueba, aísla el porqué:
-agregar el campo idéntico a resolución diaria hace colapsar la tasa de captura de
-las fallas por ráfaga de 0.46 a 0.00, mientras deja intactas las fallas por
-acumulación en ${\approx}0.42$, con el modelo y el terreno fijos; el colapso mismo se sigue del diseño, porque ninguna ráfaga de ese tamaño supera la curva una vez repartida en un día, así que el experimento mide dónde, entre lo semihorario y lo diario, cae la tasa de captura y que las fallas por acumulación quedan a salvo, no si la forzante diaria puede alguna vez ver una ráfaga. A resolución
-semihoraria de GPM IMERG el mismo gatillo intensidad--duración ubica el cruce del
-umbral en una marca de tiempo horas antes de los flujos documentados del mismo día, un timing que
-ningún producto diario puede dar con ninguna magnitud, porque su intensidad
-media más fina resoluble es total$/24$\,h; sin hora de inicio del evento ni tasa de cruces fuera de evento, estas son demostraciones de timing, no puntajes de skill. A lo largo de tres eventos fechados en
-climas opuestos de Chile descomponemos ese contraste un factor a la vez,
-insertando la misma serie satelital agregada a 24\,h para separar el producto de
-lluvia de su resolución: la resolución gobierna el \emph{timing} en todos los
-casos y gobierna la detección para una ráfaga convectiva breve, mientras que para
-una tormenta de gran magnitud es el producto, no la resolución, el que decide si
-la curva llega a cruzarse, y en las primeras semanas de operación en vivo los dos productos satelitales semihorarios se perdieron una ráfaga convectiva que un pluviómetro y el sensor de rayos sí vieron. Lo que compra la resolución es, por tanto, timing intra-diario en general y detección solo para ráfagas breves; el error de magnitud del producto de lluvia, y en operación el sensor, mandan en el resto. El resultado tampoco descansa en el umbral elegido:
-cada evento tiene una banda medible de interceptos, de un factor 2--3, en la que
-la resolución por sí sola decide la detección, y el contraste persiste a lo largo
-de las curvas I--D publicadas en la literatura. Una vía complementaria de
-crecidas, chequeada contra caudal diario \emph{observado} en el Río Itata,
-discrimina crecidas observadas fuera de muestra (ROC-AUC 0.90) pero no mejor que una suma de lluvia de 3 días o la persistencia (0.94--0.95): el ruteo
-de caudal integra la lluvia que un gatillo sub-diario de deslizamientos debe en
-cambio resolver directamente, y la forzante diaria le basta. El motor, su marco de backtesting y los
-ejemplos detrás de los resultados centrales son abiertos y reproducibles desde una instantánea archivada; los crates proveedores necesitan los motores hermanos.
+Los mapas de susceptibilidad a deslizamientos y crecidas son estáticos, y convertirlos en un nowcast exige modularlos con la forzante que gatilla la falla. Presentamos nowcast, un motor abierto en Rust que escribe el peligro como susceptibilidad por un factor de gatillo componible detrás de una sola interfaz de forzante, de modo que productos de lluvia, caudal ruteado, deshielo o deformación se intercambian sin tocar la lógica de peligro. Manteniendo fijo el modelo, variamos solo la resolución de la lluvia sobre cuencas chilenas. Con lluvia diaria, un gatillo intensidad--duración (I--D) regional no se distingue de un nulo estacional y no discrimina las ubicaciones de los eventos (AUC $\approx 0.48$). Con lluvia satelital semihoraria, el mismo gatillo cruza la curva el día documentado de tres flujos de detritos o justo antes; separando el producto de lluvia de su resolución, la resolución fija el timing intra-diario en los tres eventos pero decide la detección en solo uno, una ráfaga convectiva breve. Estas son demostraciones de timing, no puntajes de capacidad.
 \end{abstract}
 
 \begin{highlights}
 \item Un motor Rust agnóstico a la forzante acopla susceptibilidad estática con gatillos dinámicos
 \item Lluvia, deshielo, caudal y deformación InSAR entran por una sola interfaz
 \item Distribuir la lluvia diaria no mejora la discriminación (AUC $\approx 0.48$)
-\item La lluvia sub-diaria le compra a un gatillo I--D timing intra-diario siempre, detección solo para ráfagas breves
+\item La lluvia sub-diaria compra timing intra-diario siempre, detección solo para ráfagas breves
 \item La magnitud del producto de lluvia, no el paso de tiempo, decide la detección en la mayoría de los eventos
 \end{highlights}
 
@@ -428,7 +374,8 @@ incendios (propagación superficial de Rothermel \citep{andrews2018} con un
 algoritmo de perímetro de tiempo mínimo de viaje \citep{finney1998}) con una
 cascada de susceptibilidad post-incendio; un ejecutable de línea de comandos expone
 el motor (run, backtest, explain, watch, calibrate) y los bindings PyO3 lo exponen
-a Python. El núcleo está cubierto por 67 tests unitarios, de integración y de documentación (150 en todo el workspace) con 94\,\% de cobertura de líneas (\texttt{cargo llvm-cov}), el linter corre limpio bajo \texttt{-D warnings}, un flujo de integración continua en el repositorio corre ambos sobre el núcleo, y treinta y ocho ejemplos ejecutables reproducen cada resultado de abajo. Cada proveedor es un
+a Python. El núcleo está cubierto por 67 tests unitarios, de integración y de documentación (150 en todo el workspace) con 94\,\% de cobertura de líneas (\texttt{cargo llvm-cov}), el linter corre limpio bajo \texttt{-D warnings}, un flujo de integración continua en el repositorio corre ambos sobre el núcleo, y treinta y ocho ejemplos ejecutables reproducen los resultados de abajo; la sección
+de disponibilidad del software indica cuáles corren solo con la instantánea archivada. Cada proveedor es un
 crate con dependencias aisladas que implementa el mismo trait \texttt{Forcing}, de
 modo que el diseño es reutilizable y extensible por construcción: agregar una
 forzante de amenaza es un crate nuevo, no una edición al núcleo. Esa separación, y
@@ -526,6 +473,9 @@ surge. La precipitación diaria es CR2MET v2.5 (0.05$^\circ$, $\sim$5\,km;
 experimentado un descenso sostenido de la lluvia desde 2010, la Megasequía de
 Chile central \citep{garreaud2019,boisier2018}. La precipitación sub-diaria es GPM
 IMERG Final v07 semihoraria ($\sim$0.1$^\circ$; \citealp{huffman2023,tan2019}). La
+corrida Final está ajustada con pluviómetros y se publica unos tres meses y medio
+después; la cadena en vivo de la Sección~7 usa la corrida Early, así que los tiempos
+de cruce del hindcast no son tiempos de anticipación operacionales. La
 forzante de cuenca para la vía de crecidas usa CAMELS-CL \citep{alvarez2018}. El
 inventario de eventos fechados es el catálogo de deslizamientos/flujos de
 SERNAGEOMIN, consistente con los patrones regionales de deslizamientos fatales
@@ -938,10 +888,11 @@ curva I--D ajustada a datos en este trabajo --- en vez de un valor elegido para 
 la comparación funcione; la Sección~\ref{sec:intercept} muestra que la conclusión
 no descansa en esa elección. Con un valor diario la duración más fina resoluble es
 24\,h, de modo que la máxima intensidad media resoluble es (total diario)$/24$\,h:
-CR2MET ve 30.1\,mm repartidos en 0.66\,mm\,h$^{-1}$, una excedencia de a lo más
-0.45 (con el regional calibrado $a^\star=5.5$) o 0.17 (Caine); el producto diario
-\textbf{estructuralmente no puede gatillar} para la profundidad diaria de esta
-tormenta (su día más lluvioso es 15.9\,mm); un total diario mayor sí cruza la
+CR2MET ve 30.1\,mm en el evento y 15.9\,mm en su día más lluvioso
+(0.66\,mm\,h$^{-1}$), y ninguna ventana diaria alcanza la curva: la mayor excedencia,
+sobre los dos días más lluviosos, es 0.45 (con el regional $a^\star=5.5$) o 0.17
+(Caine), así que para la profundidad diaria de esta tormenta el producto diario
+\textbf{estructuralmente no puede gatillar}; un total diario mayor sí cruza la
 curva, como muestran los 7 días del Maipo de la Sección~\ref{sec:lumped}. El mismo
 núcleo de tormenta en IMERG semihorario alcanza un peak de 40\,mm\,h$^{-1}$; el
 umbral I--D se cruza a las 04:30 UTC del 24 de marzo ($E\approx9$), horas antes de
@@ -949,20 +900,21 @@ los flujos documentados (Fig.~\ref{fig:leadtime}). Una forzante de mayor resoluc
 supera el límite sin cambio alguno en el motor.
 
 Esta comparación, sin embargo, mueve \emph{dos} cosas a la vez. Los dos productos
-también difieren en magnitud (IMERG 108\,mm vs CR2MET 30\,mm en este núcleo); se
-sabe que IMERG sobreestima en regímenes convectivos áridos mientras que CR2MET,
-mezclado con pluviómetros sobre una zona casi sin estaciones, probablemente
-subestima, de modo que el total verdadero queda en medio. Un contraste
+también difieren en magnitud (IMERG 108\,mm vs CR2MET 30\,mm en este núcleo); IMERG no tiene
+respaldo de pluviómetros a escala semihoraria y sus errores en Chile dependen mucho
+de la región y del régimen de lluvia \citep{baezvillanueva2018,rojas2021}, mientras
+que CR2MET, mezclado con pluviómetros sobre una zona casi sin estaciones,
+probablemente subestima, así que con estos datos el total verdadero no se conoce. Un contraste
 CR2MET-diario vs IMERG-semihorario confunde por tanto el producto con su
 resolución, y la Sección~\ref{sec:singlefactor} los separa explícitamente --- con
 un resultado que matiza a este, ya que en \emph{este} evento es el producto, no la
 resolución, lo que decide la detección. Lo que sobrevive intacto a la separación es
 el timing: ningún producto diario, cualquiera sea su magnitud, puede situar el
 cruce a las 04:30. La parte puramente aritmética del argumento es además
-independiente de la disputa de magnitud: incluso tomando el propio total de 30\,mm
-de CR2MET, repartirlo en 24\,h da una intensidad media muy por debajo de la curva
-I--D, así que un producto diario no puede gatillar sin importar cuál magnitud sea
-la correcta.
+independiente de la disputa de magnitud: con la magnitud de CR2MET, repartir la tormenta en 24\,h da una intensidad media
+muy por debajo de la curva I--D, así que CR2MET diario no puede gatillar; con la
+magnitud de IMERG una serie diaria sí la cruza (Sección~\ref{sec:singlefactor}), y
+por eso hay que separar los dos factores.
 
 \begin{table}[ht]
 \centering
@@ -1029,12 +981,13 @@ clave que queda pendiente.
 \begin{table}[ht]
 \centering
 \caption{Cruce I--D sub-diario en tres eventos (GPM IMERG semihorario, núcleo de
-tormenta, regional calibrado $a^\star=5.5$).}
+tormenta, regional $a^\star=5.5$). La tasa peak es la mayor tasa semihoraria; ``¿Dispara
+el diario?'' aplica la misma curva a la misma serie IMERG agregada a 24\,h.}
 \label{tab:multievent}
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{@{}llcccc@{}}
 \toprule
-Evento & Clima & Total & Peak 1\,h & Cruce (UTC) & ¿Dispara el diario? \\
+Evento & Clima & Total & Tasa peak (30\,min) & Cruce (UTC) & ¿Dispara el diario? \\
 \midrule
 Atacama/Copiapó & árido, convectivo & 108\,mm & 40\,mm\,h$^{-1}$ & 24-mar 04:30 & sí \\
 Cajón del Maipo & Andes, verano & 28\,mm & 5\,mm\,h$^{-1}$ & 25-feb 17:30 & \textbf{no} \\
@@ -1110,7 +1063,9 @@ detección a escala.
 \caption{Descomposición por factor único en cada núcleo de tormenta: el factor de
 producto (A$\to$B) y el factor de resolución (B$\to$C) sobre la excedencia I--D
 peak $E$ ($a^\star=5.5$). La negrita marca el paso que voltea la detección ($E$
-cruzando 1). La fila de CR2MET (A) es el máximo sobre las celdas CR2MET dentro del
+cruzando 1). Las series diarias (A, B) se recorren con ventanas de 1 a 3 días y la
+semihoraria (C) con ventanas de hasta 24\,h, así que un $E$ diario aquí puede superar
+el valor solo de 24\,h de la Tabla~\ref{tab:oat}. La fila de CR2MET (A) es el máximo sobre las celdas CR2MET dentro del
 píxel IMERG en la ventana $D$ de la descomposición, así que su total (26.8\,mm en
 Atacama) no es el total de tres días de la celda núcleo de la Tabla~\ref{tab:headtohead} (30.1\,mm).}
 \label{tab:singlefactor}
@@ -1382,7 +1337,14 @@ vinculante sobre el \emph{timing} es por tanto la resolución de la forzante, no
 susceptibilidad ni la lógica del umbral; sobre la \emph{detección} la evidencia es más estrecha, como expone el resto de este párrafo, y donde las fallas las controla la humedad antecedente el techo es el gatillo mismo (Tabla~\ref{tab:sweep}). Esto es intuitivo una vez enunciado (con
 un valor diario la máxima intensidad resoluble es total$/24$\,h, así que las
 ráfagas convectivas breves e intensas quedan difuminadas bajo cualquier curva
-I--D), y la literatura de umbrales ha medido su efecto de primer orden: la resolución temporal gruesa sesga hacia abajo los umbrales ajustados \citep{marra2019,gariano2020}, y la incertidumbre de la estimación de lluvia y la agregación espacial los desplazan \citep{nikolopoulos2014,marra2017}. Esos estudios reajustan el umbral a cada conjunto de datos; lo que rara vez se aísla es el efecto de la resolución bajo un gatillo fijo, separado del producto, que es lo que hace el diseño de un factor. Aislarlo exige cuidado
+I--D), y la literatura de umbrales ha medido su efecto de primer orden: la resolución temporal gruesa sesga hacia abajo los umbrales ajustados \citep{marra2019,gariano2020}, y la incertidumbre de la estimación de lluvia y la agregación espacial los desplazan \citep{nikolopoulos2014,marra2017}. La práctica operacional ya resuelve la intensidad de corta duración donde importa:
+las alertas de flujos de detritos post-incendio en el oeste de Estados Unidos usan
+umbrales intensidad--duración de 15--60\,min \citep{staley2017}, basados en el
+timing a escala de minutos de los flujos frente a la lluvia medida in situ
+\citep{kean2011}; el pronóstico regional de flujos de detritos ha combinado
+susceptibilidad con lluvia de radar \citep{berenguer2015}; y el desempeño predictivo
+de umbrales a partir de datos diarios grillados se ha medido directamente
+\citep{leonarduzzi2017}. Esos estudios reajustan el umbral a cada conjunto de datos; lo que rara vez se aísla es el efecto de la resolución bajo un gatillo fijo, separado del producto, que es lo que hace el diseño de un factor. Aislarlo exige cuidado
 también en la otra dirección: comparar un producto diario mezclado con
 pluviómetros contra uno satelital semihorario varía el producto además de su
 resolución, y la Sección~\ref{sec:singlefactor} muestra que los dos factores pueden
@@ -1573,11 +1535,10 @@ nativos para lluvia--escorrentía, deshielo, inundación de aguas someras, runou
 flujo de detritos basado en agentes, un sustrato geoespacial y deformación InSAR, y
 atribución exacta en forma cerrada de cada alerta. Usado como instrumento
 experimental sobre cuencas chilenas, arroja un diagnóstico que, argumentamos, generaliza: lo que la forzante sub-diaria le compra a un gatillo intensidad--duración es timing intra-diario en todos los casos y detección solo para ráfagas breves, mientras que el error de magnitud del producto de lluvia, y en operación el sensor, mandan en el resto. Un umbral I--D global se alcanza en 36 de
-13\,880 días y nunca en un mes con evento registrado; un umbral regional calibrado
-transfiere por partición pero no se distingue de un nulo estacional y, distribuido a resolución diaria, no discrimina las ubicaciones de
+13\,880 días y nunca en un mes con evento registrado; un umbral regional ajustado al registro está débilmente identificado y no se distingue de un nulo estacional y, distribuido a resolución diaria, no discrimina las ubicaciones de
 eventos (AUC $\approx 0.48$); el gatillo idéntico sobre forzante satelital
-semihoraria ubica el cruce del umbral en una marca de tiempo horas antes de los
-flujos documentados del mismo día en tres eventos climáticamente distintos, y una descomposición
+semihoraria ubica el cruce del umbral el día documentado de los
+flujos o justo antes en tres eventos climáticamente distintos, y una descomposición
 por factor único separa cuánto de esa ganancia le debe al producto de lluvia y
 cuánto a su resolución, lo que resulta diferir según el evento. El núcleo del motor, su marco
 de backtesting y los ejemplos detrás de los resultados de resolución son reproducibles desde el snapshot archivado, y la arquitectura está
@@ -1723,11 +1684,23 @@ and stable well-balanced scheme with hydrostatic reconstruction for shallow wate
 flows. SIAM J.\ Sci.\ Comput.\ 25 (6), 2050--2065.
 \url{https://doi.org/10.1137/S1064827503431090}.
 
+\bibitem[Baez-Villanueva et al.(2018)]{baezvillanueva2018}
+Baez-Villanueva, O.M., Zambrano-Bigiarini, M., Ribbe, L., Nauditt, A.,
+Giraldo-Osorio, J.D., Thinh, N.X., 2018. Temporal and spatial evaluation of
+satellite rainfall estimates over different regions in Latin-America. Atmos.\
+Res.\ 213, 34--50. \url{https://doi.org/10.1016/j.atmosres.2018.05.011}.
+
 \bibitem[Berardino et al.(2002)]{berardino2002}
 Berardino, P., Fornaro, G., Lanari, R., Sansosti, E., 2002. A new algorithm for
 surface deformation monitoring based on small baseline differential SAR
 interferograms. IEEE Trans.\ Geosci.\ Remote Sens.\ 40 (11), 2375--2383.
 \url{https://doi.org/10.1109/tgrs.2002.803792}.
+
+\bibitem[Berenguer et al.(2015)]{berenguer2015}
+Berenguer, M., Sempere-Torres, D., H\"urlimann, M., 2015. Debris-flow forecasting
+at regional scale by combining susceptibility mapping and radar rainfall. Nat.\
+Hazards Earth Syst.\ Sci.\ 15, 587--602.
+\url{https://doi.org/10.5194/nhess-15-587-2015}.
 
 \bibitem[Bogaard and Greco(2018)]{bogaard2018}
 Bogaard, T., Greco, R., 2018. Invited perspectives: Hydrological perspectives on
@@ -1857,10 +1830,21 @@ Hutton, E.W.H., Piper, M.D., Tucker, G.E., 2020. The Basic Model Interface 2.0: 
 standard interface for coupling numerical models in the geosciences. J.\ Open
 Source Softw.\ 5 (51), 2317. \url{https://doi.org/10.21105/joss.02317}.
 
+\bibitem[Kean et al.(2011)]{kean2011}
+Kean, J.W., Staley, D.M., Cannon, S.H., 2011. In situ measurements of post-fire
+debris flows in southern California: Comparisons of the timing and magnitude of 24
+debris-flow events with rainfall and soil moisture conditions. J.\ Geophys.\ Res.\
+Earth Surf.\ 116, F04019. \url{https://doi.org/10.1029/2011JF002005}.
+
 \bibitem[Kirschbaum and Stanley(2018)]{kirschbaum2018}
 Kirschbaum, D., Stanley, T., 2018. Satellite-based assessment of
 rainfall-triggered landslide hazard for situational awareness. Earth's Future 6
 (3), 505--523. \url{https://doi.org/10.1002/2017EF000715}.
+
+\bibitem[Leonarduzzi et al.(2017)]{leonarduzzi2017}
+Leonarduzzi, E., Molnar, P., McArdell, B.W., 2017. Predictive performance of
+rainfall thresholds for shallow landslides in Switzerland from gridded daily data.
+Water Resour.\ Res.\ 53, 6612--6625. \url{https://doi.org/10.1002/2017WR021044}.
 
 \bibitem[Lundberg and Lee(2017)]{lundberg2017}
 Lundberg, S.M., Lee, S.-I., 2017. A unified approach to interpreting model
@@ -1957,6 +1941,12 @@ Wintle, B.A., Hartig, F., Dormann, C.F., 2017. Cross-validation strategies for
 data with temporal, spatial, hierarchical, or phylogenetic structure. Ecography
 40 (8), 913--929. \url{https://doi.org/10.1111/ecog.02881}.
 
+\bibitem[Rojas et al.(2021)]{rojas2021}
+Rojas, Y., Minder, J.R., Campbell, L.S., Massmann, A., Garreaud, R., 2021.
+Assessment of GPM IMERG satellite precipitation estimation and its dependence on
+microphysical rain regimes over the mountains of south-central Chile. Atmos.\ Res.\
+253, 105454. \url{https://doi.org/10.1016/j.atmosres.2021.105454}.
+
 \bibitem[Segoni et al.(2018)]{segoni2018}
 Segoni, S., Piciullo, L., Gariano, S.L., 2018. A review of the recent literature
 on rainfall thresholds for landslide occurrence. Landslides 15, 1483--1501.
@@ -1971,6 +1961,12 @@ user-friendly catchment-runoff-model software package. Hydrol.\ Earth Syst.\ Sci
 Sep\'ulveda, S.A., Petley, D.N., 2015. Regional trends and controlling factors of
 fatal landslides in Latin America and the Caribbean. Nat.\ Hazards Earth Syst.\
 Sci.\ 15, 1821--1833. \url{https://doi.org/10.5194/nhess-15-1821-2015}.
+
+\bibitem[Staley et al.(2017)]{staley2017}
+Staley, D.M., Negri, J.A., Kean, J.W., Laber, J.L., Tillery, A.C., Youberg, A.M.,
+2017. Prediction of spatially explicit rainfall intensity--duration thresholds for
+post-fire debris-flow generation in the western United States. Geomorphology 278,
+149--162. \url{https://doi.org/10.1016/j.geomorph.2016.10.019}.
 
 \bibitem[Stanley et al.(2021)]{stanley2021}
 Stanley, T.A., Kirschbaum, D.B., Benz, G., et al., 2021. Data-driven landslide
