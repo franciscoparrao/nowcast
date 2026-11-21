@@ -1,0 +1,275 @@
+{
+ "atacama_2015": {
+  "a*=5.5": {
+   "semihorario": {
+    "dias_con_cruce_fuera": 10,
+    "dias_por_anio": 0.37,
+    "episodios_por_anio": 0.37,
+    "cruza_en_evento": true,
+    "e_max_evento": 8.88,
+    "percentil_evento": 100.0,
+    "dias_fuera_con_e_mayor_igual_al_evento": 0
+   },
+   "diario": {
+    "dias_con_cruce_fuera": 0,
+    "dias_por_anio": 0.0,
+    "episodios_por_anio": 0.0,
+    "cruza_en_evento": true,
+    "e_max_evento": 2.82,
+    "percentil_evento": 100.0,
+    "dias_fuera_con_e_mayor_igual_al_evento": 0
+   },
+   "dias_validos": 9862,
+   "dias_excluidos_por_falta": 0
+  },
+  "a*=5.5 (2014-2024)": {
+   "semihorario": {
+    "dias_con_cruce_fuera": 5,
+    "dias_por_anio": 0.45,
+    "episodios_por_anio": 0.45,
+    "cruza_en_evento": true,
+    "e_max_evento": 8.88,
+    "percentil_evento": 100.0,
+    "dias_fuera_con_e_mayor_igual_al_evento": 0
+   },
+   "diario": {
+    "dias_con_cruce_fuera": 0,
+    "dias_por_anio": 0.0,
+    "episodios_por_anio": 0.0,
+    "cruza_en_evento": true,
+    "e_max_evento": 2.82,
+    "percentil_evento": 100.0,
+    "dias_fuera_con_e_mayor_igual_al_evento": 0
+   },
+   "dias_validos": 4018,
+   "dias_excluidos_por_falta": 0
+  },
+  "Caine": {
+   "semihorario": {
+    "dias_con_cruce_fuera": 0,
+    "dias_por_anio": 0.0,
+    "episodios_por_anio": 0.0,
+    "cruza_en_evento": true,
+    "e_max_evento": 3.29,
+    "percentil_evento": 100.0,
+    "dias_fuera_con_e_mayor_igual_al_evento": 0
+   },
+   "diario": {
+    "dias_con_cruce_fuera": 0,
+    "dias_por_anio": 0.0,
+    "episodios_por_anio": 0.0,
+    "cruza_en_evento": true,
+    "e_max_evento": 1.05,
+    "percentil_evento": 100.0,
+    "dias_fuera_con_e_mayor_igual_al_evento": 0
+   },
+   "dias_validos": 9862,
+   "dias_excluidos_por_falta": 0
+  },
+  "Caine (2014-2024)": {
+   "semihorario": {
+    "dias_con_cruce_fuera": 0,
+    "dias_por_anio": 0.0,
+    "episodios_por_anio": 0.0,
+    "cruza_en_evento": true,
+    "e_max_evento": 3.29,
+    "percentil_evento": 100.0,
+    "dias_fuera_con_e_mayor_igual_al_evento": 0
+   },
+   "diario": {
+    "dias_con_cruce_fuera": 0,
+    "dias_por_anio": 0.0,
+    "episodios_por_anio": 0.0,
+    "cruza_en_evento": true,
+    "e_max_evento": 1.05,
+    "percentil_evento": 100.0,
+    "dias_fuera_con_e_mayor_igual_al_evento": 0
+   },
+   "dias_validos": 4018,
+   "dias_excluidos_por_falta": 0
+  },
+  "pasos": 473376
+ },
+ "maipo_2017": {
+  "a*=5.5": {
+   "semihorario": {
+    "dias_con_cruce_fuera": 316,
+    "dias_por_anio": 11.7,
+    "episodios_por_anio": 7.33,
+    "cruza_en_evento": true,
+    "e_max_evento": 1.23,
+    "percentil_evento": 97.778,
+    "dias_fuera_con_e_mayor_igual_al_evento": 219
+   },
+   "diario": {
+    "dias_con_cruce_fuera": 94,
+    "dias_por_anio": 3.48,
+    "episodios_por_anio": 1.63,
+    "cruza_en_evento": false,
+    "e_max_evento": 0.45,
+    "percentil_evento": 96.338,
+    "dias_fuera_con_e_mayor_igual_al_evento": 361
+   },
+   "dias_validos": 9862,
+   "dias_excluidos_por_falta": 0
+  },
+  "a*=5.5 (2014-2024)": {
+   "semihorario": {
+    "dias_con_cruce_fuera": 135,
+    "dias_por_anio": 12.27,
+    "episodios_por_anio": 8.09,
+    "cruza_en_evento": true,
+    "e_max_evento": 1.23,
+    "percentil_evento": 97.683,
+    "dias_fuera_con_e_mayor_igual_al_evento": 93
+   },
+   "diario": {
+    "dias_con_cruce_fuera": 28,
+    "dias_por_anio": 2.55,
+    "episodios_por_anio": 1.27,
+    "cruza_en_evento": false,
+    "e_max_evento": 0.45,
+    "percentil_evento": 96.835,
+    "dias_fuera_con_e_mayor_igual_al_evento": 127
+   },
+   "dias_validos": 4018,
+   "dias_excluidos_por_falta": 0
+  },
+  "Caine": {
+   "semihorario": {
+    "dias_con_cruce_fuera": 45,
+    "dias_por_anio": 1.67,
+    "episodios_por_anio": 1.3,
+    "cruza_en_evento": false,
+    "e_max_evento": 0.46,
+    "percentil_evento": 97.778,
+    "dias_fuera_con_e_mayor_igual_al_evento": 219
+   },
+   "diario": {
+    "dias_con_cruce_fuera": 5,
+    "dias_por_anio": 0.19,
+    "episodios_por_anio": 0.15,
+    "cruza_en_evento": false,
+    "e_max_evento": 0.17,
+    "percentil_evento": 96.338,
+    "dias_fuera_con_e_mayor_igual_al_evento": 361
+   },
+   "dias_validos": 9862,
+   "dias_excluidos_por_falta": 0
+  },
+  "Caine (2014-2024)": {
+   "semihorario": {
+    "dias_con_cruce_fuera": 19,
+    "dias_por_anio": 1.73,
+    "episodios_por_anio": 1.36,
+    "cruza_en_evento": false,
+    "e_max_evento": 0.46,
+    "percentil_evento": 97.683,
+    "dias_fuera_con_e_mayor_igual_al_evento": 93
+   },
+   "diario": {
+    "dias_con_cruce_fuera": 1,
+    "dias_por_anio": 0.09,
+    "episodios_por_anio": 0.09,
+    "cruza_en_evento": false,
+    "e_max_evento": 0.17,
+    "percentil_evento": 96.835,
+    "dias_fuera_con_e_mayor_igual_al_evento": 127
+   },
+   "dias_validos": 4018,
+   "dias_excluidos_por_falta": 0
+  },
+  "pasos": 473376
+ },
+ "santalucia_2017": {
+  "a*=5.5": {
+   "semihorario": {
+    "dias_con_cruce_fuera": 1237,
+    "dias_por_anio": 45.81,
+    "episodios_por_anio": 25.56,
+    "cruza_en_evento": true,
+    "e_max_evento": 3.47,
+    "percentil_evento": 99.219,
+    "dias_fuera_con_e_mayor_igual_al_evento": 77
+   },
+   "diario": {
+    "dias_con_cruce_fuera": 512,
+    "dias_por_anio": 18.96,
+    "episodios_por_anio": 8.04,
+    "cruza_en_evento": true,
+    "e_max_evento": 1.72,
+    "percentil_evento": 98.701,
+    "dias_fuera_con_e_mayor_igual_al_evento": 128
+   },
+   "dias_validos": 9862,
+   "dias_excluidos_por_falta": 0
+  },
+  "a*=5.5 (2014-2024)": {
+   "semihorario": {
+    "dias_con_cruce_fuera": 518,
+    "dias_por_anio": 47.09,
+    "episodios_por_anio": 25.45,
+    "cruza_en_evento": true,
+    "e_max_evento": 3.47,
+    "percentil_evento": 99.277,
+    "dias_fuera_con_e_mayor_igual_al_evento": 29
+   },
+   "diario": {
+    "dias_con_cruce_fuera": 190,
+    "dias_por_anio": 17.27,
+    "episodios_por_anio": 7.82,
+    "cruza_en_evento": true,
+    "e_max_evento": 1.72,
+    "percentil_evento": 98.729,
+    "dias_fuera_con_e_mayor_igual_al_evento": 51
+   },
+   "dias_validos": 4018,
+   "dias_excluidos_por_falta": 0
+  },
+  "Caine": {
+   "semihorario": {
+    "dias_con_cruce_fuera": 166,
+    "dias_por_anio": 6.15,
+    "episodios_por_anio": 4.37,
+    "cruza_en_evento": true,
+    "e_max_evento": 1.29,
+    "percentil_evento": 99.219,
+    "dias_fuera_con_e_mayor_igual_al_evento": 77
+   },
+   "diario": {
+    "dias_con_cruce_fuera": 29,
+    "dias_por_anio": 1.07,
+    "episodios_por_anio": 0.67,
+    "cruza_en_evento": false,
+    "e_max_evento": 0.64,
+    "percentil_evento": 98.701,
+    "dias_fuera_con_e_mayor_igual_al_evento": 128
+   },
+   "dias_validos": 9862,
+   "dias_excluidos_por_falta": 0
+  },
+  "Caine (2014-2024)": {
+   "semihorario": {
+    "dias_con_cruce_fuera": 70,
+    "dias_por_anio": 6.36,
+    "episodios_por_anio": 4.64,
+    "cruza_en_evento": true,
+    "e_max_evento": 1.29,
+    "percentil_evento": 99.277,
+    "dias_fuera_con_e_mayor_igual_al_evento": 29
+   },
+   "diario": {
+    "dias_con_cruce_fuera": 11,
+    "dias_por_anio": 1.0,
+    "episodios_por_anio": 0.55,
+    "cruza_en_evento": false,
+    "e_max_evento": 0.64,
+    "percentil_evento": 98.729,
+    "dias_fuera_con_e_mayor_igual_al_evento": 51
+   },
+   "dias_validos": 4018,
+   "dias_excluidos_por_falta": 0
+  },
+  "pasos": 473376
+ }
+}
