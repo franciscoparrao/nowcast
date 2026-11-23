@@ -43,7 +43,7 @@ nowcasting, and what rainfall resolution buys an intensity--duration trigger}
             country={Argentina}}
 
 \begin{abstract}
-Landslide and flood susceptibility maps are static, and turning them into a nowcast requires modulating them with the forcing that triggers failure. We present nowcast, an open Rust engine that writes hazard as susceptibility times a composable trigger factor behind a single forcing interface, so rainfall, routed discharge, snowmelt or deformation products can be swapped without touching the hazard logic. Holding the model fixed, we vary only the rainfall resolution over Chilean basins. On daily rainfall, a regional intensity--duration (I--D) trigger is indistinguishable from a seasonal null and does not discriminate event locations (AUC $\approx 0.48$). On half-hourly satellite rainfall, the same trigger crosses the curve on or just before the documented day of three debris flows; separating the rainfall product from its resolution, resolution sets the intra-day timing in all three events but decides detection in only one, a short convective burst. These are timing demonstrations, not skill scores.
+Landslide and flood susceptibility maps are static, and nowcasting requires modulating them with the forcing that triggers failure. We present nowcast, an open Rust engine that writes hazard as susceptibility times a composable trigger behind a single forcing interface, so rainfall, discharge, snowmelt or deformation products swap without touching the hazard logic. Holding the model fixed, we vary only the rainfall resolution over Chilean basins. On daily rainfall, a regional intensity--duration (I--D) trigger is indistinguishable from a seasonal null and does not discriminate event locations (AUC $\approx 0.48$). On half-hourly satellite rainfall, the same trigger crosses the curve on or just before the documented day of three debris flows, and resolution decides detection for one short convective burst. Over 27 years it also crosses on 0.4, 12 and 46 other days a year at the three cores: these are timing demonstrations, specific only where the event is extreme for its location.
 \end{abstract}
 
 \begin{highlights}
@@ -845,13 +845,49 @@ the curve over a broad footprint, 30\,\% of the Atacama scene, 6\,\% at Caj\'on 
 Maipo, and the entire (small, frontal) Villa Santa Luc\'ia box, so the crossing is
 not spatially sparse within these storm-centred scenes. This locates the \emph{peak}
 correctly but is \emph{not} a low false-alarm rate, and because the box is
-event-centred by construction a high crossing fraction is expected. A genuine
-discrimination estimate needs the off-event crossing frequency at these cores, a
-multi-year sub-daily record on days \emph{without} a documented flow, which the
-present event-window granules do not provide. The sub-daily results are therefore
-triggering-timing demonstrations, not skill scores; assembling that multi-year
-sub-daily record is, with a day-resolution inventory (Section~7), the key remaining
-validation step.
+event-centred by construction a high crossing fraction is expected. The temporal counterpart of that check asks how often the same trigger crosses at
+the same core on days without a documented flow. We extracted 27 complete years
+(1998--2024) of IMERG Final half-hourly rainfall at each core through the NASA
+Giovanni time-series service, which returns the same values as the event granules,
+and ran the identical trigger ($a^\star=5.5$; half-hourly windows up to 24\,h, and
+daily windows of one to three days on the same series aggregated to UTC days),
+counting days with $E\geq1$ outside the documented day $\pm2$ days
+(Table~\ref{tab:offevent}; the protocol was fixed before the count). At Atacama the
+event is the most extreme day of the record at both resolutions and the half-hourly
+trigger crosses on 0.37 other days a year, so there the crossing is specific. At
+Caj\'on del Maipo it crosses on 11.7 days a year (7.3 episodes), and 219 days
+without a documented flow reach an exceedance at least as high as the event's: the
+one case in which resolution decides detection (Section~\ref{sec:singlefactor}) is
+not separable from an ordinary summer storm at that cell. At Villa Santa Luc\'ia it
+crosses on 45.8 days a year (25.6 episodes), so an intercept fitted in the
+semi-arid Maipo is too low for the humid south. With Caine's global curve the
+off-event crossings fall to 1.3 and 4.4 episodes a year at those two cores, but the
+Caj\'on del Maipo event is then missed. The GPM era alone (2014--2024) gives the
+same rates. The sub-daily results are therefore triggering-timing demonstrations,
+not skill scores, and the timing is specific only where the event is extreme for
+its own location; a day-resolution inventory (Section~7) remains the step that
+would turn these crossing rates into false-alarm rates.
+
+\begin{table}[ht]
+\centering
+\caption{Off-event crossings of the identical trigger ($a^\star=5.5$) at the three
+storm cores over 1998--2024 (IMERG Final half-hourly, 9\,862 days per core, none
+missing). Off-event means outside the documented day $\pm2$ days; an episode merges
+consecutive crossing days; the percentile and the last column refer to the event's
+half-hourly peak exceedance among all days of the record.}
+\label{tab:offevent}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Core & \multicolumn{2}{c}{Half-hourly} & Daily & Event & Off-event days \\
+ & days\,yr$^{-1}$ & episodes\,yr$^{-1}$ & days\,yr$^{-1}$ & percentile & with $E\geq E_{\mathrm{event}}$ \\
+\midrule
+Atacama/Copiap\'o & 0.37 & 0.37 & 0 & 100 & 0 \\
+Caj\'on del Maipo & 11.7 & 7.3 & 3.5 & 97.8 & 219 \\
+Villa Santa Luc\'ia & 45.8 & 25.6 & 19.0 & 99.2 & 77 \\
+\bottomrule
+\end{tabular}}
+\end{table}
 
 \begin{table}[ht]
 \centering
@@ -929,7 +965,10 @@ whereas it rescues detection specifically for short bursts, and a case like
 Atacama, where a daily product with the right magnitude would have fired anyway, is
 not evidence for the second claim. The controlled experiment of
 Section~\ref{sec:synthetic}, where the product is fixed by construction and only
-resolution varies, is what isolates the detection effect at scale.
+resolution varies, is what isolates the detection effect at scale. The off-event
+count of Section~\ref{sec:multievent} adds a limit to the Caj\'on del Maipo case: at
+that cell the same half-hourly trigger crosses about seven times a year, so the
+detection that resolution rescues there is mechanical, not discriminating.
 
 \begin{table}[ht]
 \centering
@@ -1365,7 +1404,9 @@ snowmelt, shallow-water inundation, agent-based debris-flow runout, a geospatial
 substrate and InSAR deformation, and exact closed-form attribution of every alert.
 Used as an experimental instrument over Chilean basins, it yields a diagnosis that, we argue, generalises: what sub-daily forcing buys an intensity--duration trigger is intra-day timing in every case and detection only for short bursts, while the magnitude error of the rainfall product, and in operation the sensor, bind elsewhere. A global I--D threshold is reached on 36 of 13\,880 days and never on a recorded event month. A regional threshold fitted to the record is weakly identified and is not distinguishable from a seasonal null, and at daily resolution and distributed over the basin it does not discriminate event locations (AUC $\approx 0.48$). The identical trigger on half-hourly satellite forcing places
 the threshold crossing on or just before the documented day of the flows in three
-climatically distinct events, and a single-factor decomposition separates what that
+climatically distinct events, but over 27 years it also crosses at those cores on
+0.4, 11.7 and 45.8 other days a year, so the timing is specific only where the event
+is extreme for its location; a single-factor decomposition separates what that
 gain owes to the rainfall product from what it owes to its resolution, which turns
 out to differ by event. The core engine, its backtesting framework and the
 examples behind the resolution results are reproducible from the archived snapshot, and the architecture is designed so that

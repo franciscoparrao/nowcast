@@ -67,7 +67,7 @@ intensidad--duración}
             country={Argentina}}
 
 \begin{abstract}
-Los mapas de susceptibilidad a deslizamientos y crecidas son estáticos, y convertirlos en un nowcast exige modularlos con la forzante que gatilla la falla. Presentamos nowcast, un motor abierto en Rust que escribe el peligro como susceptibilidad por un factor de gatillo componible detrás de una sola interfaz de forzante, de modo que productos de lluvia, caudal ruteado, deshielo o deformación se intercambian sin tocar la lógica de peligro. Manteniendo fijo el modelo, variamos solo la resolución de la lluvia sobre cuencas chilenas. Con lluvia diaria, un gatillo intensidad--duración (I--D) regional no se distingue de un nulo estacional y no discrimina las ubicaciones de los eventos (AUC $\approx 0.48$). Con lluvia satelital semihoraria, el mismo gatillo cruza la curva el día documentado de tres flujos de detritos o justo antes; separando el producto de lluvia de su resolución, la resolución fija el timing intra-diario en los tres eventos pero decide la detección en solo uno, una ráfaga convectiva breve. Estas son demostraciones de timing, no puntajes de capacidad.
+Los mapas de susceptibilidad a deslizamientos y crecidas son estáticos, y el nowcasting exige modularlos con la forzante que gatilla la falla. Presentamos nowcast, un motor abierto en Rust que escribe el peligro como susceptibilidad por un gatillo componible detrás de una sola interfaz de forzante, de modo que productos de lluvia, caudal, deshielo o deformación se intercambian sin tocar la lógica de peligro. Manteniendo fijo el modelo, variamos solo la resolución de la lluvia sobre cuencas chilenas. Con lluvia diaria, un gatillo intensidad--duración (I--D) regional no se distingue de un nulo estacional y no discrimina las ubicaciones de los eventos (AUC $\approx 0.48$). Con lluvia satelital semihoraria, el mismo gatillo cruza la curva el día documentado de tres flujos de detritos o justo antes, y la resolución decide la detección para una ráfaga convectiva breve. En 27 años también cruza en 0.4, 12 y 46 otros días al año en los tres núcleos: son demostraciones de timing, específicas solo donde el evento es extremo para su lugar.
 \end{abstract}
 
 \begin{highlights}
@@ -970,13 +970,51 @@ la escena de Atacama, 6\,\% en el Cajón del Maipo, y la totalidad del recuadro
 disperso dentro de estas escenas centradas en la tormenta. Esto ubica el
 \emph{peak} correctamente pero \emph{no} es una tasa baja de falsas alarmas, y como
 el recuadro está centrado en el evento por construcción, es esperable una fracción
-alta de cruce. Una estimación genuina de discriminación necesita la frecuencia de
-cruce fuera de evento en estos núcleos, un registro sub-diario multi-anual en días
-\emph{sin} un flujo documentado, que los gránulos de ventana de evento actuales no
-proveen. Los resultados sub-diarios son por tanto demostraciones de gatillado y
-timing, no puntajes de skill; ensamblar ese registro sub-diario multi-anual es,
-junto con un inventario con resolución de día (Sección~7), el paso de validación
-clave que queda pendiente.
+alta de cruce. La contraparte temporal de ese chequeo pregunta con qué frecuencia el mismo gatillo
+cruza en el mismo núcleo en días sin un flujo documentado. Extrajimos 27 años
+completos (1998--2024) de lluvia semihoraria IMERG Final en cada núcleo mediante el
+servicio de series de tiempo Giovanni de la NASA, que devuelve los mismos valores que
+los gránulos del evento, y corrimos el gatillo idéntico ($a^\star=5.5$; ventanas
+semihorarias de hasta 24\,h, y ventanas diarias de uno a tres días sobre la misma
+serie agregada a días UTC), contando los días con $E\geq1$ fuera del día
+documentado $\pm2$ días (Tabla~\ref{tab:offevent}; el protocolo se fijó antes del
+conteo). En Atacama el evento es el día más extremo del registro en ambas
+resoluciones y el gatillo semihorario cruza en 0.37 otros días al año, así que ahí el
+cruce es específico. En el Cajón del Maipo cruza en 11.7 días al año (7.3 episodios),
+y 219 días sin un flujo documentado alcanzan una excedencia al menos tan alta como la
+del evento: el único caso en que la resolución decide la detección
+(Sección~\ref{sec:singlefactor}) no se separa de una tormenta de verano corriente en
+esa celda. En Villa Santa Lucía cruza en 45.8 días al año (25.6 episodios), así que
+un intercepto ajustado en el Maipo semiárido es demasiado bajo para el sur húmedo.
+Con la curva global de Caine los cruces fuera de evento bajan a 1.3 y 4.4 episodios
+al año en esos dos núcleos, pero entonces se pierde el evento del Cajón del Maipo.
+La era GPM sola (2014--2024) da las mismas tasas. Los resultados sub-diarios son por
+tanto demostraciones de gatillado y timing, no puntajes de capacidad, y el timing es
+específico solo donde el evento es extremo para su propio lugar; un inventario con
+resolución de día (Sección~7) sigue siendo el paso que convertiría estas tasas de
+cruce en tasas de falsa alarma.
+
+\begin{table}[ht]
+\centering
+\caption{Cruces fuera de evento del gatillo idéntico ($a^\star=5.5$) en los tres
+núcleos de tormenta en 1998--2024 (IMERG Final semihorario, 9\,862 días por núcleo,
+ninguno faltante). Fuera de evento significa fuera del día documentado $\pm2$ días;
+un episodio une días consecutivos con cruce; el percentil y la última columna se
+refieren a la excedencia peak semihoraria del evento entre todos los días del
+registro.}
+\label{tab:offevent}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Núcleo & \multicolumn{2}{c}{Semihorario} & Diario & Percentil & Días fuera de evento \\
+ & días\,año$^{-1}$ & episodios\,año$^{-1}$ & días\,año$^{-1}$ & del evento & con $E\geq E_{\mathrm{evento}}$ \\
+\midrule
+Atacama/Copiapó & 0.37 & 0.37 & 0 & 100 & 0 \\
+Cajón del Maipo & 11.7 & 7.3 & 3.5 & 97.8 & 219 \\
+Villa Santa Lucía & 45.8 & 25.6 & 19.0 & 99.2 & 77 \\
+\bottomrule
+\end{tabular}}
+\end{table}
 
 \begin{table}[ht]
 \centering
@@ -1056,7 +1094,10 @@ para ráfagas breves, y un caso como Atacama, donde un producto diario con la
 magnitud correcta habría disparado igual, no es evidencia de la segunda afirmación.
 El experimento controlado de la Sección~\ref{sec:synthetic}, donde el producto está
 fijo por construcción y solo varía la resolución, es lo que aísla el efecto de
-detección a escala.
+detección a escala. El conteo fuera de evento de la Sección~\ref{sec:multievent}
+agrega un límite al caso del Cajón del Maipo: en esa celda el mismo gatillo
+semihorario cruza unas siete veces al año, así que la detección que la resolución
+rescata ahí es mecánica, no discriminante.
 
 \begin{table}[ht]
 \centering
@@ -1538,7 +1579,9 @@ experimental sobre cuencas chilenas, arroja un diagnóstico que, argumentamos, g
 13\,880 días y nunca en un mes con evento registrado; un umbral regional ajustado al registro está débilmente identificado y no se distingue de un nulo estacional y, distribuido a resolución diaria, no discrimina las ubicaciones de
 eventos (AUC $\approx 0.48$); el gatillo idéntico sobre forzante satelital
 semihoraria ubica el cruce del umbral el día documentado de los
-flujos o justo antes en tres eventos climáticamente distintos, y una descomposición
+flujos o justo antes en tres eventos climáticamente distintos, pero en 27 años
+también cruza en esos núcleos en 0.4, 11.7 y 45.8 otros días al año, así que el
+timing es específico solo donde el evento es extremo para su lugar; una descomposición
 por factor único separa cuánto de esa ganancia le debe al producto de lluvia y
 cuánto a su resolución, lo que resulta diferir según el evento. El núcleo del motor, su marco
 de backtesting y los ejemplos detrás de los resultados de resolución son reproducibles desde el snapshot archivado, y la arquitectura está
